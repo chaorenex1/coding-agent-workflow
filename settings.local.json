@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(code-refactor-analyzer)",
+      "Skill(codex-cli-bridge)",
+      "Skill(git-code-review)",
+      "Skill(git-commit-summarizer)",
+      "Skill(github-stars-analyzer)",
+      "Skill(skill-validator)",
+      "Skill(tech-stack-evaluator)",
+      "Bash(zip:*)",
+      "Bash(powershell:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(python:*)",
+      "Bash(del:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}
