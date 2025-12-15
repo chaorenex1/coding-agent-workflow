@@ -8,6 +8,8 @@
       "Skill(github-stars-analyzer)",
       "Skill(skill-validator)",
       "Skill(tech-stack-evaluator)",
+      "Skill(api-document-generator)",
+      "Skill(repo-analyzer)",
       "Bash(zip:*)",
       "Bash(powershell:*)",
       "Bash(ls:*)",
