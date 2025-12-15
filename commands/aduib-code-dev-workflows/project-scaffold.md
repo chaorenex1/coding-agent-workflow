@@ -34,7 +34,7 @@
 
 ## 工作流程
 
-### 阶段0：需求确认（交互式）
+### 阶段1：需求确认（交互式）
 
 **目标**：确认项目配置细节
 
@@ -47,10 +47,11 @@
    - 作者信息
 
 2. **技术栈选择**（如果未通过参数指定）：
-   - 前端框架（Vue 3 / React / Next.js / 等）
-   - UI 组件库（Element Plus / Ant Design / MUI / 无）
-   - 状态管理（Pinia / Zustand / Redux / 无）
+   - 前端框架（Vue 3 / React / Next.js）
+   - UI 组件库（Element Plus / Ant Design / MUI）
+   - 状态管理（Pinia / Zustand / Redux）
    - CSS 方案（SCSS / Less / CSS Modules / Tailwind CSS）
+   - 请求库（Axios / Fetch）
 
 3. **功能模块**：
    - 路由配置（是否需要）
@@ -75,11 +76,11 @@
 
 ---
 
-### 阶段1：项目初始化（自动执行）
+### 阶段2：项目初始化（自动执行）
 
 **目标**：创建项目基础结构
 
-#### 1.1 创建项目目录
+#### 2.1 创建项目目录
 
 ```bash
 # 根据项目类型使用对应的初始化命令
@@ -88,7 +89,7 @@ npm create vite@latest <project-name> -- --template vue-ts
 cd <project-name>
 ```
 
-#### 1.2 初始化 Git（除非指定 --skip-git）
+#### 2.2 初始化 Git（除非指定 --skip-git）
 
 ```bash
 git init
@@ -104,25 +105,41 @@ git commit -m "chore: initial commit"
 
 ---
 
-### 阶段2：依赖安装（自动执行）
+### 阶段3：依赖安装（自动执行）
 
 **目标**：安装所有必要的依赖包
 
-#### 2.1 安装核心依赖
+**条件执行**：
+- 若设置 `--skip-install`：跳过整个阶段。
+- 若设置 `--minimal`：仅安装核心运行依赖（框架与构建工具的必需部分），跳过 UI 库、ESLint/Prettier、Git Hooks 等可选项。
+
+#### 3.1 安装核心依赖
 
 ```bash
-# 根据用户选择安装核心功能依赖
-# Vue 3 示例：
-npm install vue-router@4 pinia axios element-plus @element-plus/icons-vue
+# 根据用户选择安装核心功能依赖（以下以 Vue 3 为例）
+# 必需：路由/状态/HTTP（按参数选择）
+# - 当 --state-mgmt=pinia 时安装 pinia
+# - 当 --ui-lib=element-plus 时安装 element-plus 及图标
+
+# 路由与 HTTP
+npm install vue-router@4 axios
+
+# 状态管理（可选）
+# 当 --state-mgmt=pinia 时：
+npm install pinia
+
+# UI 组件库（可选）
+# 当 --ui-lib=element-plus 时：
+npm install element-plus @element-plus/icons-vue
 ```
 
-#### 2.2 安装开发依赖
+#### 3.2 安装开发依赖
 
 ```bash
 # TypeScript 相关
 npm install -D typescript @types/node
 
-# 构建工具插件
+# 构建工具插件（Vue 项目）
 npm install -D unplugin-auto-import unplugin-vue-components
 
 # 代码质量工具
@@ -133,11 +150,11 @@ npm install -D @typescript-eslint/eslint-plugin @typescript-eslint/parser
 # CSS 预处理器（如果需要）
 npm install -D sass
 
-# Git Hooks（如果需要）
+# Git Hooks（可选）
 npm install -D husky lint-staged @commitlint/cli @commitlint/config-conventional
 ```
 
-#### 2.3 配置 Git Hooks（可选）
+#### 3.3 配置 Git Hooks（可选）
 
 ```bash
 npx husky install
@@ -150,13 +167,19 @@ npx husky add .husky/commit-msg "npx --no -- commitlint --edit $1"
 - ✅ package.json 包含正确的依赖列表
 - ✅ Git Hooks 已配置（如果需要）
 
+#### 3.4 最简模式说明（当 --minimal）
+
+- 保留：框架与构建工具核心（Vue/React/Next 等基础包、Vite 或框架内建工具、TypeScript）。
+- 跳过：UI 组件库、按需自动导入插件、ESLint/Prettier、Git Hooks、示例性 Axios 拦截器与多余演示模块。
+- 生成：最小的 `vite.config.ts`、基础入口与示例页面，确保开箱即跑。
+
 ---
 
-### 阶段3：配置文件生成（自动执行）
+### 阶段4：配置文件生成（自动执行）
 
 **目标**：生成所有必要的配置文件
 
-#### 3.1 构建工具配置
+#### 4.1 构建工具配置
 
 **vite.config.ts**（Vue 3 + Vite 示例）
 ```typescript
@@ -171,6 +194,7 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 export default defineConfig({
   plugins: [
     vue(),
+    // 当 --ui-lib=element-plus 时启用下列 Resolver；否则删除 resolvers 字段或整段插件
     AutoImport({
       resolvers: [ElementPlusResolver()],
       imports: ['vue', 'vue-router', 'pinia'],
@@ -200,7 +224,7 @@ export default defineConfig({
 })
 ```
 
-#### 3.2 TypeScript 配置
+#### 4.2 TypeScript 配置
 
 **tsconfig.json**
 ```json
@@ -237,7 +261,21 @@ export default defineConfig({
 }
 ```
 
-#### 3.3 代码质量配置
+**tsconfig.node.json**
+```json
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+```
+
+#### 4.3 代码质量配置
 
 **.eslintrc.cjs**
 ```javascript
@@ -297,7 +335,7 @@ dist
 *.d.ts
 ```
 
-#### 3.4 环境变量配置
+#### 4.4 环境变量配置
 
 **.env.development**
 ```
@@ -311,7 +349,7 @@ VITE_API_BASE_URL=https://api.production.com
 VITE_APP_TITLE=My App
 ```
 
-#### 3.5 Git Hooks 配置（可选）
+#### 4.5 Git Hooks 配置（可选）
 
 **package.json** 添加 lint-staged 配置：
 ```json
@@ -342,11 +380,11 @@ module.exports = {
 
 ---
 
-### 阶段4：项目结构搭建（自动执行）
+### 阶段5：项目结构搭建（自动执行）
 
 **目标**：创建标准化的目录结构和核心模块
 
-#### 4.1 创建目录结构
+#### 5.1 创建目录结构
 
 **Vue 3 项目标准结构**：
 ```
@@ -393,33 +431,34 @@ src/
 
 ---
 
-### 阶段5：核心模块实现（自动执行）
+### 阶段6：核心模块实现（自动执行）
 
 **目标**：生成核心功能模块的示例代码
 
-#### 5.1 应用入口
+#### 6.1 应用入口
 
 **src/main.ts**
 ```typescript
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import { createPinia } from 'pinia'
+import pinia from '@/stores'
+// 若未选择 Element Plus，请移除以下两行
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import '@/assets/styles/index.scss'
 
 const app = createApp(App)
-const pinia = createPinia()
 
 app.use(router)
 app.use(pinia)
+// 若未选择 Element Plus，请移除此行
 app.use(ElementPlus)
 
 app.mount('#app')
 ```
 
-#### 5.2 路由配置
+#### 6.2 路由配置
 
 **src/router/index.ts**
 ```typescript
@@ -458,7 +497,7 @@ router.beforeEach((to, from, next) => {
 export default router
 ```
 
-#### 5.3 状态管理
+#### 6.3 状态管理
 
 **src/stores/index.ts**
 ```typescript
@@ -510,7 +549,7 @@ export const useUserStore = defineStore('user', () => {
 })
 ```
 
-#### 5.4 HTTP 请求封装
+#### 6.4 HTTP 请求封装
 
 **src/utils/request.ts**
 ```typescript
@@ -583,7 +622,7 @@ service.interceptors.response.use(
 export default service
 ```
 
-#### 5.5 API 模块示例
+#### 6.5 API 模块示例
 
 **src/api/modules/user.ts**
 ```typescript
@@ -625,7 +664,7 @@ export const userApi = {
 }
 ```
 
-#### 5.6 TypeScript 类型定义
+#### 6.6 TypeScript 类型定义
 
 **src/types/api.d.ts**
 ```typescript
@@ -648,7 +687,7 @@ export interface PageResult<T> {
 }
 ```
 
-#### 5.7 示例页面组件
+#### 6.7 示例页面组件
 
 **src/views/Home.vue**
 ```vue
@@ -685,7 +724,7 @@ const handleClick = () => {
 </style>
 ```
 
-#### 5.8 根组件
+#### 6.8 根组件
 
 **src/App.vue**
 ```vue
@@ -721,7 +760,7 @@ const handleClick = () => {
 
 ---
 
-### 阶段6：Package.json 配置（自动执行）
+### 阶段7：Package.json 配置（自动执行）
 
 **目标**：配置 npm 脚本和项目元信息
 
@@ -745,11 +784,11 @@ const handleClick = () => {
 
 ---
 
-### 阶段7：验证测试（自动执行）
+### 阶段8：验证测试（自动执行）
 
 **目标**：确保项目可以正常启动和构建
 
-#### 7.1 依赖安装验证
+#### 8.1 依赖安装验证
 
 ```bash
 # 检查依赖是否正确安装
@@ -759,7 +798,7 @@ npm list --depth=0
 npm audit
 ```
 
-#### 7.2 TypeScript 类型检查
+#### 8.2 TypeScript 类型检查
 
 ```bash
 npx vue-tsc --noEmit
@@ -769,7 +808,7 @@ npx vue-tsc --noEmit
 - ✅ 无类型错误
 - ✅ 路径别名正常工作
 
-#### 7.3 代码检查
+#### 8.3 代码检查
 
 ```bash
 npm run lint
@@ -779,7 +818,7 @@ npm run lint
 - ✅ 无 ESLint 错误
 - ✅ 代码风格一致
 
-#### 7.4 开发服务器启动
+#### 8.4 开发服务器启动
 
 ```bash
 npm run dev
@@ -790,7 +829,7 @@ npm run dev
 - ✅ 可在浏览器中访问
 - ✅ 热更新正常工作
 
-#### 7.5 生产构建测试
+#### 8.5 生产构建测试
 
 ```bash
 npm run build
@@ -816,11 +855,11 @@ interface ValidationChecks {
 
 ---
 
-### 阶段8：文档生成（自动执行）
+### 阶段9：文档生成（自动执行）
 
 **目标**：生成项目文档和使用说明
 
-#### 8.1 生成 README.md
+#### 9.1 生成 README.md
 
 ```markdown
 # ${PROJECT_NAME}
@@ -894,7 +933,7 @@ src/
 - 文件名使用 kebab-case
 ```
 
-#### 8.2 生成 .claude/project-info.md
+#### 9.2 生成 .claude/project-info.md
 
 记录项目脚手架的详细信息，供后续开发参考：
 - 技术栈版本

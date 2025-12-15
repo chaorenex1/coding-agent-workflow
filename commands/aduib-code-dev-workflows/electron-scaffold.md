@@ -40,7 +40,7 @@
 - `--ui-lib <element-plus|antd|none>`：仅当对应渲染器支持时安装并配置（Vue=Element Plus，React=Ant Design）。
 - `--updater`：仅在启用时生成/接线自动更新模块，并要求 `electron-builder` 的 `publish` 配置有效。
 - `--skip-git`：跳过 Git 初始化与首个提交。
-- `--skip-install`：跳过依赖安装步骤（阶段2）。
+- `--skip-install`：跳过依赖安装步骤（阶段4）。
 - `--minimal`：最简模式；仅安装运行所需核心依赖与最少配置，跳过 UI 库、Linter、Prettier、Git Hooks、Updater、Tray 等可选项。
 
 ---
@@ -52,7 +52,7 @@
 **步骤**：
 1. 解析 CLI 参数，设定默认：`name=electron-app`，`renderer=vue3`，`ui-lib=element-plus`。
 2. 生成配置草案：项目元信息、渲染器、UI 库、功能开关、打包目标等。
-3. 若仍有缺失（如 `appId`、`description`），转入阶段0仅询问未提供项；否则跳过阶段0。
+3. 若仍有缺失（如 `appId`、`description`），转入阶段2仅询问未提供项；否则跳过阶段2。
 4. 记录全局开关状态以驱动后续条件分支。
 
 **输出**：规范化后的配置对象（供后续阶段使用）。
@@ -78,6 +78,7 @@
    - 状态管理（Pinia / Zustand）
    - CSS预处理器（Sass / Less / Tailwind）
    - 国际化（i18n）
+   - 请求库（Axios / Fetch）
 
 3. **功能模块**：
    - 自动更新（electron-updater）
@@ -99,7 +100,7 @@
    - Git Hooks
    - 开发者工具（DevTools）
 
-输出配置摘要并请求确认（若全部从 CLI 提供且校验通过，可直接进入阶段1）
+输出配置摘要并请求确认（若全部从 CLI 提供且校验通过，可直接进入阶段3）
 ```
 
 **质量标准**：
@@ -114,7 +115,7 @@
 
 **目标**：创建 Electron 项目基础结构
 
-#### 1.1 创建项目目录和基础文件
+#### 3.1 创建项目目录和基础文件
 
 ```bash
 # 创建项目目录
@@ -125,7 +126,7 @@ cd <project-name>
 npm init -y
 ```
 
-#### 1.2 初始化 Git（除非指定 --skip-git）
+#### 3.2 初始化 Git（除非指定 --skip-git）
 
 ```bash
 git init
@@ -161,7 +162,7 @@ EOL
 - 若设置 `--skip-install`：跳过整个阶段。
 - 若设置 `--minimal`：仅安装核心运行依赖（Electron、Vite、对应渲染器必须项），跳过 UI 库、ESLint/Prettier、Git Hooks、Updater 等。
 
-#### 2.1 安装 Electron 核心依赖
+#### 4.1 安装 Electron 核心依赖
 
 ```bash
 # Electron 相关
@@ -175,7 +176,7 @@ npm install -D cross-env@latest
 npm install -D wait-on@latest concurrently@latest
 ```
 
-#### 2.2 安装渲染进程依赖（按渲染器分支）
+#### 4.2 安装渲染进程依赖（按渲染器分支）
 
 仅当未启用 `--minimal` 时才安装 UI 库与按需插件。
 
@@ -215,7 +216,7 @@ npm install antd@latest
 npm install -D vite@latest
 ```
 
-#### 2.3 安装 TypeScript 依赖
+#### 4.3 安装 TypeScript 依赖
 
 ```bash
 # TypeScript
@@ -226,7 +227,7 @@ npm install -D vue-tsc  # Vue 项目需要
 npm install -D vite-plugin-electron@latest vite-plugin-electron-renderer@latest
 ```
 
-#### 2.4 安装代码质量工具
+#### 4.4 安装代码质量工具
 
 ```bash
 # ESLint + Prettier
@@ -238,7 +239,7 @@ npm install -D eslint-plugin-vue@latest  # Vue 项目需要
 npm install -D husky@latest lint-staged@latest @commitlint/cli@latest @commitlint/config-conventional@latest
 ```
 
-#### 2.5 安装自动更新依赖（如果需要）
+#### 4.5 安装自动更新依赖（如果需要）
 
 ```bash
 # 仅当启用 --updater 时
@@ -251,7 +252,7 @@ npm install electron-updater@latest
 - ✅ 开发工具依赖安装成功
 - ✅ package.json 包含正确的依赖列表
 
-#### 2.6 最简模式说明（当 --minimal）
+#### 4.6 最简模式说明（当 --minimal）
 
 - 保留：`electron`、`vite`、渲染器核心依赖（Vue/React 基础包或仅 Vite）、`vite-plugin-electron` 基础集成。
 - 跳过：UI 组件库、`unplugin-*`、ESLint/Prettier、Git Hooks、`electron-updater`、系统托盘与菜单增强等可选项。
@@ -263,7 +264,7 @@ npm install electron-updater@latest
 
 **目标**：生成所有必要的配置文件
 
-#### 3.0 占位符与项目元信息（自动执行）
+#### 5.0 占位符与项目元信息（自动执行）
 
 生成文件前，替换以下占位符：
 - `${PROJECT_NAME}`：项目名（来源：`--name`）。
@@ -275,7 +276,7 @@ npm install electron-updater@latest
 
 ---
 
-#### 3.1 Vite 配置（按渲染器分支）
+#### 5.1 Vite 配置（按渲染器分支）
 
 — Vue 3 配置（`vite.config.ts`）
 ```typescript
@@ -395,7 +396,7 @@ export default defineConfig({
 })
 ```
 
-#### 3.2 TypeScript 配置
+#### 5.2 TypeScript 配置
 
 **tsconfig.json**
 ```json
@@ -453,7 +454,7 @@ export default defineConfig({
 }
 ```
 
-#### 3.3 Electron Builder 配置
+#### 5.3 Electron Builder 配置
 
 **electron-builder.json5**
 ```json5
@@ -507,7 +508,7 @@ export default defineConfig({
 }
 ```
 
-#### 3.4 ESLint 配置
+#### 5.4 ESLint 配置
 
 **.eslintrc.cjs**
 ```javascript
@@ -548,7 +549,7 @@ module.exports = {
 }
 ```
 
-#### 3.5 Prettier 配置
+#### 5.5 Prettier 配置
 
 **.prettierrc.json**
 ```json
@@ -563,7 +564,7 @@ module.exports = {
 }
 ```
 
-#### 3.6 环境变量配置
+#### 5.6 环境变量配置
 
 **.env.development**
 ```env
@@ -581,7 +582,7 @@ VITE_APP_TITLE=My Electron App
 - ✅ Electron 安全配置启用
 - ✅ 路径别名配置正确
 
-#### 3.7 首次提交（自动执行）
+#### 5.7 首次提交（自动执行）
 
 完成阶段5全部文件生成后再提交，避免早期提交含大量空内容。
 
@@ -598,7 +599,7 @@ git commit -m "chore: scaffold: configs and structure"
 
 **目标**：创建 Electron 标准化的目录结构
 
-#### 4.1 创建目录结构
+#### 6.1 创建目录结构
 
 ```
 项目根目录/
@@ -660,7 +661,7 @@ git commit -m "chore: scaffold: configs and structure"
 
 **目标**：生成 Electron 核心功能模块
 
-#### 5.1 主进程入口
+#### 7.1 主进程入口
 
 **electron/main.ts**
 ```typescript
@@ -751,7 +752,7 @@ app.on('web-contents-created', (_, contents) => {
 })
 ```
 
-#### 5.2 预加载脚本（安全桥接）
+#### 7.2 预加载脚本（安全桥接）
 
 **electron/preload.ts**
 ```typescript
@@ -815,7 +816,7 @@ export type ElectronAPI = {
 }
 ```
 
-#### 5.3 窗口管理
+#### 7.3 窗口管理
 
 **electron/windows/MainWindow.ts**
 ```typescript
@@ -858,7 +859,7 @@ export { createMainWindow } from './MainWindow'
 // export { createSettingsWindow } from './SettingsWindow'
 ```
 
-#### 5.4 IPC 通信处理器
+#### 7.4 IPC 通信处理器
 
 **electron/ipc/index.ts**
 ```typescript
@@ -975,7 +976,7 @@ export function setupSystemHandlers() {
 }
 ```
 
-#### 5.5 菜单配置
+#### 7.5 菜单配置
 
 **electron/menu/index.ts**
 ```typescript
@@ -1078,7 +1079,7 @@ export function createMenu() {
 }
 ```
 
-#### 5.6 系统托盘（可选）
+#### 7.6 系统托盘（可选）
 
 **electron/tray/index.ts**
 ```typescript
@@ -1118,7 +1119,7 @@ export function createTray(mainWindow: BrowserWindow) {
 }
 ```
 
-#### 5.7 自动更新（可选）
+#### 7.7 自动更新（可选）
 
 **electron/updater/index.ts**
 ```typescript
@@ -1161,7 +1162,7 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
 
 仅当传入 `--updater` 且 `electron-builder.json5` 已配置有效 `publish` 信息时启用。在主进程中以条件方式接线，例如：在 `app.whenReady()` 后判断开关再调用 `setupAutoUpdater(mainWindow)`。
 
-#### 5.8 渲染进程入口
+#### 7.8 渲染进程入口
 
 **src/main.ts**
 ```typescript
@@ -1184,7 +1185,7 @@ app.use(ElementPlus)
 app.mount('#app')
 ```
 
-#### 5.9 Electron API 类型定义
+#### 7.9 Electron API 类型定义
 
 **src/types/electron.d.ts**
 ```typescript
@@ -1199,7 +1200,7 @@ declare global {
 export {}
 ```
 
-#### 5.10 示例页面
+#### 7.10 示例页面
 
 **src/views/Home.vue**
 ```vue
@@ -1450,7 +1451,7 @@ interface ValidationChecks {
 
 **目标**：生成项目文档
 
-#### 8.1 生成 README.md
+#### 10.1 生成 README.md
 
 ```markdown
 # ${PROJECT_NAME}
