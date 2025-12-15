@@ -34,9 +34,34 @@
 
 ## 工作流程
 
-### 阶段0：需求确认（交互式）
+### 全局条件控制（重要）
 
-**目标**：确认 Electron 项目配置细节
+- `--renderer <vue3|react|vanilla>`：按渲染器分支生成依赖与配置、示例代码。
+- `--ui-lib <element-plus|antd|none>`：仅当对应渲染器支持时安装并配置（Vue=Element Plus，React=Ant Design）。
+- `--updater`：仅在启用时生成/接线自动更新模块，并要求 `electron-builder` 的 `publish` 配置有效。
+- `--skip-git`：跳过 Git 初始化与首个提交。
+- `--skip-install`：跳过依赖安装步骤（阶段2）。
+- `--minimal`：最简模式；仅安装运行所需核心依赖与最少配置，跳过 UI 库、Linter、Prettier、Git Hooks、Updater、Tray 等可选项。
+
+---
+
+### 阶段1：参数解析（自动执行）
+
+**目标**：合并命令行参数与默认值，并决定是否进入交互式补全。
+
+**步骤**：
+1. 解析 CLI 参数，设定默认：`name=electron-app`，`renderer=vue3`，`ui-lib=element-plus`。
+2. 生成配置草案：项目元信息、渲染器、UI 库、功能开关、打包目标等。
+3. 若仍有缺失（如 `appId`、`description`），转入阶段0仅询问未提供项；否则跳过阶段0。
+4. 记录全局开关状态以驱动后续条件分支。
+
+**输出**：规范化后的配置对象（供后续阶段使用）。
+
+---
+
+### 阶段2：需求确认（交互式）
+
+**目标**：确认 Electron 项目配置细节（仅补齐缺失项；若参数已完整则自动跳过）
 
 ```
 与用户确认以下信息：
@@ -48,9 +73,11 @@
    - 应用 ID（如：com.company.appname）
 
 2. **渲染进程技术栈**：
-   - 框架选择（Vue 3 / React / Vanilla）
-   - UI 组件库（Element Plus / Ant Design / 无）
-   - 状态管理（Pinia / Zustand / 无）
+   - 框架选择（Vue 3 / React）
+   - UI 组件库（Element Plus / Ant Design）
+   - 状态管理（Pinia / Zustand）
+   - CSS预处理器（Sass / Less / Tailwind）
+   - 国际化（i18n）
 
 3. **功能模块**：
    - 自动更新（electron-updater）
@@ -72,7 +99,7 @@
    - Git Hooks
    - 开发者工具（DevTools）
 
-输出配置摘要并请求确认
+输出配置摘要并请求确认（若全部从 CLI 提供且校验通过，可直接进入阶段1）
 ```
 
 **质量标准**：
@@ -83,7 +110,7 @@
 
 ---
 
-### 阶段1：项目初始化（自动执行）
+### 阶段3：项目初始化（自动执行）
 
 **目标**：创建 Electron 项目基础结构
 
@@ -116,77 +143,106 @@ release
 *.dmg
 *.AppImage
 EOL
-
-git add .
-git commit -m "chore: initial commit"
 ```
 
 **检查点**：
 - ✅ 项目目录已创建
 - ✅ package.json 已初始化
 - ✅ Git 仓库已初始化（如果需要）
+- ℹ️ 建议在阶段5（配置文件生成）完成后再进行首次提交
 
 ---
 
-### 阶段2：依赖安装（自动执行）
+### 阶段4：依赖安装（自动执行）
 
 **目标**：安装 Electron 和渲染进程所需的依赖
+
+**条件执行**：
+- 若设置 `--skip-install`：跳过整个阶段。
+- 若设置 `--minimal`：仅安装核心运行依赖（Electron、Vite、对应渲染器必须项），跳过 UI 库、ESLint/Prettier、Git Hooks、Updater 等。
 
 #### 2.1 安装 Electron 核心依赖
 
 ```bash
 # Electron 相关
-npm install electron
-npm install -D electron-builder
+npm install electron@latest
+npm install -D electron-builder@latest
 
 # 跨平台工具
-npm install -D cross-env
+npm install -D cross-env@latest
 
 # 开发工具
-npm install -D wait-on concurrently
+npm install -D wait-on@latest concurrently@latest
 ```
 
-#### 2.2 安装渲染进程依赖（Vue 3 示例）
+#### 2.2 安装渲染进程依赖（按渲染器分支）
+
+仅当未启用 `--minimal` 时才安装 UI 库与按需插件。
+
+— Vue 3：
 
 ```bash
 # Vue 3 核心
-npm install vue vue-router pinia
+npm install vue@latest vue-router@latest pinia@latest
 
 # 构建工具
-npm install -D vite @vitejs/plugin-vue
+npm install -D vite@latest @vitejs/plugin-vue@latest
 
 # UI 组件库（如果选择）
-npm install element-plus @element-plus/icons-vue
-npm install -D unplugin-vue-components unplugin-auto-import
+## 当 ui-lib=element-plus 时
+npm install element-plus@latest @element-plus/icons-vue@latest
+npm install -D unplugin-vue-components@latest unplugin-auto-import@latest
+```
+
+— React：
+
+```bash
+# React 核心
+npm install react@latest react-dom@latest
+
+# 构建工具
+npm install -D vite@latest @vitejs/plugin-react@latest
+
+# UI 组件库（如果选择）
+## 当 ui-lib=antd 时
+npm install antd@latest
+```
+
+— Vanilla：
+
+```bash
+# 仅使用 Vite 提供的静态资源构建
+npm install -D vite@latest
 ```
 
 #### 2.3 安装 TypeScript 依赖
 
 ```bash
 # TypeScript
-npm install -D typescript @types/node @types/electron
+npm install -D typescript@latest @types/node@latest @types/electron@latest
 npm install -D vue-tsc  # Vue 项目需要
 
 # Electron Vite 插件
-npm install -D vite-plugin-electron vite-plugin-electron-renderer
+npm install -D vite-plugin-electron@latest vite-plugin-electron-renderer@latest
 ```
 
 #### 2.4 安装代码质量工具
 
 ```bash
 # ESLint + Prettier
-npm install -D eslint prettier eslint-config-prettier eslint-plugin-prettier
-npm install -D @typescript-eslint/eslint-plugin @typescript-eslint/parser
-npm install -D eslint-plugin-vue  # Vue 项目需要
+npm install -D eslint@latest prettier@latest eslint-config-prettier@latest eslint-plugin-prettier@latest
+npm install -D @typescript-eslint/eslint-plugin@latest @typescript-eslint/parser@latest
+npm install -D eslint-plugin-vue@latest  # Vue 项目需要
 
 # Git Hooks（可选）
-npm install -D husky lint-staged @commitlint/cli @commitlint/config-conventional
+npm install -D husky@latest lint-staged@latest @commitlint/cli@latest @commitlint/config-conventional@latest
 ```
 
 #### 2.5 安装自动更新依赖（如果需要）
 
 ```bash
-npm install electron-updater
+# 仅当启用 --updater 时
+npm install electron-updater@latest
 ```
 
 **检查点**：
@@ -195,15 +251,33 @@ npm install electron-updater
 - ✅ 开发工具依赖安装成功
 - ✅ package.json 包含正确的依赖列表
 
+#### 2.6 最简模式说明（当 --minimal）
+
+- 保留：`electron`、`vite`、渲染器核心依赖（Vue/React 基础包或仅 Vite）、`vite-plugin-electron` 基础集成。
+- 跳过：UI 组件库、`unplugin-*`、ESLint/Prettier、Git Hooks、`electron-updater`、系统托盘与菜单增强等可选项。
+- 生成：最小的 `vite.config`、主进程与预加载脚本、单页渲染入口与简单示例。
+
 ---
 
-### 阶段3：配置文件生成（自动执行）
+### 阶段5：配置文件生成（自动执行）
 
 **目标**：生成所有必要的配置文件
 
-#### 3.1 Vite 配置（主进程 + 渲染进程）
+#### 3.0 占位符与项目元信息（自动执行）
 
-**vite.config.ts**
+生成文件前，替换以下占位符：
+- `${PROJECT_NAME}`：项目名（来源：`--name`）。
+- `${APP_ID}`：应用唯一 ID（来源：阶段0/参数）。
+- `${PRODUCT_NAME}`：产品名；默认与项目名一致，可独立设置。
+- `${PUBLISH_OWNER}` / `${PUBLISH_REPO}`：自动更新发布仓库信息（启用 `--updater` 时要求）。
+
+替换范围：`package.json`、`electron-builder.json5`、`README.md`、示例代码与配置文件注释中涉及到的占位字段。
+
+---
+
+#### 3.1 Vite 配置（按渲染器分支）
+
+— Vue 3 配置（`vite.config.ts`）
 ```typescript
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -222,6 +296,10 @@ export default defineConfig({
       {
         // 主进程入口文件
         entry: 'electron/main.ts',
+        onstart(options) {
+          // 启动 Electron 主进程
+          options.startup(['electron', '.'])
+        },
         vite: {
           build: {
             outDir: 'dist-electron',
@@ -246,6 +324,7 @@ export default defineConfig({
       }
     ]),
     renderer(),
+    // 下方两个插件仅在 ui-lib=element-plus 时启用；若未选择 UI 库请删除
     AutoImport({
       resolvers: [ElementPlusResolver()],
       imports: ['vue', 'vue-router', 'pinia'],
@@ -269,6 +348,50 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+})
+```
+
+— React 配置（`vite.config.ts`）
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import electron from 'vite-plugin-electron'
+import renderer from 'vite-plugin-electron-renderer'
+import { resolve } from 'path'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    electron([
+      { entry: 'electron/main.ts', onstart: (o) => o.startup(['electron', '.']), vite: { build: { outDir: 'dist-electron', rollupOptions: { external: ['electron'] } } } },
+      { entry: 'electron/preload.ts', onstart: (o) => o.reload(), vite: { build: { outDir: 'dist-electron' } } }
+    ]),
+    renderer()
+  ],
+  resolve: { alias: { '@': resolve(__dirname, 'src'), '@electron': resolve(__dirname, 'electron') } },
+  server: { port: 5173 },
+  build: { outDir: 'dist', emptyOutDir: true }
+})
+```
+
+— Vanilla 配置（`vite.config.ts`）
+```typescript
+import { defineConfig } from 'vite'
+import electron from 'vite-plugin-electron'
+import renderer from 'vite-plugin-electron-renderer'
+import { resolve } from 'path'
+
+export default defineConfig({
+  plugins: [
+    electron([
+      { entry: 'electron/main.ts', onstart: (o) => o.startup(['electron', '.']), vite: { build: { outDir: 'dist-electron', rollupOptions: { external: ['electron'] } } } },
+      { entry: 'electron/preload.ts', onstart: (o) => o.reload(), vite: { build: { outDir: 'dist-electron' } } }
+    ]),
+    renderer()
+  ],
+  resolve: { alias: { '@': resolve(__dirname, 'src'), '@electron': resolve(__dirname, 'electron') } },
+  server: { port: 5173 },
+  build: { outDir: 'dist', emptyOutDir: true }
 })
 ```
 
@@ -335,8 +458,8 @@ export default defineConfig({
 **electron-builder.json5**
 ```json5
 {
-  "appId": "com.example.app",
-  "productName": "MyElectronApp",
+  "appId": "${APP_ID}",
+  "productName": "${PRODUCT_NAME}",
   "directories": {
     "output": "release/${version}"
   },
@@ -378,8 +501,8 @@ export default defineConfig({
   },
   "publish": {
     "provider": "github",
-    "owner": "your-github-username",
-    "repo": "your-repo-name"
+    "owner": "${PUBLISH_OWNER}",
+    "repo": "${PUBLISH_REPO}"
   }
 }
 ```
@@ -458,9 +581,20 @@ VITE_APP_TITLE=My Electron App
 - ✅ Electron 安全配置启用
 - ✅ 路径别名配置正确
 
+#### 3.7 首次提交（自动执行）
+
+完成阶段5全部文件生成后再提交，避免早期提交含大量空内容。
+
+```bash
+git add .
+git commit -m "chore: scaffold: configs and structure"
+```
+
+若指定 `--skip-git`，跳过本步骤。
+
 ---
 
-### 阶段4：项目结构搭建（自动执行）
+### 阶段6：项目结构搭建（自动执行）
 
 **目标**：创建 Electron 标准化的目录结构
 
@@ -522,7 +656,7 @@ VITE_APP_TITLE=My Electron App
 
 ---
 
-### 阶段5：核心模块实现（自动执行）
+### 阶段7：核心模块实现（自动执行）
 
 **目标**：生成 Electron 核心功能模块
 
@@ -601,15 +735,18 @@ app.on('before-quit', () => {
 // 阻止导航到外部 URL（安全措施）
 app.on('web-contents-created', (_, contents) => {
   contents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl)
-    
-    // 只允许导航到本地文件或开发服务器
-    if (
-      parsedUrl.origin !== 'file://' &&
-      parsedUrl.origin !== VITE_DEV_SERVER_URL
-    ) {
-      event.preventDefault()
-    }
+    const url = new URL(navigationUrl)
+    const isDev = Boolean(VITE_DEV_SERVER_URL)
+    const allow = url.protocol === 'file:' || (isDev && url.origin === new URL(VITE_DEV_SERVER_URL as string).origin)
+    if (!allow) event.preventDefault()
+  })
+
+  // 拦截 window.open 并限制外部链接
+  contents.setWindowOpenHandler(({ url }) => {
+    const target = new URL(url)
+    const isDev = Boolean(VITE_DEV_SERVER_URL)
+    const allow = target.protocol === 'file:' || (isDev && target.origin === new URL(VITE_DEV_SERVER_URL as string).origin)
+    return allow ? { action: 'allow' } : { action: 'deny' }
   })
 })
 ```
@@ -695,7 +832,7 @@ export function createMainWindow(): BrowserWindow {
     frame: true, // 使用系统标题栏
     backgroundColor: '#ffffff',
     webPreferences: {
-      preload: join(__dirname, 'preload.js'),
+      preload: join(__dirname, '../preload.js'),
       // 安全设置
       nodeIntegration: false, // 禁用 Node.js 集成
       contextIsolation: true, // 启用上下文隔离
@@ -989,13 +1126,6 @@ import { autoUpdater } from 'electron-updater'
 import { BrowserWindow } from 'electron'
 
 export function setupAutoUpdater(mainWindow: BrowserWindow) {
-  // 配置更新服务器
-  autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'your-github-username',
-    repo: 'your-repo-name',
-  })
-
   // 检查更新时不自动下载
   autoUpdater.autoDownload = false
 
@@ -1024,10 +1154,12 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
     console.error('Update error:', error)
   })
 
-  // 启动时检查更新
-  autoUpdater.checkForUpdates()
+  // 启动时检查更新（依赖 electron-builder 的 publish 配置）
+  autoUpdater.checkForUpdatesAndNotify().catch((e) => console.error(e))
 }
 ```
+
+仅当传入 `--updater` 且 `electron-builder.json5` 已配置有效 `publish` 信息时启用。在主进程中以条件方式接线，例如：在 `app.whenReady()` 后判断开关再调用 `setupAutoUpdater(mainWindow)`。
 
 #### 5.8 渲染进程入口
 
@@ -1037,6 +1169,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import { createPinia } from 'pinia'
+// 若未选择 Element Plus，请移除以下两行
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
@@ -1045,6 +1178,7 @@ const pinia = createPinia()
 
 app.use(router)
 app.use(pinia)
+// 若未选择 Element Plus，请移除此行
 app.use(ElementPlus)
 
 app.mount('#app')
@@ -1178,10 +1312,13 @@ const handleShowNotification = () => {
 
 ---
 
-### 阶段6：Package.json 配置（自动执行）
+### 阶段8：Package.json 配置（自动执行）
 
 **目标**：配置 npm 脚本和项目元信息
 
+根据渲染器选择脚本。以下为两套常用示例：
+
+— Vue 3：
 **package.json**
 ```json
 {
@@ -1206,6 +1343,31 @@ const handleShowNotification = () => {
 }
 ```
 
+— React：
+**package.json**
+```json
+{
+  "name": "electron-app",
+  "version": "1.0.0",
+  "description": "Electron + React + TypeScript Application",
+  "main": "dist-electron/main.js",
+  "author": "Your Name",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build && electron-builder",
+    "build:win": "tsc -p tsconfig.json --noEmit && vite build && electron-builder --win",
+    "build:mac": "tsc -p tsconfig.json --noEmit && vite build && electron-builder --mac",
+    "build:linux": "tsc -p tsconfig.json --noEmit && vite build && electron-builder --linux",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .jsx,.tsx,.js,.ts --fix",
+    "format": "prettier --write .",
+    "electron:dev": "vite",
+    "electron:build": "tsc -p tsconfig.json --noEmit && vite build"
+  }
+}
+```
+
 **检查点**：
 - ✅ 所有脚本配置正确
 - ✅ main 字段指向主进程入口
@@ -1213,11 +1375,11 @@ const handleShowNotification = () => {
 
 ---
 
-### 阶段7：验证测试（自动执行）
+### 阶段9：验证测试（自动执行）
 
 **目标**：确保 Electron 应用可以正常运行
 
-#### 7.1 TypeScript 类型检查
+#### 9.1 TypeScript 类型检查
 
 ```bash
 npx vue-tsc --noEmit
@@ -1227,7 +1389,7 @@ npx vue-tsc --noEmit
 - ✅ 无类型错误
 - ✅ Electron API 类型正确
 
-#### 7.2 代码检查
+#### 9.2 代码检查
 
 ```bash
 npm run lint
@@ -1237,7 +1399,7 @@ npm run lint
 - ✅ 无 ESLint 错误
 - ✅ 代码风格一致
 
-#### 7.3 开发模式测试
+#### 9.3 开发模式测试
 
 ```bash
 npm run dev
@@ -1250,7 +1412,7 @@ npm run dev
 - ✅ IPC 通信正常工作
 - ✅ 热重载功能正常
 
-#### 7.4 生产构建测试
+#### 9.4 生产构建测试
 
 ```bash
 npm run build
@@ -1261,6 +1423,13 @@ npm run build
 - ✅ 主进程打包成功
 - ✅ Electron Builder 打包成功
 - ✅ 生成安装包（.exe/.dmg/.AppImage）
+
+#### 9.5 失败处理策略
+
+- **类型检查失败**：输出详细错误并中止；询问是否尝试自动降级严格性或继续后续阶段（默认中止）。
+- **Lint 失败**：自动运行 `--fix`，若仍失败则报告并继续或中止由用户确认（默认继续）。
+- **构建/打包失败**：中止流程并输出 `vite`/`electron-builder` 日志摘要与定位建议。
+- **依赖安装失败**：提示代理/网络与镜像源配置建议；支持重试或跳过（默认重试一次）。
 
 **质量门禁**：
 ```typescript
@@ -1277,7 +1446,7 @@ interface ValidationChecks {
 
 ---
 
-### 阶段8：文档生成（自动执行）
+### 阶段10：文档生成（自动执行）
 
 **目标**：生成项目文档
 
@@ -1544,10 +1713,10 @@ MIT
 ## 错误处理
 
 如果在任何阶段遇到错误：
-1. 立即停止流程
-2. 输出详细错误信息
-3. 提供具体的修复建议
-4. 询问用户是否继续
+1. 根据阶段9.5的策略决定“自动修复/重试/中止/继续”。
+2. 输出详细错误信息与定位建议（附相关日志片段）。
+3. 当错误可绕过（如 Lint）时，允许在记录风险的前提下继续。
+4. 支持在恢复后从最近成功阶段断点续跑。
 
 ## 扩展功能
 
