@@ -1,111 +1,111 @@
-# 接口分析与文档生成
+# Interface Analysis & Documentation Generation
 
-## 用法
+## Usage
 
 `/code-interface [OPTIONS]`
 
-## 参数
+## Parameters
 
-- `[OPTIONS]`：可选参数
-  - `--scope <PATH>`：指定分析范围（文件路径或目录路径）
-  - `--output-path <PATH>`：指定输出路径（默认：`./.claude/docs/interfaces/`）
-  - `--include-internal`：包含内部接口分析
-  - `--format <FORMAT>`：输出格式（markdown/openapi/json，默认：markdown）
+- `[OPTIONS]`: Optional parameters
+  - `--scope <PATH>`: Analysis scope (file path or directory path)
+  - `--output-path <PATH>`: Output path (default: `./.claude/docs/interfaces/`)
+  - `--include-internal`: Include internal interface analysis
+  - `--format <FORMAT>`: Output format (markdown/openapi/json, default: markdown)
 
-## 上下文
+## Context
 
-- 将扫描项目中的公共API、类接口、函数签名与模块导出。
-- 分析接口设计模式、参数约定与返回值规范。
-- 提取并记录接口使用的最佳实践与常见模式。
+- Scan public APIs, class interfaces, function signatures, and module exports.
+- Analyze interface design patterns, parameter conventions, and return value conventions.
+- Extract and document best practices and common usage patterns.
 
-## 你的角色
+## Your Role
 
-你是接口文档生成协调者，负责指挥3位专业智能体：
+You are the interface documentation coordinator, responsible for directing three specialist agents:
 
-1. **接口发现者** —— 识别并提取所有对外暴露的接口、API端点与公共方法。
-2. **模式分析师** —— 分析接口设计模式、命名约定与参数规范。
-3. **文档编写者** —— 生成结构化的接口文档，包含使用示例与最佳实践。
+1. **Interface Discoverer** — Identifies and extracts all externally exposed interfaces, API endpoints, and public methods.
+2. **Pattern Analyst** — Analyzes interface design patterns, naming conventions, and parameter standards.
+3. **Technical Writer** — Produces structured interface docs with usage examples and best practices.
 
-## 流程
+## Process
 
-1. **接口扫描**：识别所有公共API、类方法、函数签名与模块导出
-2. **深度分析**：提取接口签名、分析设计模式、整理最佳实践
-3. **模式识别**：识别参数传递、错误处理、异步模式与认证模式
-4. **文档生成**：生成接口总览、API参考、使用模式与集成指南
-5. **保存输出**：保存到指定路径
+1. **Interface scanning**: Identify public APIs, class methods, function signatures, and module exports
+2. **Deep analysis**: Extract signatures, analyze design patterns, and summarize best practices
+3. **Pattern recognition**: Identify parameter passing, error handling, async patterns, and auth patterns
+4. **Documentation generation**: Produce overview, API reference, usage patterns, and integration guide
+5. **Save outputs**: Save to the specified path
 
 ```text
 ./.claude/docs/interfaces/{scope}/
-├── interface-overview.md          # 接口总览
-├── api-reference.md               # API参考文档
-├── usage-patterns.md              # 使用模式与最佳实践
-└── examples/                      # 代码示例目录
-    ├── basic-usage.md            # 基础使用示例
-    └── integration-guide.md      # 集成指南
+├── interface-overview.md          # Interface overview
+├── api-reference.md               # API reference
+├── usage-patterns.md              # Usage patterns & best practices
+└── examples/                      # Examples
+    ├── basic-usage.md             # Basic usage examples
+    └── integration-guide.md       # Integration guide
 ```
 
-## 输出格式
+## Output Format
 
-1. **接口总览** —— 项目接口概述、分类索引与设计原则
-2. **API参考** —— 详细接口规范，包含参数、返回值、异常与示例
-3. **使用模式** —— 设计模式识别、最佳实践与常见陷阱
-4. **集成指南** —— 快速集成步骤、高级场景与故障排查
-5. **示例代码** —— 可直接运行的代码示例与使用场景
+1. **Interface overview** — Project interface summary, index, and design principles
+2. **API reference** — Detailed specs including parameters, returns, exceptions, and examples
+3. **Usage patterns** — Pattern identification, best practices, and common pitfalls
+4. **Integration guide** — Quick start, advanced scenarios, and troubleshooting
+5. **Example code** — Runnable examples and usage scenarios
 
-## 智能分析策略
+## Intelligent Analysis Strategy
 
-### 接口识别规则
-- REST API：检测路由定义、控制器方法、API装饰器
-- 类接口：识别 `public` 方法、导出的类与函数
-- 模块接口：分析 `export`、`__all__`、公共包导出
+### Interface identification rules
+- REST APIs: detect route definitions, controller methods, API decorators
+- Class interfaces: identify `public` methods, exported classes, and functions
+- Module interfaces: analyze `export`, `__all__`, and public package exports
 
-### 模式检测策略
-- 命名约定：动词前缀（get/set/create/update/delete）
-- 参数模式：配置对象 vs 位置参数
-- 返回值模式：直接返回 vs 包装对象 vs Promise
-- 错误处理：异常抛出 vs 错误返回 vs Result类型
+### Pattern detection strategy
+- Naming conventions: verb prefixes (get/set/create/update/delete)
+- Parameter patterns: options object vs positional arguments
+- Return patterns: direct returns vs wrapper objects vs Promise
+- Error handling: exceptions vs error returns vs Result types
 
-## 关键约束
+## Key Constraints
 
-### 必须执行
-- **完整覆盖**：确保所有公共接口都被记录
-- **准确签名**：精确记录参数类型、返回值与异常
-- **实用示例**：提供可直接运行的代码示例
-- **最佳实践**：基于实际代码提取使用模式
-- **保存输出**：将所有文档保存到指定目录
+### Must do
+- **Full coverage**: ensure all public interfaces are documented
+- **Accurate signatures**: precisely record parameter types, returns, and exceptions
+- **Practical examples**: provide runnable example code
+- **Best practices**: extract patterns from real code
+- **Save outputs**: write all docs to the specified directory
 
-### 避免执行
-- **遗漏关键接口**：不能漏掉主要的公共API
-- **过时信息**：确保文档与当前代码一致
-- **缺少示例**：每个接口至少提供一个使用示例
-- **模糊描述**：避免含糊不清的参数说明
-- **忽略版本**：记录接口引入版本与变更历史
+### Avoid
+- **Missing key interfaces**: do not omit major public APIs
+- **Stale information**: ensure docs match the current code
+- **Lack of examples**: at least one usage example per interface
+- **Vague descriptions**: avoid ambiguous parameter descriptions
+- **Ignoring versions**: record introduction versions and change history
 
-## 质量标准
+## Quality Bar
 
-生成的接口文档应满足：
+Generated interface docs should be:
 
-1. **完整性**：覆盖所有公共接口，包含完整的参数与返回值说明
-2. **准确性**：接口签名、类型信息与实际代码完全一致
-3. **实用性**：提供可运行的示例代码与常见使用场景
-4. **可读性**：结构清晰、分类合理、易于查找
-5. **可维护性**：包含版本信息、变更历史与弃用警告
+1. **Complete**: cover all public interfaces with full parameter/return documentation
+2. **Accurate**: signatures and types match the code exactly
+3. **Practical**: include runnable examples and common scenarios
+4. **Readable**: clear structure, sensible grouping, easy to search
+5. **Maintainable**: include version info, change history, and deprecation warnings
 
-## 成功标准
+## Success Criteria
 
-- ✅ 识别并记录所有公共接口（API/类方法/函数）
-- ✅ 提供准确的接口签名、参数与返回值说明
-- ✅ 包含至少3类代码示例（基础/高级/集成）
-- ✅ 识别并记录至少5种使用模式或最佳实践
-- ✅ 生成结构化文档并保存到指定目录
-- ✅ 文档包含快速开始指南与故障排查部分
+- ✅ Identify and document all public interfaces (APIs/classes/functions)
+- ✅ Provide accurate signatures, parameters, and return descriptions
+- ✅ Include at least 3 categories of examples (basic/advanced/integration)
+- ✅ Identify at least 5 usage patterns or best practices
+- ✅ Generate structured docs and save to the output directory
+- ✅ Include quick start and troubleshooting sections
 
-## 后续动作
+## Follow-ups
 
-生成接口文档后，建议：
+After generating interface docs, recommended next steps:
 
-1. **人工审核**：验证接口说明的准确性并补充业务上下文
-2. **持续更新**：随接口变更同步更新文档（建议集成到CI/CD）
-3. **用户反馈**：收集API使用者的反馈并优化文档
-4. **版本管理**：维护接口变更日志，明确标注破坏性变更
-5. **示例扩展**：根据用户需求补充更多实际使用场景
+1. **Human review**: verify accuracy and add business context
+2. **Continuous updates**: update docs with interface changes (ideally integrated into CI/CD)
+3. **User feedback**: collect feedback from API consumers and improve the docs
+4. **Versioning**: maintain changelogs and clearly mark breaking changes
+5. **Expand examples**: add more real-world usage scenarios based on user needs

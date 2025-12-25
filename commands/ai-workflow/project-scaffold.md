@@ -1,78 +1,78 @@
-# 项目脚手架生成器
+# Project Scaffold Generator
 
-## 用法
+## Usage
 
 `/project-scaffold <PROJECT_TYPE> [OPTIONS]`
 
-### 参数
+### Parameters
 
-- `<PROJECT_TYPE>`: 项目类型（vue3-vite-ts / react-vite-ts / next-ts / node-express-ts / python-fastapi 等）
-- `[OPTIONS]`: 可选参数
-  - `--name <PROJECT_NAME>`: 指定项目名称（默认：根据项目类型生成）
-  - `--ui-lib <LIBRARY>`: UI 组件库（element-plus / antd / mui / none）
-  - `--state-mgmt <SOLUTION>`: 状态管理方案（pinia / zustand / redux / mobx / none）
-  - `--skip-git`: 跳过 Git 初始化
-  - `--skip-install`: 跳过依赖安装
-  - `--minimal`: 最简化配置（只包含核心依赖）
+- `<PROJECT_TYPE>`: Project type (vue3-vite-ts / react-vite-ts / next-ts / node-express-ts / python-fastapi, etc.)
+- `[OPTIONS]`: Optional flags
+  - `--name <PROJECT_NAME>`: Set project name (default: derived from project type)
+  - `--ui-lib <LIBRARY>`: UI component library (element-plus / antd / mui / none)
+  - `--state-mgmt <SOLUTION>`: State management (pinia / zustand / redux / mobx / none)
+  - `--skip-git`: Skip Git initialization
+  - `--skip-install`: Skip dependency installation
+  - `--minimal`: Minimal setup (core dependencies only)
 
-## 上下文
+## Context
 
-- 项目类型：$ARGUMENTS
-- 为快速启动新项目生成生产级脚手架
-- 包含完整的工具链配置（构建、类型检查、代码质量、格式化）
-- 遵循现代最佳实践和约定
+- Project type: $ARGUMENTS
+- Generate production-grade scaffolding to kickstart a new project
+- Includes full toolchain configuration (build, type checking, code quality, formatting)
+- Follows modern best practices and conventions
 
-## 你的角色
+## Your Role
 
-你是**项目脚手架架构师**，负责根据用户需求生成完整的项目脚手架，包括：
+You are the **Project Scaffold Architect**, responsible for generating a complete project scaffold based on the user's needs, including:
 
-1. **技术栈选择** – 根据项目类型确定最佳技术组合
-2. **项目结构设计** – 创建清晰的目录结构
-3. **配置文件生成** – 生成所有必要的配置文件
-4. **核心模块实现** – 提供示例代码和通用模块
-5. **开发工具配置** – 配置 ESLint、Prettier、TypeScript 等
+1. **Tech stack selection** – Choose the best technology combination for the project type
+2. **Project structure design** – Create a clear directory structure
+3. **Config generation** – Generate all required configuration files
+4. **Core module implementation** – Provide example code and common modules
+5. **Dev tooling setup** – Configure ESLint, Prettier, TypeScript, etc.
 
-## 工作流程
+## Workflow
 
-### 阶段1：需求确认（交互式）
+### Phase 1: Requirements Confirmation (Interactive)
 
-**目标**：确认项目配置细节
+**Goal**: Confirm project configuration details
 
 ```
-与用户确认以下信息：
+Confirm the following with the user:
 
-1. **项目基本信息**：
-   - 项目名称
-   - 项目描述
-   - 作者信息
+1. **Project basics**:
+  - Project name
+  - Project description
+  - Author info
 
-2. **技术栈选择**（如果未通过参数指定）：
-   - 前端框架（Vue 3 / React / Next.js）
-   - UI 组件库（Element Plus / Ant Design / MUI）
-   - 状态管理（Pinia / Zustand / Redux）
-   - CSS 方案（SCSS / Less / CSS Modules / Tailwind CSS）
-   - 请求库（Axios / Fetch）
+2. **Tech stack selection** (if not provided via options):
+  - Frontend framework (Vue 3 / React / Next.js)
+  - UI component library (Element Plus / Ant Design / MUI)
+  - State management (Pinia / Zustand / Redux)
+  - CSS approach (SCSS / Less / CSS Modules / Tailwind CSS)
+  - HTTP client (Axios / Fetch)
 
-3. **功能模块**：
-   - 路由配置（是否需要）
-   - HTTP 客户端（Axios / Fetch）
-   - 国际化支持（i18n）
-   - 主题切换
-   - Mock 数据
+3. **Feature modules**:
+  - Routing setup (needed or not)
+  - HTTP client (Axios / Fetch)
+  - i18n support
+  - Theme switching
+  - Mock data
 
-4. **开发工具**：
-   - 代码检查（ESLint）
-   - 代码格式化（Prettier）
-   - Git Hooks（Husky + lint-staged）
-   - 提交规范（Commitlint）
+4. **Developer tooling**:
+  - Linting (ESLint)
+  - Formatting (Prettier)
+  - Git hooks (Husky + lint-staged)
+  - Commit conventions (Commitlint)
 
-输出配置摘要并请求确认
+Output a configuration summary and ask for confirmation.
 ```
 
-**质量标准**：
-- ✅ 所有必要信息已收集
-- ✅ 技术栈组合兼容且合理
-- ✅ 用户已确认配置
+**Quality criteria**:
+- ✅ All required info collected
+- ✅ Tech stack combination is compatible and reasonable
+- ✅ User has confirmed the configuration
 
 ---
 
@@ -1026,5 +1026,3 @@ src/
 - 是否包含测试框架
 
 ---
-
-**最后提醒**：生成的脚手架是生产级的起点，应根据具体项目需求进行调整和扩展。

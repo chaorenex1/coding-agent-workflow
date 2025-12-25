@@ -1,19 +1,19 @@
-# 快速重命名修复
+# Quick Rename Fix
 
-## 用法
+## Usage
 
 `/quick-rename <OLD_NAME> <NEW_NAME>`
 
-## 参数
+## Parameters
 
-- `<OLD_NAME>`：需要重命名的旧名称
-- `<NEW_NAME>`：新的名称
+- `<OLD_NAME>`: The old name to be renamed
+- `<NEW_NAME>`: The new name
 
-## 简介
+## Overview
 
-这是 `/rename-fixer` 的简化版本，适用于简单的重命名场景。自动完成侦察、分析、修复、验证四个阶段。
+This is a simplified version of `/rename-fixer` for straightforward renames. It automatically runs four phases: recon, analysis, fix, and validation.
 
-## 智能体链
+## Agent Chain
 
 ```
 First use rename-detective sub agent to scan codebase for [<OLD_NAME>] and generate reference map, 
@@ -24,32 +24,32 @@ If validation score ≥95% complete workflow with final report,
 otherwise use batch-fixer sub agent again with validation feedback for missed references and repeat validation.
 ```
 
-## 工作流程
+## Workflow
 
-1. **侦察阶段** - 扫描所有 `<OLD_NAME>` 引用
-2. **分析阶段** - 评估影响范围和风险
-3. **修复阶段** - 批量执行重命名
-4. **验证阶段** - 验证完整性（目标≥95%）
-5. **迭代优化** - 如需要，针对遗漏项再次修复
+1. **Recon** - Scan all references of `<OLD_NAME>`
+2. **Analysis** - Evaluate impact scope and risk
+3. **Fix** - Execute the rename in batch
+4. **Validation** - Validate completeness (target ≥95%)
+5. **Iterate** - If needed, fix missed items and validate again
 
-## 质量保证
+## Quality Assurance
 
-- ✅ 自动扫描所有文件类型
-- ✅ 智能分类和优先级排序
-- ✅ 批量修复保证一致性
-- ✅ 多维度验证确保完整性
-- ✅ 得分≥95%自动通过
+- ✅ Automatically scans all file types
+- ✅ Smart categorization and prioritization
+- ✅ Batch fixes for consistency
+- ✅ Multi-dimensional validation for completeness
+- ✅ Auto-pass when score ≥95%
 
-## 输出
+## Outputs
 
-生成在 `.claude/rename-fixes/{timestamp}-{old_name}-to-{new_name}/` 目录：
-- `reference-map.json` - 引用清单
-- `impact-analysis.md` - 影响分析
-- `changes-summary.md` - 变更摘要
-- `validation-report.md` - 验证报告
-- `manual-review-items.md` - 人工确认项
+Generated under `.claude/rename-fixes/{timestamp}-{old_name}-to-{new_name}/`:
+- `reference-map.json` - Reference inventory
+- `impact-analysis.md` - Impact analysis
+- `changes-summary.md` - Change summary
+- `validation-report.md` - Validation report
+- `manual-review-items.md` - Items requiring manual review
 
-## 示例
+## Examples
 
 ```bash
 /quick-rename calculatePrice computeTotalCost
@@ -57,26 +57,26 @@ otherwise use batch-fixer sub agent again with validation feedback for missed re
 /quick-rename old_function new_function
 ```
 
-## 适用场景
+## Suitable For
 
-✅ 函数/变量重命名
-✅ 类/接口重命名
-✅ 模块重命名
-✅ 配置键重命名
+✅ Function/variable renames
+✅ Class/interface renames
+✅ Module renames
+✅ Config key renames
 
-## 不适用场景
+## Not Suitable For
 
-❌ 跨仓库重命名
-❌ 涉及外部API的重命名（需要额外考虑向后兼容）
-❌ 复杂的代码重构（建议使用IDE重构工具）
+❌ Cross-repo renames
+❌ Renames involving external APIs (requires extra backward-compat consideration)
+❌ Complex refactors (prefer IDE refactor tools)
 
-## 与完整版的区别
+## Differences vs Full Version
 
-| 特性 | quick-rename | rename-fixer |
+| Feature | quick-rename | rename-fixer |
 |-----|-------------|--------------|
-| 参数 | 简单（新旧名称） | 灵活（支持错误信息等） |
-| 控制 | 全自动 | 可分步执行 |
-| 报告 | 标准格式 | 详细可定制 |
-| 适用 | 简单场景 | 复杂场景 |
+| Parameters | Simple (old/new) | Flexible (supports error messages, etc.) |
+| Control | Fully automatic | Can be run step-by-step |
+| Report | Standard format | Detailed and customizable |
+| Best for | Simple scenarios | Complex scenarios |
 
-需要更细粒度控制时，请使用完整版 `/rename-fixer` 命令。
+Use the full `/rename-fixer` command when you need finer-grained control.

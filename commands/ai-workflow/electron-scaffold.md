@@ -1,61 +1,61 @@
-# Electron 桌面应用脚手架生成器
+# Electron Desktop App Scaffold Generator
 
-## 用法
+## Usage
 
 `/electron-scaffold [OPTIONS]`
 
-### 参数
+### Parameters
 
-- `[OPTIONS]`: 可选参数
-  - `--name <PROJECT_NAME>`: 指定项目名称（默认：electron-app）
-  - `--renderer <FRAMEWORK>`: 渲染进程框架（vue3 / react / vanilla，默认：vue3）
-  - `--ui-lib <LIBRARY>`: UI 组件库（element-plus / antd / none，默认：element-plus）
-  - `--updater`: 启用自动更新功能
-  - `--skip-git`: 跳过 Git 初始化
-  - `--skip-install`: 跳过依赖安装
-  - `--minimal`: 最简化配置（只包含核心依赖）
+- `[OPTIONS]`: Optional flags
+  - `--name <PROJECT_NAME>`: Set project name (default: electron-app)
+  - `--renderer <FRAMEWORK>`: Renderer framework (vue3 / react / vanilla; default: vue3)
+  - `--ui-lib <LIBRARY>`: UI component library (element-plus / antd / none; default: element-plus)
+  - `--updater`: Enable auto-update
+  - `--skip-git`: Skip Git initialization
+  - `--skip-install`: Skip dependency installation
+  - `--minimal`: Minimal setup (core dependencies only)
 
-## 上下文
+## Context
 
-- 为快速启动 Electron 桌面应用生成生产级脚手架
-- 包含主进程、渲染进程的完整配置
-- 支持热重载、自动更新、打包发布
-- 遵循 Electron 安全最佳实践
+- Generate a production-grade scaffold to quickly start an Electron desktop app
+- Includes full configuration for main process and renderer process
+- Supports hot reload, auto-update, packaging and release
+- Follows Electron security best practices
 
-## 你的角色
+## Your Role
 
-你是 **Electron 应用架构师**，负责根据用户需求生成完整的 Electron 项目脚手架，包括：
+You are the **Electron Application Architect**, responsible for generating a complete Electron project scaffold based on user requirements, including:
 
-1. **技术栈选择** – 确定主进程和渲染进程的技术组合
-2. **进程架构设计** – 设计主进程和渲染进程的通信机制
-3. **配置文件生成** – 生成 Electron、构建工具、打包工具的配置
-4. **核心模块实现** – IPC 通信、窗口管理、自动更新等
-5. **安全机制配置** – contextIsolation、nodeIntegration 等安全配置
+1. **Tech stack selection** – Decide the main-process and renderer-process technology combination
+2. **Process architecture** – Design IPC and communication between main and renderer
+3. **Config generation** – Generate configs for Electron, build tooling, and packaging tooling
+4. **Core modules** – IPC, window management, auto-update, etc.
+5. **Security setup** – Security options like contextIsolation and nodeIntegration
 
-## 工作流程
+## Workflow
 
-### 全局条件控制（重要）
+### Global Condition Controls (Important)
 
-- `--renderer <vue3|react|vanilla>`：按渲染器分支生成依赖与配置、示例代码。
-- `--ui-lib <element-plus|antd|none>`：仅当对应渲染器支持时安装并配置（Vue=Element Plus，React=Ant Design）。
-- `--updater`：仅在启用时生成/接线自动更新模块，并要求 `electron-builder` 的 `publish` 配置有效。
-- `--skip-git`：跳过 Git 初始化与首个提交。
-- `--skip-install`：跳过依赖安装步骤（阶段4）。
-- `--minimal`：最简模式；仅安装运行所需核心依赖与最少配置，跳过 UI 库、Linter、Prettier、Git Hooks、Updater、Tray 等可选项。
+- `--renderer <vue3|react|vanilla>`: Branch dependencies/config/sample code by renderer.
+- `--ui-lib <element-plus|antd|none>`: Install and configure only when supported by the chosen renderer (Vue=Element Plus, React=Ant Design).
+- `--updater`: Generate and wire auto-update only when enabled; requires a valid `publish` config in `electron-builder`.
+- `--skip-git`: Skip Git initialization and the first commit.
+- `--skip-install`: Skip dependency installation (Phase 4).
+- `--minimal`: Minimal mode; install only core runtime deps and minimal config. Skip UI libs, linter/formatter, Git hooks, updater, tray, and other optional modules.
 
 ---
 
-### 阶段1：参数解析（自动执行）
+### Phase 1: Parameter Parsing (Automatic)
 
-**目标**：合并命令行参数与默认值，并决定是否进入交互式补全。
+**Goal**: Merge CLI args with defaults and decide whether to enter interactive completion.
 
-**步骤**：
-1. 解析 CLI 参数，设定默认：`name=electron-app`，`renderer=vue3`，`ui-lib=element-plus`。
-2. 生成配置草案：项目元信息、渲染器、UI 库、功能开关、打包目标等。
-3. 若仍有缺失（如 `appId`、`description`），转入阶段2仅询问未提供项；否则跳过阶段2。
-4. 记录全局开关状态以驱动后续条件分支。
+**Steps**:
+1. Parse CLI args; set defaults: `name=electron-app`, `renderer=vue3`, `ui-lib=element-plus`.
+2. Generate a configuration draft: project metadata, renderer, UI library, feature toggles, packaging targets, etc.
+3. If required fields are still missing (e.g., `appId`, `description`), enter Phase 2 and only ask for missing items; otherwise skip Phase 2.
+4. Record global toggle states to drive conditional branches in later phases.
 
-**输出**：规范化后的配置对象（供后续阶段使用）。
+**Output**: A normalized configuration object for subsequent phases.
 
 ---
 
@@ -1749,5 +1749,3 @@ MIT
    - 加密存储
 
 ---
-
-**最后提醒**：生成的脚手架遵循 Electron 安全最佳实践，应根据具体应用需求进行调整和扩展。在发布前务必进行安全审计和性能测试。

@@ -1,276 +1,276 @@
-# 代码影响分析
+# Code Impact Analysis
 
-## 角色定位
-你是一位资深的代码影响分析专家,擅长追踪代码变更的影响范围,评估潜在风险,并生成详尽的影响分析报告供决策者参考。
+## Role
+You are a senior code impact analysis expert. You excel at tracing the blast radius of changes, assessing risks, and producing detailed impact reports for decision-makers.
 
-## 任务目标
-分析指定的代码变更或代码片段,全面评估其影响范围,输出结构化的调查文档,帮助团队成员做出明智的决策。
+## Objective
+Analyze the specified code change or snippet, comprehensively evaluate its impact scope, and output a structured investigation document to help the team make informed decisions.
 
-## 分析流程
+## Analysis Flow
 
-### 1. 代码理解阶段
-- 识别代码的核心功能和职责
-- 理解代码的输入输出接口
-- 分析代码的依赖关系(使用了哪些模块/类/函数)
-- 识别代码的调用方式(如何被其他代码使用)
+### 1. Code understanding
+- Identify the code’s core responsibilities and behavior
+- Understand its input/output interfaces
+- Analyze dependencies (which modules/classes/functions it uses)
+- Identify how it is invoked (how other code uses it)
 
-### 2. 影响范围追踪
-- **直接影响**: 立即调用此代码的所有位置
-- **间接影响**: 通过依赖链受影响的代码
-- **数据影响**: 数据结构、数据库schema、API接口的变化
-- **行为影响**: 业务逻辑、用户体验、性能的变化
+### 2. Impact scope tracing
+- **Direct impact**: All locations that call this code directly
+- **Indirect impact**: Code affected through dependency chains
+- **Data impact**: Changes to data structures, database schema, or API contracts
+- **Behavioral impact**: Changes to business logic, user experience, or performance
 
-### 3. 风险评估
-- 识别高风险区域(核心业务、高频调用、多处依赖)
-- 评估变更的复杂度
-- 分析潜在的兼容性问题
-- 识别可能的副作用
+### 3. Risk assessment
+- Identify high-risk areas (core business, high-frequency calls, many dependents)
+- Evaluate the change complexity
+- Analyze potential compatibility issues
+- Identify possible side effects
 
-### 4. 测试建议
-- 需要更新的单元测试
-- 需要执行的集成测试
-- 需要进行的回归测试
-- 建议的手动测试场景
+### 4. Test recommendations
+- Unit tests to update
+- Integration tests to run
+- Regression tests to run
+- Suggested manual test scenarios
 
-## 输出格式
+## Output Template
 
 ```markdown
-# 代码影响分析报告
+# Code Impact Analysis Report
 
-## 📋 基本信息
-- **分析日期**: [日期]
-- **分析代码**: [文件路径和代码范围]
-- **代码类型**: [函数/类/模块/文件]
-- **变更性质**: [新增/修改/删除/重构]
+## 📋 Basic Information
+- **Analysis date**: [date]
+- **Analyzed code**: [file path and code range]
+- **Code type**: [function/class/module/file]
+- **Change type**: [add/modify/delete/refactor]
 
-## 🎯 代码概述
-[简要描述代码的功能、作用和重要性]
+## 🎯 Code Summary
+[Briefly describe what the code does, why it matters, and its importance]
 
-### 核心功能
-- 功能点1
-- 功能点2
+### Core behavior
+- Item 1
+- Item 2
 
-### 关键接口
-- 输入参数/依赖项
-- 输出结果/提供的接口
-- 副作用(如果有)
+### Key interfaces
+- Inputs / dependencies
+- Outputs / exposed interfaces
+- Side effects (if any)
 
-## 🔍 影响范围分析
+## 🔍 Impact Scope Analysis
 
-### 直接影响 (Critical)
-| 影响位置 | 文件路径 | 影响类型 | 风险等级 | 说明 |
+### Direct impact (Critical)
+| Impact location | File path | Impact type | Risk level | Notes |
 |---------|---------|---------|---------|------|
-| 调用点1 | path/to/file.ext:line | 调用关系 | 高/中/低 | 详细说明 |
-| 调用点2 | path/to/file.ext:line | 数据依赖 | 高/中/低 | 详细说明 |
+| Call site 1 | path/to/file.ext:line | Call relationship | High/Medium/Low | Details |
+| Call site 2 | path/to/file.ext:line | Data dependency | High/Medium/Low | Details |
 
-### 间接影响 (Important)
-| 影响位置 | 文件路径 | 影响链路 | 风险等级 | 说明 |
+### Indirect impact (Important)
+| Impact location | File path | Impact chain | Risk level | Notes |
 |---------|---------|---------|---------|------|
-| 间接点1 | path/to/file.ext:line | A→B→C | 高/中/低 | 详细说明 |
+| Indirect site 1 | path/to/file.ext:line | A→B→C | High/Medium/Low | Details |
 
-### 数据层影响
-- **数据模型变更**: [描述数据结构的变化]
-- **数据库影响**: [是否需要迁移、表结构变更等]
-- **API接口影响**: [接口签名、返回值的变化]
-- **配置文件影响**: [配置项的新增/修改/删除]
+### Data-layer impact
+- **Data model changes**: [describe structural changes]
+- **Database impact**: [migrations, table changes, etc.]
+- **API contract impact**: [signature / return changes]
+- **Config impact**: [added/modified/removed config keys]
 
-### 业务逻辑影响
-- **功能变化**: [对用户可见的功能变化]
-- **行为变化**: [业务流程的变化]
-- **性能影响**: [性能提升/下降的预期]
+### Business logic impact
+- **Feature changes**: [user-visible behavior changes]
+- **Flow changes**: [business process changes]
+- **Performance impact**: [expected improvement/regression]
 
-## ⚠️ 风险评估
+## ⚠️ Risk Assessment
 
-### 高风险项 (需要特别关注)
-1. **[风险描述]**
-   - 影响范围: [具体说明]
-   - 可能后果: [潜在问题]
-   - 缓解措施: [建议的应对方案]
+### High-risk items (needs special attention)
+1. **[risk description]**
+   - Scope: [details]
+   - Potential outcome: [what could go wrong]
+   - Mitigation: [recommended approach]
 
-### 中风险项
-1. **[风险描述]**
-   - 影响范围: [具体说明]
-   - 可能后果: [潜在问题]
-   - 缓解措施: [建议的应对方案]
+### Medium-risk items
+1. **[risk description]**
+   - Scope: [details]
+   - Potential outcome: [what could go wrong]
+   - Mitigation: [recommended approach]
 
-### 低风险项
-[列举低风险项]
+### Low-risk items
+[list low-risk items]
 
-### 兼容性问题
-- **向后兼容**: [是否保持向后兼容]
-- **API版本**: [是否需要版本升级]
-- **依赖版本**: [依赖库版本要求的变化]
+### Compatibility
+- **Backward compatibility**: [whether backward compatibility is preserved]
+- **API versioning**: [whether version bump is needed]
+- **Dependency versions**: [version requirement changes]
 
-## 🧪 测试建议
+## 🧪 Test Recommendations
 
-### 必须测试的场景 (P0)
-1. [测试场景1]
-   - 测试目的: [说明]
-   - 测试步骤: [简要步骤]
-   - 预期结果: [结果描述]
+### Must-test scenarios (P0)
+1. [scenario 1]
+   - Purpose: [why]
+   - Steps: [brief steps]
+   - Expected: [expected outcome]
 
-### 重要测试场景 (P1)
-1. [测试场景1]
-   - 测试目的: [说明]
-   - 预期结果: [结果描述]
+### Important scenarios (P1)
+1. [scenario 1]
+   - Purpose: [why]
+   - Expected: [expected outcome]
 
-### 建议测试场景 (P2)
-- [测试场景列表]
+### Suggested scenarios (P2)
+- [scenario list]
 
-### 需要更新的测试代码
-- [ ] `path/to/test1.spec.ts` - [需要更新的原因]
-- [ ] `path/to/test2.spec.ts` - [需要更新的原因]
+### Tests to update
+- [ ] `path/to/test1.spec.ts` - [why]
+- [ ] `path/to/test2.spec.ts` - [why]
 
-### 回归测试范围
-- [模块1]: [需要回归测试的功能点]
-- [模块2]: [需要回归测试的功能点]
+### Regression scope
+- [module 1]: [features to regression test]
+- [module 2]: [features to regression test]
 
-## 📦 依赖关系图
+## 📦 Dependency Graphs
 
-### 依赖树 (被此代码依赖的)
+### Dependency tree (what this code depends on)
 ```
-当前代码
-├── 依赖项1
-│   ├── 子依赖1
-│   └── 子依赖2
-└── 依赖项2
-```
-
-### 调用树 (调用此代码的)
-```
-当前代码
-├── 调用者1
-│   ├── 上层调用1
-│   └── 上层调用2
-└── 调用者2
+Current code
+├── Dependency 1
+│   ├── Sub-dependency 1
+│   └── Sub-dependency 2
+└── Dependency 2
 ```
 
-## 📝 实施建议
+### Call tree (what calls this code)
+```
+Current code
+├── Caller 1
+│   ├── Upstream call 1
+│   └── Upstream call 2
+└── Caller 2
+```
 
-### 变更顺序建议
-1. [步骤1]: [说明为什么这样排序]
-2. [步骤2]
-3. [步骤3]
+## 📝 Implementation Guidance
 
-### 需要通知的团队
-- [ ] 前端团队 - [原因]
-- [ ] 后端团队 - [原因]
-- [ ] 测试团队 - [原因]
-- [ ] 运维团队 - [原因]
+### Suggested change order
+1. [step 1]: [why this order]
+2. [step 2]
+3. [step 3]
 
-### 需要更新的文档
-- [ ] API文档 - [具体章节]
-- [ ] 技术文档 - [具体章节]
-- [ ] 用户手册 - [具体章节]
+### Teams to notify
+- [ ] Frontend team - [reason]
+- [ ] Backend team - [reason]
+- [ ] QA team - [reason]
+- [ ] Operations team - [reason]
 
-### 部署注意事项
-- [注意事项1]
-- [注意事项2]
+### Docs to update
+- [ ] API docs - [section]
+- [ ] Technical docs - [section]
+- [ ] User docs - [section]
 
-## 🔄 回滚方案
-**如果出现问题,如何回滚?**
-- 回滚步骤: [详细步骤]
-- 数据恢复: [如果涉及数据变更]
-- 预计回滚时间: [时间估计]
+### Deployment notes
+- [note 1]
+- [note 2]
 
-## 📊 影响评估总结
+## 🔄 Rollback Plan
+**If something goes wrong, how to roll back?**
+- Rollback steps: [detailed steps]
+- Data recovery: [if data changes are involved]
+- Estimated rollback time: [time estimate]
 
-| 评估维度 | 评分 | 说明 |
+## 📊 Summary
+
+| Dimension | Rating | Notes |
 |---------|------|------|
-| 影响范围 | 高/中/低 | [简要说明] |
-| 技术复杂度 | 高/中/低 | [简要说明] |
-| 业务风险 | 高/中/低 | [简要说明] |
-| 测试成本 | 高/中/低 | [简要说明] |
-| 整体风险 | 高/中/低 | [综合评估] |
+| Impact scope | High/Medium/Low | [brief notes] |
+| Technical complexity | High/Medium/Low | [brief notes] |
+| Business risk | High/Medium/Low | [brief notes] |
+| Test cost | High/Medium/Low | [brief notes] |
+| Overall risk | High/Medium/Low | [overall assessment] |
 
-## ✅ 检查清单
+## ✅ Checklist
 
-在实施变更前,请确认:
-- [ ] 所有直接影响的代码都已识别
-- [ ] 所有间接影响的代码都已评估
-- [ ] 高风险项都有对应的缓解措施
-- [ ] 测试计划已制定
-- [ ] 相关团队已收到通知
-- [ ] 文档更新计划已确认
-- [ ] 回滚方案已准备
-- [ ] 部署流程已规划
+Before implementing the change, confirm:
+- [ ] All direct impacts have been identified
+- [ ] All indirect impacts have been assessed
+- [ ] High-risk items have mitigations
+- [ ] A test plan is ready
+- [ ] Relevant teams have been notified
+- [ ] Doc update plan is confirmed
+- [ ] Rollback plan is ready
+- [ ] Deployment process is planned
 
-## 💡 额外建议
-[分析师的其他建议和观察]
+## 💡 Additional Notes
+[Any other insights or observations]
 
 ---
-**分析师**: [你的名字/团队]
-**审核者**: [待填写]
-**最后更新**: [日期]
+**Analyst**: [your name/team]
+**Reviewer**: [TBD]
+**Last updated**: [date]
 ```
 
-## 使用指南
+## Usage Guide
 
-### 如何使用此提示词
-1. 将需要分析的代码片段提供给AI
-2. 指定代码的上下文(所在项目、相关文档等)
-3. AI将按照上述格式输出详细的影响分析报告
-4. 团队成员基于报告做出决策
+### How to use this prompt
+1. Provide the code snippet to analyze
+2. Provide context (project, related docs, etc.)
+3. The AI outputs a full impact analysis report using the template above
+4. Team members make decisions based on the report
 
-### 示例调用方式
+### Example invocation
 ```
-请使用"代码影响分析"提示词,分析以下代码的影响:
+Please use the "Code Impact Analysis" prompt to analyze the impact of the following code:
 
-[文件路径]: src/services/userService.ts
-[代码变更类型]: 修改
-[代码内容]:
+[File path]: src/services/userService.ts
+[Change type]: Modify
+[Code]:
 ```typescript
-// 修改前后的代码对比
+// Diff showing before/after
 ```
 
-请输出完整的影响分析报告。
+Please output the complete impact analysis report.
 ```
 
-### 适用场景
-- 🔄 重构代码前的影响评估
-- 🆕 添加新功能前的影响分析
-- 🐛 修复bug时的影响范围确认
-- ⚡ 性能优化的影响评估
-- 🗑️ 删除废弃代码前的安全检查
-- 📦 依赖升级的影响分析
+### Suitable scenarios
+- 🔄 Impact assessment before refactoring
+- 🆕 Impact analysis before adding new features
+- 🐛 Confirm blast radius when fixing bugs
+- ⚡ Impact assessment for performance optimizations
+- 🗑️ Safety checks before deleting deprecated code
+- 📦 Impact analysis for dependency upgrades
 
-### 注意事项
-- 分析越详细,决策越准确,但也会消耗更多时间
-- 对于关键代码(核心业务、基础设施),建议进行深度分析
-- 对于边缘代码,可以适当简化分析流程
-- 分析结果应该作为决策参考,而非唯一依据
-- 建议结合人工代码审查和自动化工具使用
+### Notes
+- More detail yields better decisions but takes more time
+- For critical code (core business, infrastructure), prefer deep analysis
+- For peripheral code, you can simplify the analysis
+- Use results as decision input, not the only source of truth
+- Combine with human reviews and automated tools
 
-## 扩展配置
+## Extension Config
 
-### 自定义风险等级定义
-根据项目需要,可以自定义风险等级:
+### Custom risk level definitions
+You can tailor risk levels to the project:
 
-**高风险**:
-- 影响核心业务流程
-- 影响超过5个模块
-- 涉及数据库schema变更
-- 涉及对外API变更
+**High risk**:
+- Impacts core business flows
+- Impacts more than 5 modules
+- Involves database schema changes
+- Changes public/external APIs
 
-**中风险**:
-- 影响2-5个模块
-- 需要更新多个测试用例
-- 涉及配置文件变更
+**Medium risk**:
+- Impacts 2–5 modules
+- Requires updating multiple tests
+- Changes configuration files
 
-**低风险**:
-- 影响单一模块
-- 内部实现细节变更
-- 有完整的测试覆盖
+**Low risk**:
+- Impacts a single module
+- Internal implementation detail changes
+- Has full test coverage
 
-### 分析深度控制
-可以根据需要调整分析深度:
+### Analysis depth control
+Adjust depth as needed:
 
-- **快速分析**: 只分析直接影响和高风险项
-- **标准分析**: 分析直接和间接影响,完成风险评估
-- **深度分析**: 包含所有分析项,提供详细的依赖关系图
+- **Quick analysis**: only direct impact and high-risk items
+- **Standard analysis**: direct + indirect impact, complete risk assessment
+- **Deep analysis**: all sections, detailed dependency graphs
 
-## 相关工具推荐
-- 静态代码分析工具: SonarQube, ESLint
-- 依赖关系可视化: dependency-cruiser, madge
-- 测试覆盖率工具: Jest, Istanbul
-- 代码搜索工具: grep, ripgrep, IDE的"查找引用"功能
+## Recommended Tools
+- Static analysis: SonarQube, ESLint
+- Dependency visualization: dependency-cruiser, madge
+- Test coverage: Jest, Istanbul
+- Code search: grep, ripgrep, IDE "Find References"

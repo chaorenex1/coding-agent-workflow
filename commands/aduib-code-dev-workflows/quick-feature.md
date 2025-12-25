@@ -1,911 +1,826 @@
-# 快速功能实现工作流
+---
+name: quick-feature
+description: "Rapid feature development workflow for small to medium-sized requests"
+---
 
-## 用法
-`/quick-feature <FEATURE_DESCRIPTION> [OPTIONS]`
+# Quick Feature Development Workflow
 
-### 参数
-- `<FEATURE_DESCRIPTION>`：功能需求描述（支持中英文）
-- `[OPTIONS]`：可选参数
-  - `--skip-tests`：跳过测试阶段
-  - `--skip-review`：跳过代码审查（不推荐）
-  - `--minimal-docs`：生成最简化文档
-  - `--scope <PATH>`：指定实施范围（默认：整个项目）
-    - 示例：`--scope src/components` 仅在components目录下工作
-    - 示例：`--scope src/api/users` 限制为用户API模块
-    - 作用：限制架构扫描和文件修改范围，加快处理速度
-  - `--branch <NAME>`：创建新的Git分支（默认：不创建）
-  - `--resume <FEATURE_NAME>`：恢复中断的功能开发
+You are an efficient feature development orchestrator, focused on rapidly implementing small to medium-sized feature requests. By automatically recognizing the repository architecture and reusing existing components, you will lead a team of specialized agents to deliver high-quality code quickly.
 
-## 上下文
-- 待实现功能：$ARGUMENTS
-- 针对中小型功能需求的快速开发流程
-- 自动识别仓库架构并复用现有组件
-- 智能体协作保证代码质量与架构一致性
+---
 
-## 你的角色
-你是快速开发协调者，管理精简的智能体团队高效完成功能开发：
+## Usage
+`/quick-feature <TASK> [OPTIONS]`
 
-1. **架构识别专家** – 扫描仓库识别架构模式与技术栈
-2. **需求分析师** – 快速分析需求并定义验收标准
-3. **开发工程师** – 实施功能并确保代码质量
-4. **质量保障员** – 可选测试与验证
+### Parameters
+- `<TASK>`: Description of the feature requirement (supports Chinese and English)
+- `[OPTIONS]`: Optional parameters
+ - `--skip-repo-scan`: Skip repository architecture scanning (use only when the architecture is already known)
+ - `--direct-dev`: Proceed directly to the implementation phase, skipping requirements and design phases
+ - `--skip-tests`: Skip the testing phase
+ - `--skip-review`: Skip the code review phase
+ - `--resume <FEATURE_NAME>`: Resume an interrupted feature development process
 
-## 智能体协作机制
+## Context
+- Feature to implement: `$ARGUMENTS`
+- A rapid development process for small to medium-sized feature requests
+- Automatically identifies repository architecture and reuses existing components
+- Agent collaboration ensures code quality and architectural consistency
 
-### 上下文传递
-所有智能体通过标准化文件共享上下文：
+## Your Role
+You are the team coordinator, managing a team of agents to efficiently complete feature development:
+1. **Architecture Recognition Expert** – Scans the repository to identify architectural patterns and tech stack.
+2. **Requirements Analyst** – Quickly analyzes requirements and generates a PRD.
+3. **Development Engineer** – Defines the technical solution and implements the code.
+4. **Code Reviewer** – Reviews code quality and architectural consistency.
+5. **Test & Validation Agent** – Validates that the feature meets acceptance criteria.
 
+## Collaboration Mechanism
+
+### Context Sharing
+All agents share context through standardized files:
 ```
 ./.claude/
-├── quick-context.md          # 仓库架构（阶段0生成，所有阶段共享）
-├── specs/{feature-name}/
-│   ├── requirements.md       # PRD（阶段1生成，阶段2-5使用）
-│   ├── tech-design.md        # 技术方案（阶段2生成，阶段3-5使用）
-│   ├── progress.json         # 进度状态（阶段3更新，用于恢复）
-│   └── implementation.log    # 实施日志（阶段3-4记录）
+├── quick-context.md          # Repository architecture (generated in Stage 0, shared across all stages)
+├── specs/{TASK}/
+│   ├── requirements.md       # PRD (generated in Stage 1, used in Stages 2-5)
+│   ├── tech-design.md        # Technical design (generated in Stage 2, used in Stages 3-5)
+│   ├── progress.json         # Progress status (created in Stage 0, updated in Stages 0-5)
+│   └── implementation.log    # Implementation log (generated in Stage 3, used in Stages 3-5)
+|   └── test-report.md        # Test report (generated in Stage 4, used in Stages 4-5)
+|   └── review-report.md      # Code review report (generated in Stage 4, used in Stages 4-5)
+|   └── README.md              # Feature documentation (generated in Stage 5)
 ```
 
-### 智能体调用策略
-- **顺序调用**：阶段0 → 1 → 2 → 3 → 4 → 5（有依赖关系）
-- **上下文加载**：每个智能体启动时自动加载相关文档
-- **失败回退**：如智能体调用失败，重试最多2次，然后请求用户介入
-- **状态同步**：通过 progress.json 记录当前状态，支持中断恢复
+### Process Rules
+- **Sequential Invocation**: Stage 0 → 1 → 2 → 3 → 4 → 5 (dependencies exist)
+- **Context Loading**: Each agent automatically loads relevant documents upon start.
+- **Failure Fallback**: If an agent call fails, retry up to 3 times before requesting user intervention.
+- **State Synchronization**: Each stage records its current state via `progress.json`, enabling process interruption and resumption.
+- **Interactive Confirmation Gate**: Key stages (requirements confirmation, design approval) require user confirmation before proceeding.
+- **Optional Skipping**:
+ - If the user provides the `--skip-tests` parameter, the workflow skips test verification in Stage 4, performing only code review.
+ - If the user provides the `--skip-review` parameter, the workflow skips code review in Stage 4, performing only test verification.
+ - If the user provides the `--direct-dev` parameter, the workflow proceeds directly to Stage 3 after completing Stage 0.
+ - If the user provides the `--skip-repo-scan` parameter, the workflow skips Stage 0 and proceeds directly to Stage 1.
+- **Resume Mechanism**: When the user uses the `--resume` parameter, retrieve the state from `progress.json` and continue execution from the interrupted stage.
 
-### 智能体复用
-如果工作区已有以下智能体，优先复用：
-- `prd-orchestrator` → 架构识别专家
-- `prd-po` → 需求分析师
-- `prd-dev` → 开发工程师
-- `prd-review` → 代码审查员
-- `prd-qa` → 质量保障员
+## Workflow
 
-如不存在，使用内联智能体指令（prompts直接嵌入）。
+### Stage 0: Repository Architecture Recognition (Auto-executed, unless `--skip-repo-scan` is specified or context already exists)
 
-## 工作流程
-
-### 阶段0：仓库架构识别（自动执行）
-
-**目标**：快速理解项目结构与技术栈
+**Goal**: Quickly understand the project structure and technology stack.
 
 ```
-使用架构识别专家智能体：
-"扫描当前仓库并提取关键架构信息
+Use the Architecture Recognition Expert agent [fa-orchestrator]:
+Scan the current repository and extract key architectural information.
 
-## 扫描任务：
-1. **项目类型识别**：
-   - 前端/后端/全栈/库/工具
-   - Web应用/API服务/桌面应用/CLI工具
+## Scan Tasks:
+1.  **Project Type Identification**:
+    - Frontend/Backend/Full-stack/Library/Tool
+    - Web app/API service/Desktop app/CLI tool
+2.  **Tech Stack Detection**:
+    - Primary programming language & version
+    - Core frameworks and libraries
+    - Build tools and package managers
+3.  **Code Organization Patterns**:
+    - Directory structure conventions (src/lib/app/components/etc.)
+    - Naming conventions (kebab-case/camelCase/PascalCase)
+    - Module partitioning and layer structure
+4.  **Existing Component Scan**:
+    - Reusable utility functions/components/services
+    - Common data models/interface definitions
+    - Existing design pattern applications
+5.  **Development Convention Identification**:
+    - Code style configuration (ESLint/Prettier/etc.)
+    - Testing framework and test location
+    - Documentation conventions (JSDoc/TypeDoc/etc.)
 
-2. **技术栈检测**：
-   - 主要编程语言与版本
-   - 核心框架与库
-   - 构建工具与包管理器
-
-3. **代码组织模式**：
-   - 目录结构约定（src/lib/app/components/等）
-   - 命名规范（kebab-case/camelCase/PascalCase）
-   - 模块划分与分层结构
-
-4. **现有组件扫描**：
-   - 可复用的工具函数/组件/服务
-   - 通用的数据模型/接口定义
-   - 已有的设计模式应用
-
-5. **开发约定识别**：
-   - 代码风格配置（ESLint/Prettier/等）
-   - 测试框架与测试位置
-   - 文档规范（JSDoc/TypeDoc/等）
-
-## 输出格式：
-生成快速参考摘要（保存为 ./.claude/quick-context.md）：
-- 项目类型与技术栈
-- 核心目录结构
-- 关键复用组件列表
-- 代码风格要点
-- 功能实施建议位置
-
-预计耗时：30-60秒"
+## Output:
+- Generate a summary (saved as `./.claude/quick-context.md`)
+- Generate a progress file (saved as `./.claude/specs/{TASK}/progress.json`)
 ```
 
-**质量标准**：
-- ✅ 识别出主要编程语言与框架
-- ✅ 提取至少3个关键目录路径
-- ✅ 找到至少2个可复用组件
-- ✅ 明确代码风格约定
+**Quality Gate**:
+- ✅ Main programming language and framework identified.
+- ✅ At least 3 key directory paths extracted.
+- ✅ At least 2 reusable components found.
+- ✅ Code style conventions clarified.
 
-**错误处理**：
-如果架构识别失败或信息不足：
-1. 提示用户手动提供关键信息：
-   - 项目类型（前端/后端/全栈）
-   - 主要编程语言
-   - 代码主目录位置
-2. 使用默认约定继续（警告用户可能需要手动调整）
-3. 允许用户使用 `--scope <PATH>` 指定工作范围
+**Error Handling**:
+If architecture recognition fails or provides insufficient information:
+Prompt the user to manually provide key information:
+ - Project type (Frontend/Backend/Full-stack)
+ - Main programming language
+ - Location of the main code directory
+ - Dependency management tool
+ - Other supplementary information
 
 ---
 
-### 阶段1：需求快速分析（交互式）
+### Stage 1: Requirements Analysis (Interactive execution, unless `--direct-dev` is specified)
 
-**目标**：5分钟内明确功能边界与验收标准
+**Goal**: Generate a clear PRD based on the feature description.
 
-#### 1.1 智能需求解析
-
-```
-使用需求分析师智能体：
-"分析功能需求并生成精简PRD
-
-输入需求：[$ARGUMENTS]
-仓库上下文：[来自阶段0的架构信息]
-
-## 分析要点：
-1. **核心功能**：用1-2句话描述主要功能
-2. **用户故事**：生成2-3个关键用户故事
-3. **验收标准**：明确3-5条可验证的标准
-4. **技术约束**：基于现有架构的限制
-5. **影响范围**：需修改/新增的文件预估
-
-## 快速质量检查：
-- 需求是否明确？（清晰度评分 1-10）
-- 是否有歧义点？（列出需澄清的部分）
-- 预估复杂度？（简单/中等/复杂）
-
-如果清晰度 < 7，生成3个澄清问题并等待用户回复
-如果清晰度 >= 7，直接生成PRD摘要"
-```
-
-#### 1.2 交互式澄清（如需要）
-
-当清晰度不足时，向用户提问：
-- 问题1：[具体澄清点]
-- 问题2：[具体澄清点]
-- 问题3：[具体澄清点]
-
-等待用户回复后更新PRD。
-
-#### 1.3 PRD确认
-
-当PRD清晰度 ≥ 7分时，展示给用户：
+#### 1.1 Requirements Parsing
 
 ```
-📋 功能需求摘要
+Use the Requirements Analyst agent [fa-requirements-analyst]:
+Analyze the feature request and generate a PRD.
 
-核心功能：[一句话描述]
+## Input:
+- Feature Request: [`$ARGUMENTS`]
+- Repository Architecture: [Information from Stage 0]
 
-用户故事：
-- 作为[角色]，我想[功能]，以便[目标]
-- [更多故事]
+## Analysis Points:
+1.  **Core Functionality**: Describe the main feature in 1-2 sentences.
+2.  **User Stories**: Generate 2-3 key user stories.
+3.  **Acceptance Criteria**: Define 3-5 verifiable criteria.
+4.  **Technical Constraints**: Limitations based on the existing architecture.
+5.  **Impact Scope**: Estimated number of files to be created/modified.
 
-验收标准：
-✓ [标准1]
-✓ [标准2]
-✓ [标准3]
+## Rapid Quality Check:
+- Are the requirements clear? (Clarity Score 1-10)
+- Are there any ambiguous points? (List parts needing clarification)
+- Estimated complexity? (Simple/Medium/Complex)
 
-预估复杂度：[简单/中等/复杂]
-预计文件数：[约X个文件]
-
-是否开始实施？(yes/no/modify)
+If Clarity Score < 7, generate 3 clarification questions and wait for user response.
+If Clarity Score >= 7, directly generate the PRD summary."
 ```
 
-**等待用户确认**：
-- 如果回复 `yes/是/确认/开始` → 进入阶段2
-- 如果回复 `no/否/取消` → 终止流程
-- 如果回复 `modify/修改` → 询问具体修改点，返回1.1重新分析
-- 如果回复具体修改意见 → 更新PRD，重新展示确认
+#### 1.2 Interactive Clarification (If needed)
+When clarity is insufficient, ask the user:
+- Question 1: [Specific clarification point]
+- Question 2: [Specific clarification point]
+- Question 3: [Specific clarification point]
+Wait for the user's response, then update the PRD.
 
-**最大重试次数**：3次
-如果3次澄清后清晰度仍 < 7，建议：
-- 切换到 `/prd-pilot` 进行深度需求分析
-- 或由用户提供更详细的需求文档
+#### 1.3 PRD Confirmation Gate
+When the PRD Clarity Score is ≥ 7, present it to the user:
+
+```
+📋 Feature Request Summary
+
+Core Functionality: [One-sentence description]
+
+User Stories:
+- As a [role], I want [functionality] so that [goal].
+- [More stories]
+
+Acceptance Criteria:
+✓ [Criterion 1]
+✓ [Criterion 2]
+✓ [Criterion 3]
+
+Estimated Complexity: [Simple/Medium/Complex]
+Estimated File Count: [Approximately X files]
+
+Proceed with implementation? (yes/no/modify/back)
+```
+
+**Await User Confirmation**:
+- If reply is `yes`/`是`/`确认`/`开始` → Proceed to Stage 2.
+- If reply is `no`/`否`/`取消` → Terminate the workflow.
+- If reply is `modify`/`修改` → Ask for specific modification points, return to 1.1 for re-analysis.
+- If reply is `back`/`返回` → Return to Stage 0 to modify architectural information.
+- If reply contains specific modification feedback → Update the PRD, re-present for confirmation.
+
+**Max Retry Count**: 3 times.
+If clarity remains < 7 after 3 clarifications, suggest:
+- Record the state and terminate the workflow.
+
+#### 1.4 PRD Save (Only after user confirmation)
+
+```
+- Generate/update `./.claude/specs/{TASK}/requirements.md`:
+  - Use the "requirements.md format" template, filling in: Feature Name, Generation Time, Clarity Score, Complexity.
+  - Write the core functionality description, user stories, acceptance criteria (mark each with a unique ID like AC1/AC2 for later reference).
+  - Record technical constraints, impact scope (list estimated new/modified file counts and affected modules), and non-functional requirements.
+  - If there are pending clarifications or user responses, attach them under an "Open Questions/Assumptions" section.
+- Sync user confirmation content and question list to `progress.json`:
+  - Set `currentStage` to 2 (preparing technical design), `currentStep` to 0.
+  - Append an entry for Stage 1 to `completedSteps`, recording the clarity score and confirmation time.
+  - Write the Q&A to `userInputs`.
+  - Record `requirements.md` in `filesCreated/Modified`.
+- If `progress.json` already exists, preserve historical information and only update relevant fields.
+- If a feature name is not yet determined, generate a stable `{feature-name}` (kebab-case) based on the task description and use it consistently in subsequent stages.
+```
 
 ---
 
-### 阶段2：技术方案设计（快速通道）
+### Stage 2: Technical Solution Design
 
-**目标**：10分钟内完成技术方案
+**Goal**: Generate a feasible technical solution based on the PRD.
 
-```
-使用架构识别专家智能体（复用）：
-"基于PRD生成快速技术方案
-
-PRD路径：[如果已保存]
-仓库架构：[来自阶段0]
-功能需求：[$ARGUMENTS]
-
-## 设计要点：
-1. **文件规划**：
-   - 需要新建的文件（路径+职责）
-   - 需要修改的文件（路径+改动类型）
-   - 文件命名遵循现有约定
-
-2. **组件设计**：
-   - 主要类/函数/组件（名称+接口）
-   - 复用现有组件的方式
-   - 新增抽象（如需要）
-
-3. **数据流设计**：
-   - 输入输出定义
-   - 关键数据结构
-   - 与现有系统的集成点
-
-4. **实施顺序**：
-   - 按依赖关系排序的实施步骤
-   - 每步的预估时间
-
-## 输出格式：
-生成技术方案摘要（保存为 ./.claude/specs/{feature-name}/tech-design.md）：
-- 文件清单（新建/修改）
-- 核心接口定义
-- 实施步骤（1-5步）
-- 风险点（如有）
-
-快速通道限制：
-- 方案说明 ≤ 500字
-- 实施步骤 ≤ 5步
-- 不生成详细架构图（除非复杂度为'复杂'）"
-```
-
-#### 2.1 方案快速审核
-
-展示技术方案摘要给用户：
+#### 2.1 Solution Design
 
 ```
-🏗️ 技术方案摘要
+Use the Development Engineer agent [fa-developer]:
+Generate a technical solution based on the PRD.
 
-文件操作：
-📝 新建：[文件1], [文件2]
-✏️ 修改：[文件3], [文件4]
+## Input:
+- PRD Path: [From Stage 1]
+- Repository Architecture: [From Stage 0]
+- Feature Request: [`$ARGUMENTS`]
 
-核心接口：
-- [接口1名称]：[一句话说明]
-- [接口2名称]：[一句话说明]
+## Design Points:
+1.  **File Planning**:
+    - Files to create (path + responsibility)
+    - Files to modify (path + type of change)
+    - File naming must follow existing conventions
+    - Refer to directory/naming constraints in `quick-context.md` to avoid deviating from the existing architecture.
+2.  **Component Design**:
+    - Main classes/functions/components (name + interface)
+    - How to reuse existing components
+    - New abstractions (if needed)
+3.  **Data Flow Design**:
+    - Input/Output definitions
+    - Key data structures
+    - Integration points with the existing system
+4.  **Risk Identification**:
+    - Potential technical challenges
+    - Dependency risks
+    - Performance bottlenecks
+5.  **Technical Decisions**:
+    - Chosen tech stack/library/tool
+    - Design patterns and architectural choices
+    - Performance and security considerations
+6.  **Implementation Sequence**:
+    - Implementation steps ordered by dependency
+    - Each step should be associated with the acceptance criteria or PRD section it satisfies.
+7.  **Requirements Mapping**:
+    - List the implementation path (file + function) corresponding to each acceptance criterion.
+    - Mark key dependencies, configurations, or switches for easy verification later.
+    - Identify utility scripts/commands that can be reused in Stage 3.
 
-实施步骤：
-1. [步骤1]（预估：X分钟）
-2. [步骤2]（预估：X分钟）
-...
+## Output Format:
+Generate a technical design summary (saved as `./.claude/specs/{TASK}/tech-design.md`):
+- File List (New/Modified)
+- Core Functionality Definition
+- Risk Points (if any)
+- Technical Decision Rationale
+- Implementation Steps List
+- Acceptance Criteria ↔ Implementation Mapping Table (e.g., "Criterion 1 -> src/.../handler.ts#handle")
 
-风险提示：[如有]
-
-是否批准方案并开始开发？(yes/no/modify)
+Constraints:
+- Solution description ≤ 500 words
+- Implementation steps ≤ 8 steps
 ```
 
-**等待用户确认**：
-- 如果回复 `yes/是/批准/开始` → 进入阶段3
-- 如果回复 `no/否/重做` → 返回阶段2重新设计
-- 如果回复 `modify/修改` → 询问具体修改要求，调整方案后重新展示
-- 如果回复 `back/返回` → 返回阶段1修改PRD
+#### 2.2 Solution Review Gate (Interactive)
+Present the technical design summary to the user:
 
-**最大重试次数**：2次
-如果2次设计后仍不满意，建议：
-- 切换到 `/prd-pilot` 进行完整架构设计
-- 或由用户提供技术方案指导
+```
+🏗️ Technical Design Summary
+
+File Operations:
+📝 To Create:
+- [File1]: [Responsibility]
+- [File2]: [Responsibility]
+- [More files]
+✏️ To Modify:
+- [File3]: [Type of change]
+- [File4]: [Type of change]
+- [More files]
+
+Core Functionality Definition:
+- [Function1 Name]: [One-sentence description]
+- [Function2 Name]: [One-sentence description]
+- [More functions]
+
+Technical Decisions:
+- [Decision1]: [Rationale]
+- [Decision2]: [Rationale]
+- [More decisions]
+
+Implementation Steps:
+1. [Step1]: [One-sentence description]
+2. [Step2]: [One-sentence description]
+3. [More steps]
+
+Risk Notes:
+- [Risk1]: [Description]
+- [Risk2]: [Description]
+- [More risks]
+
+Approve the design and proceed to development? (yes/no/modify/back/Specific feedback)
+```
+
+**Await User Confirmation**:
+- If reply is `yes`/`是`/`批准`/`开始` → Proceed to Stage 3.
+- If reply is `no`/`否`/`重做` → Return to the beginning of Stage 2 for redesign.
+- If reply is `modify`/`修改` → Ask for specific modification requests, adjust the design, and re-present.
+- If reply is `back`/`返回` → Return to Stage 1 to modify the PRD.
+- If reply contains specific modification feedback → Update the technical design, re-present for confirmation.
+- Each round of interaction must write the latest summary to `tech-design.md` and sync the stage/retry count in `progress.json`.
+
+**Max Retry Count**: 3 times.
+If still unsatisfactory after 3 design attempts, suggest:
+- Or have the user provide technical guidance to update the design.
 
 ---
 
-### 阶段3：功能实施（自动执行）
+### Stage 3: Feature Implementation (Auto-executed)
 
-**目标**：按技术方案完成代码实现
+**Goal**: Complete the code implementation according to the technical design.
 
 ```
-使用开发工程师智能体：
-"实施功能并确保代码质量
+Use the Development Engineer agent [fa-developer]:
+"Implement the feature and ensure code quality.
 
-技术方案路径：./.claude/specs/{feature-name}/tech-design.md
-PRD路径：./.claude/specs/{feature-name}/requirements.md
-仓库架构：./.claude/quick-context.md
+Technical Design Path: `./.claude/specs/{TASK}/tech-design.md`
+PRD Path: `./.claude/specs/{TASK}/requirements.md`
+Repository Architecture: `./.claude/quick-context.md`
 
-## 实施要求：
-1. **代码质量**：
-   - 遵循仓库的代码风格约定
-   - 添加必要的注释与文档
-   - 使用类型标注（如适用）
-   - 处理边界情况与错误
+Before starting coding, need to:
+- List the implementation checklist based on the technical design and align it item-by-item with the acceptance criteria.
+- Confirm that required dependencies/build scripts are executable (e.g., `npm test`, `make build`).
+- Record the start time and plan in `./.claude/specs/{TASK}/implementation.log`.
 
-2. **架构一致性**：
-   - 遵循现有目录结构
-   - 复用现有组件与工具函数
-   - 保持命名规范一致
-   - 遵循现有设计模式
+## Implementation Requirements:
+1.  **Code Quality**:
+    - Follow the repository's code style conventions.
+    - Add necessary comments and documentation.
+    - Use type annotations (if applicable).
+    - Handle edge cases and errors.
+2.  **Architectural Consistency**:
+    - Follow the existing directory structure.
+    - Reuse existing components and utility functions.
+    - Maintain consistent naming conventions.
+    - Adhere to existing design patterns.
+3.  **Incremental Development**:
+    - Implement in the order specified by the technical design steps.
+    - Report progress after completing each step.
+    - Promptly explain issues encountered and request guidance if needed.
+4.  **Self-Test Requirements**:
+    - Manually verify core functionality.
+    - Ensure no existing functionality is broken.
+    - Check edge cases.
 
-3. **渐进式开发**：
-   - 按技术方案的步骤顺序实施
-   - 每完成一个步骤报告进度
-   - 遇到问题及时说明并请求指导
+## Implementation Steps:
+[Execute according to the steps in the technical design. Update `implementation.log` and the progress file immediately after completing each item.]
 
-4. **自测要求**：
-   - 手动验证核心功能
-   - 确保不破坏现有功能
-   - 检查边界情况
+## Progress Report Format:
+After completing each step, report:
+✅ Step X Complete: [Step description]
+   - New File: [File path]
+   - Modified File: [File path]
+   - Key Changes: [Brief description]
+   - Next Step: [Next step description]
+   - Covered Acceptance Criteria: [Criterion ID or name]
 
-## 实施步骤：
-[按技术方案的步骤执行]
+## Error Handling:
+If problems are encountered during implementation:
+1.  **Technical Obstacle**:
+    - Pause implementation, describe the problem.
+    - Provide 2-3 alternative solutions.
+    - Wait for the user to choose a solution or provide guidance.
+    - Update the technical design (if needed) and record it in `implementation.log`.
+2.  **Design Flaw**:
+    - If the technical design is found to be infeasible.
+    - Describe the specific issue and suggest adjustments.
+    - Return to Stage 2 for redesign.
+3.  **Scope Creep**:
+    - If the requirements are found to exceed expectations.
+    - Prompt the user to confirm whether to continue [yes/no]. If yes, continue; if no, return to Stage 1 to modify the PRD.
 
-## 进度报告格式：
-每完成一个步骤后报告：
-✅ 步骤X完成：[步骤描述]
-   - 新建文件：[文件路径]
-   - 修改文件：[文件路径]
-   - 关键改动：[简要说明]
-   - 下一步：[下个步骤]
+## Progress Save:
+After completing each step, automatically save progress to:
+`./.claude/specs/{TASK}/progress.json`
+- If the step involves a failure/rollback, record it in `implementation.log` and associate it with an issue ID.
 
-## 错误处理：
-如果实施过程中遇到问题：
-1. **技术障碍**：
-   - 暂停实施，说明遇到的问题
-   - 提供2-3个可选解决方案
-   - 等待用户选择方案或提供指导
-   - 更新技术方案（如需要）
+Content includes:
+- Current stage and step
+- List of completed files
+- Pending tasks
+- Record of encountered issues
+- Corresponding acceptance criteria/PRD section
 
-2. **设计缺陷**：
-   - 如果发现技术方案不可行
-   - 说明具体问题并建议调整
-   - 返回阶段2重新设计
-
-3. **范围蔓延**：
-   - 如果发现需求超出预期
-   - 提示用户当前进度
-   - 建议拆分功能或切换到 `/prd-pilot`
-
-## 进度保存：
-每完成一个步骤后，自动保存进度到：
-`./.claude/specs/{feature-name}/progress.json`
-
-包含内容：
-- 当前阶段与步骤
-- 已完成的文件列表
-- 待完成的任务
-- 遇到的问题记录
-
-如流程中断，可使用 `/quick-feature --resume {feature-name}` 恢复"
+If the process is interrupted, use `/quick-feature --resume {TASK}` to resume."
 ```
 
-**实时进度展示**：
+**Real-time Progress Display**:
 ```
-🚀 开发进度
+🚀 Development Progress
 
-✅ 步骤1：创建基础接口定义
+✅ Step 1: Create basic interface definitions
    📝 src/types/feature.ts
-✅ 步骤2：实现核心逻辑
+✅ Step 2: Implement core logic
    📝 src/services/feature-service.ts
-⏳ 步骤3：集成到现有系统（进行中...）
-⬜ 步骤4：添加错误处理
-⬜ 步骤5：编写文档
+⏳ Step 3: Integrate with existing system (In Progress...)
+⬜ Step 4: Add error handling
+⬜ Step 5: Write documentation
 ```
 
 ---
 
-### 阶段4：质量验证（可选 - 默认执行）
+### Stage 4: Quality Verification (Optional - Executed by default)
 
-**跳过条件**：用户指定 `--skip-tests`
+**Goal**: Ensure code quality and functional completeness.
 
-#### 4.1 代码审查（除非 --skip-review）
-
-```
-使用代码审查智能体（如存在）：
-"审查新实现的代码
-
-实施文件：[从阶段3获取]
-PRD路径：./.claude/specs/{feature-name}/requirements.md
-技术方案路径：./.claude/specs/{feature-name}/tech-design.md
-
-## 审查要点：
-1. **功能完整性**：是否满足所有验收标准
-2. **代码质量**：可读性、可维护性、性能
-3. **架构一致性**：是否遵循现有模式
-4. **潜在问题**：边界情况、错误处理、安全性
-
-## 输出格式：
-- 审查结果：通过/有风险/不通过
-- 问题清单（如有）：[问题描述 + 建议修复]
-- 优化建议（可选）：[改进方向]
-
-快速通道限制：
-- 仅标记关键问题（不要求完美）
-- 优化建议 ≤ 3条"
-```
-
-如果审查不通过，返回阶段3进行修复。
-
-#### 4.2 测试验证（除非 --skip-tests）
+#### 4.1 Code Review (Unless `--skip-review`)
 
 ```
-使用质量保障员智能体：
-"验证功能是否符合验收标准
+Use the Code Reviewer agent [fa-code-reviewer]:
+"Review the newly implemented code.
 
-实施文件：[从阶段3获取]
-PRD路径：./.claude/specs/{feature-name}/requirements.md
-验收标准：[从PRD提取]
+Implementation Files: [Obtained from Stage 3]
+PRD Path: `./.claude/specs/{TASK}/requirements.md`
+Technical Design Path: `./.claude/specs/{TASK}/tech-design.md`
+Review Record: `./.claude/specs/{TASK}/review-report.md`
 
-## 验证任务：
-1. **功能测试**：
-   - 验证每个验收标准
-   - 测试正常流程
-   - 测试边界情况
+## Review Points:
+1.  **Functional Completeness**: Does it satisfy all acceptance criteria?
+2.  **Code Quality**: Readability, maintainability, performance.
+3.  **Architectural Consistency**: Does it follow existing patterns?
+4.  **Potential Issues**: Edge cases, error handling, security.
+5.  **Consistency Check**: Are any differences between the code implementation and the technical design documented? (If deviations exist, note the reason in `implementation.log`)
 
-2. **集成测试**：
-   - 与现有功能的兼容性
-   - 不影响现有功能
+## Output Format:
+- Review Result: Pass/At Risk/Fail
+- Issue List (if any): [Issue description + suggested fix]
+- Optimization Suggestions (optional): [Improvement directions]
+- Severity Level: Blocker/High/Medium/Low, with impact scope explained.
+- Output must be synced to `review-report.md`, and the status recorded in `progress.json`.
 
-3. **测试报告**：
-   - 验收标准检查清单
-   - 发现的问题（如有）
-   - 测试结论（通过/未通过）
-
-快速通道限制：
-- 不要求编写自动化测试（除非项目已有测试框架）
-- 手动功能测试即可
-- 测试报告 ≤ 200字"
+Constraints:
+- Only flag critical issues (perfection not required).
+- Optimization suggestions ≤ 3."
 ```
 
-**展示测试报告**：
+If the review fails, return to Stage 3 for fixes.
+
+#### 4.2 Test Verification (Unless `--skip-tests`)
+
 ```
-✅ 测试报告
+Use the Test & Validation Agent [fa-tester]:
+"Verify the feature complies with acceptance criteria.
 
-验收标准检查：
-✓ [标准1] - 通过
-✓ [标准2] - 通过
-✓ [标准3] - 通过
+Implementation Files: [Obtained from Stage 3]
+PRD Path: `./.claude/specs/{TASK}/requirements.md`
+Acceptance Criteria: [Extracted from PRD]
+Test Record: `./.claude/specs/{TASK}/test-report.md`
 
-集成测试：
-✓ 不影响现有功能
-✓ 与[组件X]正常集成
+## Verification Tasks:
+1.  **Functional Testing**:
+    - Verify each acceptance criterion.
+    - Test the normal flow.
+    - Test edge cases.
+2.  **Integration Testing**:
+    - Compatibility with existing functionality.
+    - Ensure no regression in existing features.
+3.  **Test Report**:
+    - Acceptance criteria checklist.
+    - Issues found (if any).
+    - Test conclusion (Pass/Fail).
+    - For each issue, label severity (Critical/Major/Minor) and reproduction steps.
+    - Record suggested regression scope.
 
-发现的问题：
-- [问题描述]（严重度：低/中/高）
-
-测试结论：通过 ✅
+Constraints:
+- Use existing testing frameworks (e.g., Jest/Vitest/Pytest, etc.).
+- Cover each acceptance criterion at least once.
+- Test report ≤ 200 words, must still include the above severity/conclusion fields."
 ```
 
-**如果测试未通过**：
-1. 记录测试失败的具体问题
-2. 分析问题严重程度：
-   - **严重问题**（功能不可用）→ 必须修复
-   - **中等问题**（部分场景有问题）→ 建议修复
-   - **轻微问题**（边界情况）→ 记录技术债，可选修复
-3. 返回阶段3进行修复
-4. 修复后重新运行测试
+**Display Test Report**:
+```
+✅ Test Report
 
-**回退循环控制**：
-- 最大修复次数：3次
-- 如果3次修复后仍有严重问题：
-  - 暂停流程，请求用户介入
-  - 展示当前代码状态和问题清单
-  - 由用户决定：继续修复/接受现状/放弃功能
+Acceptance Criteria Check:
+✓ [Criterion 1] - Pass
+✓ [Criterion 2] - Pass
+✓ [Criterion 3] - Pass
 
-**代码审查未通过处理**：
-如果审查结果为"不通过"：
-1. 列出所有关键问题
-2. 返回阶段3修复问题
-3. 修复后重新审查
-4. 最大审查次数：2次
-5. 如仍不通过，转为手动审查
+Integration Tests:
+✓ No impact on existing functionality
+✓ Normal integration with [Component X]
+
+Issues Found:
+- [Issue description] (Severity: Low/Medium/High)
+
+Test Conclusion: Pass ✅
+```
+
+**If Tests Fail**:
+1. Record the specific problem causing the test failure.
+2. Analyze the severity of the problem:
+ - **Critical Issue** (feature unusable) → Must fix.
+ - **Medium Issue** (problems in some scenarios) → Recommended to fix.
+ - **Minor Issue** (edge cases) → Document as technical debt, optional fix.
+3. Return to Stage 3 for fixes.
+4. After fixes, rerun the tests.
+5. Sync `test-report.md` and `progress.json`, marking the corresponding acceptance criteria as failed.
+
+**Fallback Loop Control**:
+- Max fix attempts: 3 times.
+- If critical issues persist after 3 fixes:
+ - Pause the workflow, request user intervention.
+ - Present current code status and issue list.
+ - Let user decide: continue fixing/accept current state/abandon feature.
+
+**Code Review Fail Handling**:
+If the review result is "Fail":
+1. List all critical issues.
+2. Return to Stage 3 to fix the issues.
+3. After fixes, re-run the review.
+4. Max review attempts: 2 times.
+5. If it still fails, switch to manual review.
 
 ---
 
-### 阶段5：交付与文档（自动执行）
+### Stage 5: Delivery & Documentation (Auto-executed)
 
-**目标**：完成功能交付并生成必要文档
+**Goal**: Complete feature delivery and generate necessary documentation.
 
-#### 5.1 生成文档（根据 --minimal-docs）
+#### 5.1 Generate Documentation
 
-**标准文档**（默认）：
+**Standard Documentation** (Default):
 ```
-生成以下文档：
-1. 功能说明：./.claude/specs/{feature-name}/README.md
-   - 功能描述
-   - 使用方法
-   - API文档（如适用）
-   - 配置说明（如适用）
-
-2. 变更记录：./.claude/specs/{feature-name}/CHANGELOG.md
-   - 新增文件列表
-   - 修改文件列表
-   - 关键改动说明
-
-3. 代码内文档：
-   - 关键函数的JSDoc/注释
-   - 接口/类型的说明
-```
-
-**最简文档**（--minimal-docs）：
-```
-仅生成：
-1. 快速说明：./.claude/specs/{feature-name}/QUICKSTART.md
-   - 功能一句话描述
-   - 使用示例（1-2个）
-   - 新增的关键文件路径
+Generate the following documents:
+1.  Feature Documentation: `./.claude/specs/{TASK}/README.md`
+    - Feature description
+    - Usage instructions
+    - API documentation (if applicable)
+    - Configuration instructions (if applicable)
+    - Links to related acceptance criteria or usage examples.
+2.  Change Log: `./.claude/specs/{TASK}/CHANGELOG.md`
+    - List of new files
+    - List of modified files
+    - Description of key changes
+    - Corresponding commit/PR information (if any)
+3.  In-Code Documentation:
+    - JSDoc/Comments for key functions
+    - Interface/Type descriptions
+    - Reference the covered acceptance criterion IDs in comments.
 ```
 
-#### 5.2 版本控制集成
-
-**如果指定了 --branch 参数**：
+**Minimal Documentation** (`--minimal-docs`):
 ```
-执行以下Git操作：
-1. 检查当前是否有未提交的更改
-2. 创建新分支：git checkout -b {branch-name}
-3. 添加所有更改：git add [修改的文件]
-4. 提交更改：git commit -m "feat: {功能描述}"
-5. 显示提交信息和分支名称
-
-提示用户：
-- 推送分支：git push origin {branch-name}
-- 创建PR（如果是GitHub/GitLab等平台）
+Generate only:
+1.  Quick Start Guide: `./.claude/specs/{TASK}/QUICKSTART.md`
+    - One-sentence feature description
+    - Usage examples (1-2)
+    - Paths to key new files
 ```
 
-**如果未指定 --branch**：
-- 不执行Git操作
-- 在交付摘要中提示用户手动提交代码
-- 建议的commit message格式：`feat: {功能描述}`
-
-#### 5.3 交付摘要
-
-生成完成报告：
+#### 5.3 Delivery Summary
+Generate a completion report:
 
 ```
-🎉 功能实施完成
+🎉 Feature Implementation Complete
 
-📋 功能名称：[功能名]
-⏱️ 总耗时：[预估时间]
-📊 复杂度：[简单/中等/复杂]
+📋 Feature Name: [Feature name]
+⏱️ Total Time: [Estimated duration]
+📊 Complexity: [Simple/Medium/Complex]
 
-📁 文件变更：
-新建：
-  - [文件1]（[行数] 行）
-  - [文件2]（[行数] 行）
-修改：
-  - [文件3]（[改动行数] 行）
+📁 File Changes:
+Created:
+  - [File1] ([line count] lines)
+  - [File2] ([line count] lines)
+Modified:
+  - [File3] ([changed line count] lines)
 
-✅ 验收标准：全部通过 (X/X)
+✅ Acceptance Criteria: All Passed (X/X)
 
-📚 文档位置：
-  - 功能说明：./.claude/specs/{feature-name}/README.md
-  - 技术方案：./.claude/specs/{feature-name}/tech-design.md
-  - 变更记录：./.claude/specs/{feature-name}/CHANGELOG.md
+📚 Documentation Location:
+  - Feature Docs: `./.claude/specs/{TASK}/README.md`
+  - Technical Design: `./.claude/specs/{TASK}/tech-design.md`
+  - Change Log: `./.claude/specs/{TASK}/CHANGELOG.md`
+  - Review Record: `./.claude/specs/{TASK}/review-report.md`
+  - Test Record: `./.claude/specs/{TASK}/test-report.md`
 
-� 版本控制：
-  - Git分支：{branch-name}（如已创建）
-  - Commit ID：{commit-hash}（如已提交）
-  - 建议Commit Message：feat: {功能描述}
+🚀 Follow-up Suggestions:
+- [Suggestion 1]
+- [Suggestion 2]
 
-🚀 后续建议：
-- [建议1]
-- [建议2]
-
-📝 手动操作（如需要）：
-  - 提交代码：git add . && git commit -m "feat: {功能描述}"
-  - 推送分支：git push origin {branch-name}
-  - 创建Pull Request（如使用GitHub/GitLab）
+- Confirm `progress.json` is marked as Stage 5 / completed.
 ```
 
----
-
-## 时间预估
-
-| 阶段 | 标准耗时 | 快速通道耗时 |
-|------|---------|------------|
-| 阶段0：仓库扫描 | 1-2分钟 | 30-60秒 |
-| 阶段1：需求分析 | 5-10分钟 | 3-5分钟 |
-| 阶段2：技术方案 | 10-15分钟 | 5-10分钟 |
-| 阶段3：功能实施 | 根据复杂度 | 根据复杂度 |
-| 阶段4：质量验证 | 10-15分钟 | 5分钟（可跳过） |
-| 阶段5：交付文档 | 5分钟 | 2分钟 |
-
-**总计**：
-- 简单功能：20-30分钟
-- 中等功能：40-60分钟
-
----
-
-## 关键特性
-
-### 🚀 快速通道优化
-
-1. **精简文档**：
-   - 避免冗长的架构文档
-   - 专注核心技术决策
-   - 摘要式输出
-
-2. **并行分析**：
-   - 仓库扫描与需求分析可并行
-   - 技术方案与代码审查可复用智能体
-
-3. **智能跳过**：
-   - 简单功能自动采用快速通道
-   - 复杂功能自动建议使用完整流程
-
-### 🎯 用户控制点
-
-**2个必须确认点**（不可跳过）：
-1. ✋ PRD确认：明确需求后才开始实施
-2. ✋ 方案确认：批准技术方案后才编码
-
-**1个可选确认点**：
-- ⚙️ 测试验证：可通过 `--skip-tests` 跳过
-
-### 🔍 架构感知
-
-- 自动识别项目类型与技术栈
-- 复用现有组件与模式
-- 遵循既定代码规范
-- 智能推荐文件位置
-
-### 📊 质量保障
-
-- 需求清晰度评分（≥7分才实施）
-- 代码审查（可选跳过）
-- 验收标准检查
-- 集成测试
-
----
-
-## 使用场景
-
-### 适用场景 ✅
-
-- **小型功能**：新增工具函数、辅助类、UI组件
-- **功能增强**：在现有模块上扩展功能
-- **Bug修复后的功能补充**：修复后增加防御性代码
-- **快速原型**：验证技术可行性
-- **维护性任务**：重构、优化、文档补充
-
-### 不适用场景 ❌
-
-- **大型功能**：涉及多个模块、复杂交互（建议用 `/prd-pilot`）
-- **架构变更**：需要重大架构调整的需求
-- **跨团队协作**：需要多方评审的功能
-- **安全敏感**：支付、认证等关键功能（需更严格的审查）
-
----
-
-## 智能体使用策略
-
-### 复用现有智能体
-- `prd-orchestrator`：作为架构识别专家
-- `prd-po`：作为需求分析师（精简模式）
-- `prd-dev`：作为开发工程师
-- `prd-review`：作为代码审查员（可选）
-- `prd-qa`：作为质量保障员（可选）
-
-### 智能体调用模式
-```
-阶段0 → prd-orchestrator（仓库扫描）
-阶段1 → prd-po（需求分析，快速模式）
-阶段2 → prd-orchestrator（技术方案，快速模式）
-阶段3 → prd-dev（功能实施）
-阶段4 → prd-review + prd-qa（质量验证，可选）
-阶段5 → prd-orchestrator（文档生成）
-```
-
----
-
-## 输出目录结构
+## Output Directory Structure
 
 ```
 ./.claude/
-├── quick-context.md                      # 仓库架构快速参考
+├── quick-context.md                      # Repository architecture quick reference
 └── specs/
-    └── {feature-name}/
-        ├── requirements.md               # 需求摘要
-        ├── tech-design.md                # 技术方案
-        ├── progress.json                 # 进度状态（用于恢复）
-        ├── implementation.log            # 实施日志
-        ├── README.md                     # 功能说明（标准文档）
-        ├── QUICKSTART.md                 # 快速说明（--minimal-docs）
-        └── CHANGELOG.md                  # 变更记录
+    └── {TASK}/
+        ├── requirements.md               # Requirements summary
+        ├── tech-design.md                # Technical design
+        ├── progress.json                 # Progress status (for resumption)
+        ├── implementation.log            # Implementation log
+        ├── README.md                     # Feature documentation (standard)
+        ├── QUICKSTART.md                 # Quick start guide (`--minimal-docs`)
+        └── CHANGELOG.md                  # Change log
 ```
 
 ---
 
-## 文档格式模板
+## Document Format Templates
 
-### quick-context.md 格式
-
-```markdown
-# 项目架构快速参考
-
-生成时间：{timestamp}
-扫描范围：{scope}
-
-## 项目类型
-- 类型：{前端/后端/全栈/库/工具}
-- 应用类型：{Web应用/API服务/桌面应用/CLI工具}
-
-## 技术栈
-- 主要语言：{语言} ({版本})
-- 核心框架：{框架名称} ({版本})
-- 包管理器：{npm/yarn/pnpm/pip/等}
-- 构建工具：{webpack/vite/等}
-
-## 目录结构
-```
-{关键目录树}
-```
-
-## 代码组织
-- 命名规范：{kebab-case/camelCase/PascalCase}
-- 模块模式：{ESM/CommonJS/等}
-- 分层结构：{MVC/分层架构/等}
-
-## 可复用组件
-1. {组件名称}：{路径} - {说明}
-2. {组件名称}：{路径} - {说明}
-3. ...
-
-## 代码风格
-- 配置文件：{.eslintrc/.prettierrc/等}
-- 缩进：{空格数}个空格
-- 引号：{单引号/双引号}
-- 其他约定：{列举}
-
-## 测试
-- 测试框架：{Jest/Vitest/Pytest/等}
-- 测试位置：{__tests__/test/等}
-- 覆盖率要求：{如有}
-
-## 建议实施位置
-基于功能类型的建议目录：
-- UI组件：{路径}
-- API接口：{路径}
-- 业务逻辑：{路径}
-- 工具函数：{路径}
-```
-
-### requirements.md 格式
+### quick-context.md Format
 
 ```markdown
-# 功能需求：{功能名称}
+# Project Architecture Quick Reference
 
-生成时间：{timestamp}
-清晰度评分：{分数}/10
-复杂度：{简单/中等/复杂}
+Generated: {timestamp}
+Scan Scope: {scope}
 
-## 核心功能
-{一句话描述主要功能}
+## Project Type
+- Type: {Frontend/Backend/Full-stack/Library/Tool}
+- Application Type: {Web app/API service/Desktop app/CLI tool}
 
-## 用户故事
-1. 作为{角色}，我想{功能}，以便{目标}
-2. 作为{角色}，我想{功能}，以便{目标}
+## Technology Stack
+- Main Language: {Language} ({Version})
+- Core Framework: {Framework Name} ({Version})
+- Package Manager: {npm/yarn/pnpm/pip/etc.}
+- Build Tool: {webpack/vite/etc.}
+
+## Directory Structure
+```
+{Key directory tree}
+```
+
+## Code Organization
+- Naming Convention: {kebab-case/camelCase/PascalCase}
+- Module Pattern: {ESM/CommonJS/etc.}
+- Layered Structure: {MVC/Layered Architecture/etc.}
+
+## Reusable Components
+1. {Component Name}: {Path} - {Description}
+2. {Component Name}: {Path} - {Description}
 3. ...
 
-## 验收标准
-- [ ] {标准1}
-- [ ] {标准2}
-- [ ] {标准3}
+## Code Style
+- Config File: {.eslintrc/.prettierrc/etc.}
+- Indentation: {Number} spaces
+- Quotes: {Single/Double}
+- Other Conventions: {List}
+
+## Testing
+- Testing Framework: {Jest/Vitest/Pytest/etc.}
+- Test Location: {__tests__/test/etc.}
+- Coverage Requirement: {If any}
+
+## Recommended Implementation Locations
+Suggested directories based on feature type:
+- UI Component: {Path}
+- API Endpoint: {Path}
+- Business Logic: {Path}
+- Utility Function: {Path}
+```
+
+### requirements.md Format
+
+```markdown
+# Feature Requirement: {Feature Name}
+
+Generated: {timestamp}
+Clarity Score: {Score}/10
+Complexity: {Simple/Medium/Complex}
+
+## Core Functionality
+{One-sentence description of the main feature}
+
+## User Stories
+1. As a {role}, I want {functionality} so that {goal}.
+2. As a {role}, I want {functionality} so that {goal}.
+3. ...
+
+## Acceptance Criteria
+- [ ] {Criterion 1}
+- [ ] {Criterion 2}
+- [ ] {Criterion 3}
 - [ ] ...
 
-## 技术约束
-- {约束1}
-- {约束2}
+## Technical Constraints
+- {Constraint 1}
+- {Constraint 2}
 - ...
 
-## 影响范围
-- 预计新建文件：{数量}个
-- 预计修改文件：{数量}个
-- 涉及模块：{模块列表}
+## Impact Scope
+- Estimated New Files: {Count}
+- Estimated Modified Files: {Count}
+- Affected Modules: {Module list}
 
-## 非功能需求
-- 性能要求：{如有}
-- 安全要求：{如有}
-- 兼容性：{如有}
+## Non-functional Requirements
+- Performance Requirements: {If any}
+- Security Requirements: {If any}
+- Compatibility: {If any}
 ```
 
-### tech-design.md 格式
+### tech-design.md Format
 
 ```markdown
-# 技术方案：{功能名称}
+# Technical Design: {Feature Name}
 
-生成时间：{timestamp}
-基于PRD：requirements.md
+Generated: {timestamp}
+Based on PRD: requirements.md
 
-## 文件规划
+## File Plan
 
-### 新建文件
-1. `{文件路径}`
-   - 职责：{职责说明}
-   - 类型：{组件/服务/工具/等}
+### New Files
+1. `{File Path}`
+   - Responsibility: {Responsibility description}
+   - Type: {Component/Service/Utility/etc.}
+2. `{File Path}`
+   - Responsibility: {Responsibility description}
+   - Type: {Component/Service/Utility/etc.}
 
-2. `{文件路径}`
-   - 职责：{职责说明}
-   - 类型：{组件/服务/工具/等}
+### Modified Files
+1. `{File Path}`
+   - Change Type: {Add/Modify/Delete}
+   - Change Description: {Description}
 
-### 修改文件
-1. `{文件路径}`
-   - 改动类型：{新增/修改/删除}
-   - 改动说明：{说明}
+## Core Interface Definitions
 
-## 核心接口定义
-
-### {接口/类/函数名称1}
-```{语言}
-{接口定义代码}
+### {Interface/Class/Function Name 1}
+```{Language}
+{Interface definition code}
 ```
-说明：{一句话说明}
+Description: {One-sentence description}
 
-### {接口/类/函数名称2}
-```{语言}
-{接口定义代码}
+### {Interface/Class/Function Name 2}
+```{Language}
+{Interface definition code}
 ```
-说明：{一句话说明}
+Description: {One-sentence description}
 
-## 数据流设计
+## Data Flow Design
 
-### 输入
-- {输入1}：{类型} - {说明}
-- {输入2}：{类型} - {说明}
+### Input
+- {Input1}: {Type} - {Description}
+- {Input2}: {Type} - {Description}
 
-### 输出
-- {输出1}：{类型} - {说明}
-- {输出2}：{类型} - {说明}
+### Output
+- {Output1}: {Type} - {Description}
+- {Output2}: {Type} - {Description}
 
-### 数据结构
-```{语言}
-{关键数据结构定义}
-```
-
-## 集成点
-- 与{现有模块1}集成：{集成方式}
-- 与{现有模块2}集成：{集成方式}
-
-## 实施步骤
-
-1. **{步骤1名称}**（预估：{时间}分钟）
-   - 任务：{具体任务}
-   - 产出：{文件或代码}
-
-2. **{步骤2名称}**（预估：{时间}分钟）
-   - 任务：{具体任务}
-   - 产出：{文件或代码}
-
-3. ...
-
-## 风险点
-- {风险1}：{说明及应对措施}
-- {风险2}：{说明及应对措施}
-
-## 技术决策
-- {决策1}：{原因}
-- {决策2}：{原因}
+### Data Structures
+```{Language}
+{Key data structure definition}
 ```
 
-### progress.json 格式
+## Integration Points
+- Integration with {Existing Module 1}: {Integration method}
+- Integration with {Existing Module 2}: {Integration method}
+
+## Implementation Steps
+
+1.  **{Step 1 Name}**
+    - Task: {Specific task}
+    - Deliverable: {File or code}
+2.  **{Step 2 Name}**
+    - Task: {Specific task}
+    - Deliverable: {File or code}
+3.  ...
+
+## Risk Points
+- {Risk1}: {Description & mitigation}
+- {Risk2}: {Description & mitigation}
+
+## Technical Decisions
+- {Decision1}: {Rationale}
+- {Decision2}: {Rationale}
+```
+
+### progress.json Format
 
 ```json
 {
-  "featureName": "{功能名称}",
-  "startTime": "{ISO时间戳}",
-  "lastUpdateTime": "{ISO时间戳}",
-  "currentStage": "{阶段编号：0-5}",
-  "currentStep": "{当前步骤编号}",
-  "status": "{状态：in-progress/blocked/completed}",
+  "featureName": "{Feature Name}",
+  "startTime": "{ISO Timestamp}",
+  "lastUpdateTime": "{ISO Timestamp}",
+  "currentStage": "{Stage Number: 0-5}",
+  "currentStep": "{Current Step Number}",
+  "status": "{Status: in-progress/blocked/completed}",
   "completedSteps": [
     {
       "stage": 0,
       "step": 1,
-      "description": "{步骤描述}",
-      "completedAt": "{ISO时间戳}"
+      "description": "{Step description}",
+      "completedAt": "{ISO Timestamp}"
     }
   ],
   "filesCreated": [
     {
-      "path": "{文件路径}",
-      "lines": {行数},
-      "createdAt": "{ISO时间戳}"
+      "path": "{File Path}",
+      "lines": {Line Count},
+      "createdAt": "{ISO Timestamp}"
     }
   ],
   "filesModified": [
     {
-      "path": "{文件路径}",
-      "linesChanged": {行数},
-      "modifiedAt": "{ISO时间戳}"
+      "path": "{File Path}",
+      "linesChanged": {Line Count},
+      "modifiedAt": "{ISO Timestamp}"
     }
   ],
   "issues": [
     {
-      "type": "{类型：error/warning/info}",
-      "description": "{问题描述}",
-      "stage": {阶段编号},
+      "type": "{Type: error/warning/info}",
+      "description": "{Issue description}",
+      "stage": {Stage Number},
       "resolved": {true/false},
-      "timestamp": "{ISO时间戳}"
+      "timestamp": "{ISO Timestamp}"
     }
   ],
   "retryCount": {
@@ -916,9 +831,9 @@ PRD路径：./.claude/specs/{feature-name}/requirements.md
   },
   "userInputs": [
     {
-      "prompt": "{提示内容}",
-      "response": "{用户回复}",
-      "timestamp": "{ISO时间戳}"
+      "prompt": "{Prompt content}",
+      "response": "{User response}",
+      "timestamp": "{ISO Timestamp}"
     }
   ]
 }
@@ -926,259 +841,13 @@ PRD路径：./.claude/specs/{feature-name}/requirements.md
 
 ---
 
-## 成功标准
+## Success Criteria
 
-- ✅ 仓库架构识别准确（主要语言、框架、目录结构）
-- ✅ 需求明确（清晰度 ≥ 7分）
-- ✅ 技术方案可行（用户批准）
-- ✅ 代码实施完成（所有验收标准满足）
-- ✅ 质量验证通过（如未跳过）
-- ✅ 文档生成完整（根据选项）
-- ✅ 总耗时符合预期（简单功能 ≤ 30分钟）
-
----
-
-## 与其他命令的对比
-
-| 特性 | `/quick-feature` | `/prd-pilot` | `/code` |
-|------|-----------------|---------------|---------|
-| 目标场景 | 中小型功能 | 完整项目/大型功能 | 纯代码实现 |
-| 需求分析 | 快速分析（5分钟） | 深度分析（≥90分） | 无 |
-| 技术方案 | 精简方案 | 完整架构设计 | 无 |
-| Sprint规划 | 无 | 有（可选） | 无 |
-| 代码实施 | 有 | 有 | 有 |
-| 代码审查 | 可选 | 强制 | 无 |
-| 测试阶段 | 可选 | 可选 | 无 |
-| 用户控制点 | 2个（PRD+方案） | 3个（PRD+架构+Sprint） | 0个 |
-| 预估耗时 | 20-60分钟 | 1-4小时+ | 10-30分钟 |
-| 文档详细度 | 精简 | 完整 | 无 |
+- ✅ Repository architecture accurately identified (main language, framework, directory structure).
+- ✅ Requirements are clear (clarity score ≥ 7).
+- ✅ Technical solution is feasible (user approved).
+- ✅ Code implementation completed (all acceptance criteria met).
+- ✅ Quality verification passed (if not skipped).
+- ✅ Documentation generated completely (according to options).
 
 ---
-
-## 最佳实践
-
-### 1. 需求描述技巧
-```
-✅ 好的描述：
-"为用户列表页面添加分页功能，每页显示20条，支持前后翻页"
-
-❌ 模糊描述：
-"优化用户列表"
-```
-
-### 2. 何时跳过测试
-```
-✅ 可以跳过：
-- 纯UI调整（视觉效果）
-- 快速原型验证
-- 配置文件修改
-
-❌ 不应跳过：
-- 业务逻辑变更
-- API接口修改
-- 数据处理功能
-```
-
-### 3. 快速迭代策略
-```
-第1轮：使用 --skip-tests --minimal-docs 快速实现
-第2轮：验证功能后，单独运行测试
-第3轮：需要时补充完整文档
-```
-
-### 4. 使用 --scope 加速开发
-```
-✅ 推荐场景：
-- 大型项目中开发独立模块
-- 明确功能只涉及特定目录
-- 避免全仓库扫描节省时间
-
-示例：
-/quick-feature "添加用户导出功能" --scope src/features/users
-
-效果：
-- 仅扫描 src/features/users 目录
-- 仅在该目录下创建/修改文件
-- 架构识别时间减少50%+
-```
-
-### 5. 使用 --branch 集成版本控制
-```
-✅ 推荐场景：
-- 团队协作项目
-- 需要代码审查的功能
-- 希望保持主分支稳定
-
-示例：
-/quick-feature "添加深色模式" --branch feature/dark-mode
-
-效果：
-- 自动创建新分支
-- 自动提交所有更改
-- 提供PR创建提示
-
-❌ 不推荐场景：
-- 个人实验项目
-- 快速原型验证
-- 临时测试代码
-```
-
----
-
-## 故障排查
-
-### 问题：架构识别不准确
-**解决**：手动指定关键信息
-```bash
-/quick-feature "添加登录功能" --scope src/auth
-```
-
-### 问题：需求清晰度始终 < 7
-**解决**：切换到 `/prd-pilot` 使用深度需求分析
-
-### 问题：实施时间超预期
-**解决**：
-1. 检查是否应使用 `/prd-pilot`（复杂功能）
-2. 将功能拆分为多个小功能分别实施
-
-### 问题：代码审查持续不通过
-**解决**：
-1. 使用 `--skip-review` 先完成实施
-2. 后续手动进行代码审查与修复
-
-### 问题：流程中断后无法恢复
-**解决**：
-1. 检查 `./.claude/specs/{feature-name}/progress.json` 是否存在
-2. 使用 `/quick-feature --resume {feature-name}` 恢复
-3. 如progress.json损坏，手动指定从哪个阶段开始：
-   ```bash
-   /quick-feature "继续实现XX功能" --scope {路径} --from-stage 3
-   ```
-
-### 问题：Git分支创建失败
-**解决**：
-1. 检查是否在Git仓库中：`git status`
-2. 检查是否有未提交的更改：先手动提交或stash
-3. 检查分支名是否合法（不含特殊字符）
-4. 如不需要Git集成，不使用 `--branch` 参数
-
-### 问题：智能体调用超时
-**解决**：
-1. 检查网络连接
-2. 使用 `--scope` 限制扫描范围
-3. 简化功能需求，拆分为多个小功能
-4. 检查是否有大文件阻塞扫描（node_modules等）
-
-### 问题：生成的代码不符合项目规范
-**解决**：
-1. 检查 `.eslintrc`、`.prettierrc` 等配置文件是否存在
-2. 在 quick-context.md 中手动补充代码规范
-3. 在PRD确认时明确指出特殊规范要求
-4. 实施后手动运行 lint 工具修复
-
----
-
-## 后续改进建议
-
-完成功能后，建议：
-
-1. **代码审查**：提交PR请团队成员审查（如跳过了自动审查）
-2. **测试补充**：在测试环境进一步验证（如跳过了测试阶段）
-3. **文档完善**：根据团队反馈补充文档（如使用了 --minimal-docs）
-4. **性能优化**：在生产环境监控性能并优化
-5. **技术债跟踪**：记录快速实施过程中留下的技术债
-
----
-
-## 示例
-
-### 示例0：恢复中断的功能开发
-```bash
-/quick-feature --resume user-stats-api
-```
-
-**预期流程**：
-- 读取 `./.claude/specs/user-stats-api/progress.json`
-- 展示中断前的状态：
-  ```
-  📊 恢复功能开发：user-stats-api
-  
-  上次中断：2025-12-15 14:30:25
-  当前阶段：阶段3（功能实施）
-  已完成步骤：2/5
-  
-  已完成：
-  ✅ 步骤1：创建API路由文件
-  ✅ 步骤2：实现数据查询逻辑
-  
-  待完成：
-  ⏳ 步骤3：添加数据聚合
-  ⬜ 步骤4：添加错误处理
-  ⬜ 步骤5：编写API文档
-  
-  是否继续？(yes/no/restart)
-  ```
-- 用户确认后从步骤3继续
-- 如选择 `restart`，从阶段1重新开始
-
-**预估耗时**：剩余20-30分钟
-
-### 示例1：简单UI组件
-```bash
-/quick-feature "创建一个加载状态的Spinner组件，支持大中小三种尺寸" --skip-tests
-```
-
-**预期流程**：
-- 阶段0：识别前端框架（React/Vue/等）
-- 阶段1：明确组件API（props、样式）
-- 阶段2：确定文件位置（src/components/Spinner.tsx）
-- 阶段3：实施组件代码
-- 阶段5：生成使用文档
-
-**预估耗时**：15-20分钟
-
-### 示例2：API端点
-```bash
-/quick-feature "添加获取用户统计信息的API端点 GET /api/users/stats"
-```
-
-**预期流程**：
-- 阶段0：识别后端框架（Express/FastAPI/等）
-- 阶段1：明确API规格（请求/响应格式）
-- 阶段2：确定路由与服务文件位置
-- 阶段3：实施路由、服务逻辑、数据查询
-- 阶段4：验证API响应正确性
-- 阶段5：生成API文档
-
-**预估耗时**：30-40分钟
-
-### 示例3：工具函数
-```bash
-/quick-feature "创建一个日期格式化工具函数，支持多种常见格式" --minimal-docs
-```
-
-**预期流程**：
-- 阶段0：识别工具函数存放位置
-- 阶段1：明确函数签名与格式类型
-- 阶段2：确定文件位置（src/utils/date.ts）
-- 阶段3：实施函数与单元测试
-- 阶段4：运行测试验证
-- 阶段5：生成最简使用说明
-
-**预估耗时**：20-25分钟
-
----
-
-## 总结
-
-`/quick-feature` 命令提供了一个精简高效的功能开发流程，适合中小型功能需求。通过智能仓库识别、快速需求分析、精简技术方案与可选的质量验证，在保证代码质量的前提下显著提升开发效率。
-
-**核心优势**：
-- ⚡ 快速：20-60分钟完成中小功能
-- 🎯 聚焦：2个关键确认点保证方向正确
-- 🔧 灵活：可选跳过测试与审查
-- 📊 质量：架构感知保证代码一致性
-- 📚 文档：自动生成必要文档
-
-**使用原则**：
-- 功能明确 → 快速实施 → 质量验证 → 持续改进

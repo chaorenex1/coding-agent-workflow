@@ -1,260 +1,260 @@
-# 快速重构工作流
+# Quick Refactor Workflow
 
-## 用法
+## Usage
 
 `/quick-refactor <CODE_SCOPE> [OPTIONS]`
 
-### 参数
+### Parameters
 
-- `<CODE_SCOPE>`: 要重构的代码范围(文件路径、目录路径或使用 @ 文件语法)
-- `[OPTIONS]`: 可选参数
-  - `--priority <LEVEL>`: 指定处理优先级(P0/P1/P2/P3,默认:所有)
-  - `--skip-analysis`: 跳过详细分析,使用已有分析报告
-  - `--skip-validation`: 跳过验证阶段(不推荐)
-  - `--safe-mode`: 安全模式,每步都需要人工确认
-  - `--auto-commit`: 每步自动提交(默认行为)
-  - `--batch-commit`: 批量提交(完成所有步骤后一次性提交)
+- `<CODE_SCOPE>`: The code scope to refactor (file path, directory path, or @ file syntax)
+- `[OPTIONS]`: Optional flags
+   - `--priority <LEVEL>`: Set priority levels to handle (P0/P1/P2/P3; default: all)
+   - `--skip-analysis`: Skip deep analysis and use an existing analysis report
+   - `--skip-validation`: Skip the validation phase (not recommended)
+   - `--safe-mode`: Safe mode; require manual confirmation at each step
+   - `--auto-commit`: Auto-commit after each step (default behavior)
+   - `--batch-commit`: Batch commit (commit once after all steps finish)
 
-## 上下文
+## Context
 
-- 待重构代码: $ARGUMENTS
-- 针对代码质量改进、技术债务清理和架构优化
-- 多智能体协作确保重构安全、高效、有质量保证
-- 小步迭代,每步可验证、可回滚
+- Target refactor scope: $ARGUMENTS
+- For code quality improvements, technical debt cleanup, and architecture optimization
+- Multi-agent collaboration to keep refactors safe, efficient, and quality-assured
+- Small steps: each step is verifiable and reversible
 
-## 你的角色
+## Your Role
 
-你是**快速重构协调者**,管理3个专业智能体团队完成代码重构:
+You are the **Quick Refactor Coordinator**, managing a team of three specialist sub-agents to complete the refactor:
 
-1. **重构分析师** – 评估代码质量,识别问题,制定重构计划
-2. **重构执行者** – 按计划安全执行重构操作
-3. **重构验证者** – 验证重构正确性和质量改进效果
+1. **Refactor Analyst** – Assess code quality, identify issues, and create a refactor plan
+2. **Refactor Executor** – Execute the refactor safely according to the plan
+3. **Refactor Validator** – Validate correctness and quality improvements
 
-## 工作流程
+## Workflow
 
-### 阶段0: 环境准备(自动执行)
+### Phase 0: Environment Preparation (Automatic)
 
-**目标**: 确保重构环境安全可靠
+**Goal**: Ensure the refactor environment is safe and reliable
 
 ```bash
-# 1. 检查工作区状态
+# 1. Check working tree state
 git status
 
-# 检查点:
-# ✅ 工作区干净(无未提交变更)
-# ✅ 当前分支可以创建重构分支
-# ⚠️ 如有未提交变更,提示用户处理
+# Checkpoints:
+# ✅ Clean working tree (no uncommitted changes)
+# ✅ Current branch can create a refactor branch
+# ⚠️ If there are uncommitted changes, prompt the user to handle them
 
-# 2. 运行基线测试
+# 2. Run baseline tests
 npm test
 
-# 检查点:
-# ✅ 所有测试通过
-# ❌ 如有失败,中止重构并报告
+# Checkpoints:
+# ✅ All tests pass
+# ❌ If failures occur, stop and report
 
-# 3. 记录基线指标
+# 3. Record baseline metrics
 npm run test:coverage
 npm run lint
 
-# 保存指标到 ./.claude/refactor/baseline-metrics.json
+# Save metrics to ./.claude/refactor/baseline-metrics.json
 ```
 
-**质量门禁**:
+**Quality gate**:
 ```typescript
 interface BaselineCheck {
-  git_clean: boolean;          // 必须: true
-  tests_passing: boolean;       // 必须: true
-  coverage_threshold: number;   // 建议: >= 70%
-  build_success: boolean;       // 必须: true
+   git_clean: boolean;          // required: true
+   tests_passing: boolean;       // required: true
+   coverage_threshold: number;   // recommended: >= 70%
+   build_success: boolean;       // required: true
 }
 
-// 如果不满足必须条件,终止流程并给出明确指导
+// If any required condition is not met, stop and give clear guidance.
 ```
 
 ---
 
-### 阶段1: 重构分析(交互式)
+### Phase 1: Refactor Analysis (Interactive)
 
-**目标**: 识别代码问题并制定重构计划
+**Goal**: Identify issues and produce a refactor plan
 
-#### 1.1 启动分析
-
-```
-使用重构分析师智能体:
-"分析指定代码范围的质量问题并生成重构计划
-
-代码范围: [$ARGUMENTS]
-分析深度: 全面分析
-
-## 分析任务:
-1. **代码异味检测**:
-   - 识别神类、长方法、重复代码
-   - 检测复杂度过高的代码
-   - 发现耦合度问题
-   - 标记设计原则违规
-
-2. **问题优先级评定**:
-   - 按严重程度分级(P0/P1/P2/P3)
-   - 评估影响范围
-   - 预估修复工作量
-   - 计算收益/成本比
-
-3. **重构策略制定**:
-   - 为每个问题确定重构方法
-   - 设计分步执行计划
-   - 识别依赖关系
-   - 评估风险并制定缓解措施
-
-4. **前置条件检查**:
-   - 评估测试覆盖率充分性
-   - 检查依赖关系复杂度
-   - 识别潜在阻塞因素
-   - 给出Go/No-Go建议
-
-## 输出格式:
-生成重构分析报告 (./.claude/refactor/analysis/refactor-analysis.md):
-- 执行摘要
-- 问题清单(按优先级)
-- 重构路线图
-- 风险评估
-- 前置条件检查结果
-
-预计耗时: 2-5分钟"
-```
-
-#### 1.2 分析报告展示
-
-向用户展示分析摘要:
+#### 1.1 Start Analysis
 
 ```
-📊 重构分析报告摘要
+Use the Refactor Analyst agent:
+"Analyze code quality issues in the specified scope and generate a refactor plan
 
-代码健康度: 🟡 中等 (68/100)
+Scope: [$ARGUMENTS]
+Depth: comprehensive
 
-发现问题:
-🔴 严重(P0): 8个 - 立即处理
-🟠 高(P1): 23个 - 本周处理
-🟡 中(P2): 45个 - 本月处理
-🟢 低(P3): 67个 - 可选处理
+## Analysis tasks:
+1. **Code smell detection**:
+    - Identify god classes, long methods, duplicated code
+    - Detect overly complex code
+    - Find coupling/cohesion issues
+    - Flag violations of design principles
 
-主要问题:
-1. UserManager神类 (487行, 28方法)
-2. 3处循环依赖
-3. 12处重复代码块
-4. 8个N+1查询问题
+2. **Issue prioritization**:
+    - Classify by severity (P0/P1/P2/P3)
+    - Assess impact scope
+    - Estimate effort
+    - Estimate benefit/cost ratio
 
-预估工作量:
-- P0问题: 16小时
-- P1问题: 12小时
-- P2问题: 20小时
-- 总计: 48小时
+3. **Refactor strategy**:
+    - Choose refactor methods for each issue
+    - Design a step-by-step execution plan
+    - Identify dependencies
+    - Assess risks and define mitigations
 
-风险评估: 🟡 中风险
-前置条件: ⚠️ 测试覆盖率需提升至80%
+4. **Precondition checks**:
+    - Evaluate whether test coverage is sufficient
+    - Check dependency complexity
+    - Identify potential blockers
+    - Provide a Go/No-Go recommendation
 
-查看完整报告: ./.claude/refactor/analysis/refactor-analysis.md
+## Output format:
+Create a refactor analysis report (./.claude/refactor/analysis/refactor-analysis.md):
+- Executive summary
+- Issue list (by priority)
+- Refactor roadmap
+- Risk assessment
+- Preconditions check results
 
-选择要处理的问题范围:
-1. 仅P0 (紧急问题)
-2. P0 + P1 (高优先级)
-3. P0 + P1 + P2 (常规重构)
-4. 全部 (完整重构)
-5. 自定义选择
-
-请输入选项(1-5):
+ETA: 2–5 minutes"
 ```
 
-#### 1.3 用户确认
+#### 1.2 Present the Analysis Summary
 
-**等待用户选择优先级范围**
-
-如果前置条件不满足(如测试覆盖率低),提示:
+Show the user a summary:
 
 ```
-⚠️ 前置条件检查
+📊 Refactor Analysis Summary
 
-测试覆盖率: 67.8% (目标: ≥80%)
-建议: 先补充测试用例
+Code health: 🟡 Medium (68/100)
 
-选项:
-1. 继续重构 (风险较高)
-2. 先补充测试 (推荐)
-3. 取消重构
+Issues found:
+🔴 Critical (P0): 8 - fix immediately
+🟠 High (P1): 23 - fix this week
+🟡 Medium (P2): 45 - fix this month
+🟢 Low (P3): 67 - optional
 
-请选择:
+Top issues:
+1. God class: UserManager (487 lines, 28 methods)
+2. 3 circular dependencies
+3. 12 duplicated code blocks
+4. 8 N+1 query issues
+
+Effort estimate:
+- P0: 16 hours
+- P1: 12 hours
+- P2: 20 hours
+- Total: 48 hours
+
+Risk: 🟡 Medium
+Preconditions: ⚠️ Increase test coverage to 80%
+
+Full report: ./.claude/refactor/analysis/refactor-analysis.md
+
+Choose the scope to handle:
+1. P0 only (urgent)
+2. P0 + P1 (high priority)
+3. P0 + P1 + P2 (standard refactor)
+4. All (full refactor)
+5. Custom selection
+
+Enter an option (1-5):
+```
+
+#### 1.3 User Confirmation
+
+**Wait for the user to choose the priority range**
+
+If preconditions are not met (e.g., low test coverage), prompt:
+
+```
+⚠️ Preconditions Check
+
+Test coverage: 67.8% (target: ≥80%)
+Recommendation: add tests first
+
+Options:
+1. Continue refactor (higher risk)
+2. Add tests first (recommended)
+3. Cancel refactor
+
+Choose:
 ```
 
 ---
 
-### 阶段2: 生成执行计划(自动执行)
+### Phase 2: Generate an Execution Plan (Automatic)
 
-**目标**: 将重构策略转化为可执行步骤
-
-```
-基于用户选择的优先级范围,生成详细执行计划:
-
-## 执行计划生成规则:
-1. **依赖排序**: 先处理被依赖项,后处理依赖项
-2. **风险排序**: 低风险项优先,建立信心
-3. **小步迭代**: 每步 ≤ 30分钟
-4. **独立可验证**: 每步完成后可运行测试验证
-
-## 输出格式:
-生成执行计划 (./.claude/refactor/plan/execution-plan.md):
-- 步骤清单(编号、描述、预估时间)
-- 依赖关系图
-- 验证检查点
-- 回滚策略
-
-示例步骤:
-  步骤1: 提取UserAuthService (45min)
-    - 创建新类
-    - 移动认证方法
-    - 更新调用点
-    - 验证: npm test
-    
-  步骤2: 提取UserValidator (30min)
-    - 创建验证器类
-    - 移动验证方法
-    - 更新调用点
-    - 验证: npm test
-```
-
-展示执行计划:
+**Goal**: Convert the refactor strategy into executable steps
 
 ```
-📋 重构执行计划
+Based on the user's selected priority range, generate a detailed execution plan:
 
-总步骤: 6步
-总时间: 3.5小时
-优先级: P0
+## Rules for plan generation:
+1. **Dependency order**: fix dependencies before dependents
+2. **Risk order**: low-risk items first to build confidence
+3. **Small steps**: each step ≤ 30 minutes
+4. **Independently verifiable**: each step can run tests to validate
 
-步骤概览:
-1. 提取UserAuthService (45min) [P0]
-2. 提取UserValidator (30min) [P0]
-3. 提取UserRepository (40min) [P0]
-4. 解除循环依赖 (60min) [P0]
-5. 优化N+1查询 (45min) [P1]
-6. 清理重复代码 (30min) [P2]
+## Output format:
+Generate an execution plan (./.claude/refactor/plan/execution-plan.md):
+- Step list (number, description, ETA)
+- Dependency graph
+- Verification checkpoints
+- Rollback strategy
 
-查看详细计划: ./.claude/refactor/plan/execution-plan.md
+Example steps:
+   Step 1: Extract UserAuthService (45min)
+      - Create a new class
+      - Move auth methods
+      - Update call sites
+      - Verify: npm test
 
-开始执行? (yes/no)
-或输入步骤编号单独执行 (如: 1,3,4)
+   Step 2: Extract UserValidator (30min)
+      - Create a validator class
+      - Move validation methods
+      - Update call sites
+      - Verify: npm test
 ```
 
-**等待用户确认**
+Present the execution plan:
+
+```
+📋 Refactor Execution Plan
+
+Total steps: 6
+Total time: 3.5 hours
+Priority: P0
+
+Steps overview:
+1. Extract UserAuthService (45min) [P0]
+2. Extract UserValidator (30min) [P0]
+3. Extract UserRepository (40min) [P0]
+4. Break circular dependencies (60min) [P0]
+5. Optimize N+1 queries (45min) [P1]
+6. Clean up duplicated code (30min) [P2]
+
+Detailed plan: ./.claude/refactor/plan/execution-plan.md
+
+Start execution? (yes/no)
+Or enter step numbers to run individually (e.g., 1,3,4)
+```
+
+**Wait for user confirmation**
 
 ---
 
-### 阶段3: 执行重构(自动执行 + 可选人工确认)
+### Phase 3: Execute Refactor (Automatic + Optional Manual Confirmation)
 
-**目标**: 安全高效地完成代码重构
+**Goal**: Complete the refactor safely and efficiently
 
-#### 3.1 创建重构分支
+#### 3.1 Create a Refactor Branch
 
 ```bash
-# 自动创建分支
+# Auto-create a branch
 git checkout -b refactor/$(date +%Y%m%d)-quality-improvement
 ```
 
@@ -916,19 +916,3 @@ git checkout -b backup-main   # 创建备份分支
 **预估耗时**: 30-60分钟
 
 ---
-
-## 总结
-
-`/quick-refactor` 命令提供了一个系统化、自动化、安全的代码重构流程。通过3个专业智能体的协作,在保证质量和安全的前提下高效完成代码重构。
-
-**核心优势**:
-- 🛡️ 安全: 多重保障机制,小步迭代,自动回滚
-- 🎯 精准: 基于分析的重构策略,优先级明确
-- 📊 可量化: 完整的指标对比,改进可见
-- 🔄 可控: 多个确认点,安全模式可选
-- 📚 文档化: 自动生成完整文档
-
-**使用原则**:
-- 准备充分 → 分析问题 → 制定计划 → 小步执行 → 全面验证 → 文档交付
-
-立即开始你的代码重构之旅! 🚀

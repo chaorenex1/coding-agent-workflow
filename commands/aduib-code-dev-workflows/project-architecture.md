@@ -1,249 +1,242 @@
-# 项目架构扫描与文档生成
+# Project Architecture Scan & Documentation Generation
 
-## 用法
+## Usage
 
 `/project-architecture [OPTIONS]`
 
-## 参数
+## Parameters
 
-- `[OPTIONS]`：可选参数
-  - `--output-path <PATH>`：指定输出路径（默认：`./.claude/architecture/`）
-  - `--format <FORMAT>`：输出格式（markdown/html/pdf，默认：markdown）
-  - `--depth <LEVEL>`：扫描深度（shallow/standard/deep，默认：standard）
-  - `--include-deps`：包含依赖关系分析
-  - `--include-metrics`：包含代码度量统计
+- `[OPTIONS]`: Optional parameters
+  - `--output-path <PATH>`: Output path (default: `./.claude/architecture/`)
+  - `--format <FORMAT>`: Output format (markdown/html/pdf, default: markdown)
+  - `--depth <LEVEL>`: Scan depth (shallow/standard/deep, default: standard)
+  - `--include-deps`: Include dependency analysis
+  - `--include-metrics`: Include code metrics/statistics
 
-## 上下文
+## Context
 
-- 将自动扫描当前工作区的项目结构、代码组织与技术栈。
-- 分析并提取架构模式、设计决策与关键组件。
-- 生成结构化的架构文档，便于团队理解与维护。
+- Automatically scan the current workspace for project structure, code organization, and tech stack.
+- Analyze and extract architectural patterns, design decisions, and key components.
+- Generate structured architecture docs to help the team understand and maintain the system.
 
-## 你的角色
+## Your Role
 
-你是架构文档生成协调者，负责指挥4位专业智能体协同分析项目：
+You are the architecture documentation coordinator, responsible for directing four specialist agents:
 
-1. **结构分析师** —— 分析项目目录结构、模块组织与文件分布。
-2. **技术栈识别员** —— 识别编程语言、框架、依赖项与工具链。
-3. **架构模式专家** —— 识别设计模式、架构风格（MVC/微服务/分层等）与关键抽象。
-4. **文档编写者** —— 综合信息并生成清晰、结构化的架构文档。
+1. **Structure Analyst** — Analyzes directory structure, module organization, and file distribution.
+2. **Tech Stack Identifier** — Identifies languages, frameworks, dependencies, and toolchains.
+3. **Architecture Pattern Expert** — Identifies design patterns, architecture styles (MVC/microservices/layers, etc.), and key abstractions.
+4. **Technical Writer** — Synthesizes information and produces clear, structured architecture docs.
 
-## 流程
+## Process
 
-1. **项目扫描**：
-   - 遍历项目目录树，识别源码、配置文件与文档
-   - 分析文件类型分布与代码组织结构
-   - 检测构建工具、包管理器与配置文件
+1. **Project scan**:
+   - Traverse the directory tree and identify source code, config files, and docs
+   - Analyze file type distribution and code organization
+   - Detect build tools, package managers, and key configuration files
 
-2. **多维分析**：
-   - 结构分析师：绘制目录树、识别模块边界与分层结构
-   - 技术栈识别员：提取语言版本、主要框架、核心依赖与开发工具
-   - 架构模式专家：识别设计模式、架构风格、关键抽象类/接口与数据流
-   - 文档编写者：整合分析结果并生成文档框架
+2. **Multi-dimensional analysis**:
+   - Structure Analyst: draw directory tree; identify module boundaries and layering
+   - Tech Stack Identifier: extract language versions, primary frameworks, core dependencies, and dev tools
+   - Architecture Pattern Expert: identify patterns/styles, key abstractions, and data flows
+   - Technical Writer: consolidate results into a document outline
 
-3. **深度洞察**（当 `--depth deep` 时）：
-   - 分析组件间依赖关系与调用链
-   - 识别潜在架构问题（循环依赖、高耦合）
-   - 提取关键业务流程与核心算法
+3. **Deep insights** (when `--depth deep`):
+   - Analyze inter-component dependencies and call chains
+   - Identify potential architecture issues (cycles, high coupling)
+   - Extract key business flows and core algorithms
 
-4. **文档生成**：
-   - 生成架构概览图（文本/Mermaid 图表）
-   - 编写组件职责说明
-   - 记录技术决策与设计理由
-   - 提供目录导航与快速参考
+4. **Documentation generation**:
+   - Generate architecture overview diagrams (text/Mermaid)
+   - Write component responsibility descriptions
+   - Record technical decisions and rationale
+   - Provide navigation and quick reference
 
-5. **保存输出**：将架构文档保存到指定路径：
+5. **Save outputs**: Save docs to the specified path:
 
 ```text
 ./.claude/architecture/
-├── architecture-overview.md       # 架构总览
-├── component-details.md           # 组件详细说明
-├── tech-stack.md                  # 技术栈清单
-├── design-decisions.md            # 架构决策记录（ADR）
-└── diagrams/                      # 架构图表目录
-    ├── system-overview.mmd        # 系统概览图（Mermaid）
-    ├── component-diagram.mmd      # 组件关系图
-    └── data-flow.mmd              # 数据流图
+├── architecture-overview.md       # Architecture overview
+├── component-details.md           # Component details
+├── tech-stack.md                  # Tech stack inventory
+├── design-decisions.md            # Architecture decision records (ADR)
+└── diagrams/                      # Diagrams
+    ├── system-overview.mmd        # System overview (Mermaid)
+    ├── component-diagram.mmd      # Component diagram
+    └── data-flow.mmd              # Data flow diagram
 ```
 
-## 输出格式
+## Output Format
 
-### 1. 架构总览（architecture-overview.md）
+### 1. Architecture Overview (architecture-overview.md)
 
 ```markdown
-# 项目架构总览
+# Project Architecture Overview
 
-## 项目基本信息
-- 项目名称：[自动识别]
-- 项目类型：[Web应用/API服务/桌面应用/库/工具等]
-- 主要语言：[语言列表]
-- 架构风格：[单体/微服务/分层/事件驱动等]
+## Basic Information
+- Project name: [auto-detected]
+- Project type: [Web app/API service/desktop app/library/tool/etc.]
+- Primary languages: [list]
+- Architecture style: [monolith/microservices/layered/event-driven/etc.]
 
-## 系统架构图
-[Mermaid 架构图]
+## System Architecture Diagram
+[Mermaid diagram]
 
-## 核心组件
-- 组件A：职责说明
-- 组件B：职责说明
+## Core components
+- Component A: responsibility
+- Component B: responsibility
 
-## 技术栈概览
-- 前端：[框架/库]
-- 后端：[框架/运行时]
-- 数据库：[类型/版本]
-- 部署：[平台/工具]
+## Tech stack overview
+- Frontend: [framework/library]
+- Backend: [framework/runtime]
+- Database: [type/version]
+- Deployment: [platform/tools]
 
-## 关键特性
-- [特性1]
-- [特性2]
+## Key capabilities
+- [capability 1]
+- [capability 2]
 ```
 
-### 2. 组件详细说明（component-details.md）
+### 2. Component Details (component-details.md)
 
 ```markdown
-# 组件详细说明
+# Component Details
 
-## 前端层
-### 组件名称
-- **路径**：`src/frontend/...`
-- **职责**：[描述]
-- **关键文件**：
-  - `file1.ts`：[作用]
-  - `file2.tsx`：[作用]
-- **依赖**：[依赖的其他组件]
-- **接口**：[暴露的API/事件]
+## Frontend layer
+### Component name
+- **Path**: `src/frontend/...`
+- **Responsibility**: [description]
+- **Key files**:
+  - `file1.ts`: [purpose]
+  - `file2.tsx`: [purpose]
+- **Dependencies**: [other components]
+- **Interfaces**: [exposed APIs/events]
 
-## 后端层
-[同上结构]
+## Backend layer
+[same structure]
 
-## 数据层
-[同上结构]
+## Data layer
+[same structure]
 ```
 
-### 3. 技术栈清单（tech-stack.md）
+### 3. Tech Stack Inventory (tech-stack.md)
 
 ```markdown
-# 技术栈清单
+# Tech Stack Inventory
 
-## 编程语言
-- [语言] [版本]：[使用场景]
+## Programming languages
+- [language] [version]: [usage]
 
-## 核心框架与库
-| 名称 | 版本 | 用途 | 引入原因 |
+## Core frameworks & libraries
+| Name | Version | Purpose | Rationale |
 |------|------|------|----------|
-| [框架] | [版本] | [用途] | [理由] |
+| [framework] | [version] | [purpose] | [reason] |
 
-## 开发工具
-- 构建工具：[工具名]
-- 测试框架：[框架名]
-- 代码质量：[Linter/Formatter]
-- 版本控制：[Git工作流]
+## Development tools
+- Build tools: [tool]
+- Test framework: [framework]
+- Code quality: [Linter/Formatter]
+- Version control: [Git workflow]
 
-## 基础设施
-- CI/CD：[工具/平台]
-- 容器化：[Docker/K8s]
-- 云服务：[AWS/Azure/GCP]
+## Infrastructure
+- CI/CD: [tool/platform]
+- Containerization: [Docker/K8s]
+- Cloud: [AWS/Azure/GCP]
 ```
 
-### 4. 架构决策记录（design-decisions.md）
+### 4. Architecture Decision Records (design-decisions.md)
 
 ```markdown
-# 架构决策记录（ADR）
+# Architecture Decision Records (ADR)
 
-## ADR-001：[决策标题]
-- **日期**：[扫描日期]
-- **状态**：已采用（从代码中识别）
-- **上下文**：[从代码结构推断]
-- **决策**：[实际采用的方案]
-- **后果**：[当前架构的优缺点分析]
+## ADR-001: [title]
+- **Date**: [scan date]
+- **Status**: Adopted (inferred from code)
+- **Context**: [inferred from code structure]
+- **Decision**: [solution adopted]
+- **Consequences**: [pros/cons in the current architecture]
 
-## ADR-002：[下一个决策]
-[同上结构]
+## ADR-002: [next decision]
+[same structure]
 ```
 
-### 5. 系统概览图示例（Mermaid）
+### 5. Diagrams Directory (diagrams/)
 
-```mermaid
-graph TB
-    Client[客户端]
-    API[API层]
-    Service[业务逻辑层]
-    Data[数据访问层]
-    DB[(数据库)]
-    
-    Client -->|HTTP/REST| API
-    API --> Service
-    Service --> Data
-    Data --> DB
+```text
+diagrams/
+├── system-overview.mmd        # System overview (Mermaid)
+├── component-diagram.mmd      # Component diagram (Mermaid)
+└── data-flow.mmd              # Data flow (Mermaid)
 ```
 
-## 智能分析策略
+## Intelligent Analysis Strategy
 
-### 结构分析启发式规则
+### Structure heuristics
 
-- `src/`、`app/`、`lib/` → 源码主目录
-- `test/`、`__tests__/`、`*.test.*` → 测试代码
-- `config/`、`*.config.*` → 配置文件
-- `public/`、`static/`、`assets/` → 静态资源
-- `docs/`、`*.md` → 文档
+- `src/`, `app/`, `lib/` → main source directories
+- `test/`, `__tests__/`, `*.test.*` → tests
+- `config/`, `*.config.*` → configuration
+- `public/`, `static/`, `assets/` → static assets
+- `docs/`, `*.md` → documentation
 
-### 技术栈识别规则
+### Tech stack identification rules
 
-- `package.json` → Node.js/JavaScript 生态
-- `requirements.txt`、`pyproject.toml` → Python
-- `pom.xml`、`build.gradle` → Java
+- `package.json` → Node.js/JavaScript ecosystem
+- `requirements.txt`, `pyproject.toml` → Python
+- `pom.xml`, `build.gradle` → Java
 - `Cargo.toml` → Rust
 - `go.mod` → Go
 
-### 架构模式识别
+### Architecture pattern identification
 
-- 存在 `controllers/`、`models/`、`views/` → MVC 模式
-- 存在 `services/`、`repositories/` → 分层架构
-- 多个独立的 `package.json` → 微服务/Monorepo
-- `events/`、`handlers/`、`subscribers/` → 事件驱动
+- `controllers/`, `models/`, `views/` → MVC
+- `services/`, `repositories/` → layered architecture
+- multiple independent `package.json` → microservices/monorepo
+- `events/`, `handlers/`, `subscribers/` → event-driven architecture
 
-## 关键约束
+## Key Constraints
 
-### 必须执行
+### Must do
 
-- **完整扫描**：确保覆盖所有主要目录与关键文件
-- **模式识别**：准确识别架构风格与设计模式
-- **图表生成**：提供可视化的架构图（Mermaid 格式，Mermaid语法采用最新版本）
-- **分类整理**：按层次/模块清晰组织文档
-- **保存输出**：将所有文档保存到指定目录
+- **Complete scan**: cover all major directories and key files
+- **Pattern recognition**: accurately identify architecture styles and design patterns
+- **Diagram generation**: provide architecture diagrams (Mermaid, using the latest Mermaid syntax)
+- **Clear organization**: structure docs by layers/modules
+- **Save outputs**: write all docs to the output directory
 
-### 避免执行
+### Avoid
 
-- **过度推测**：对不确定的架构决策标注"推测"
-- **遗漏核心**：不能漏掉主要组件或关键依赖
-- **格式混乱**：保持文档结构清晰、层次分明
-- **过度简化**：对复杂架构需保留足够细节
-- **忽略约定**：遵循项目现有命名与组织约定
+- **Over-speculation**: mark uncertain decisions as "speculation"
+- **Missing core parts**: do not omit major components or key dependencies
+- **Messy formatting**: keep structure clear and consistent
+- **Over-simplification**: retain sufficient detail for complex architectures
+- **Ignoring conventions**: follow existing project naming and organization
 
-## 质量标准
+## Quality Bar
 
-生成的架构文档应满足：
+Generated architecture docs should be:
 
-1. **准确性**：架构描述与实际代码一致，技术栈识别准确
-2. **完整性**：覆盖主要组件、关键依赖与核心流程
-3. **可读性**：结构清晰、层次分明、易于导航
-4. **可维护性**：便于后续更新，包含时间戳与版本信息
-5. **实用性**：新成员能通过文档快速理解项目架构
+1. **Accurate**: descriptions match the code; tech stack identification is correct
+2. **Complete**: cover major components, dependencies, and core flows
+3. **Readable**: clear structure, easy navigation
+4. **Maintainable**: easy to update, includes timestamps and version info
+5. **Useful**: new team members can ramp up quickly
 
-## 成功标准
+## Success Criteria
 
-- ✅ 完成项目结构扫描，识别所有主要模块
-- ✅ 准确识别技术栈、框架与依赖
-- ✅ 生成至少3类架构图（系统概览/组件关系/数据流）
-- ✅ 输出结构化文档，包含总览、详情、技术栈与决策记录
-- ✅ 所有文档保存到指定目录，文件命名规范
-- ✅ 文档包含生成时间戳与扫描范围说明
+- ✅ Complete structure scan and identify all major modules
+- ✅ Accurately identify tech stack, frameworks, and dependencies
+- ✅ Generate at least 3 diagram types (system/component/data flow)
+- ✅ Output structured docs: overview, details, tech stack, and ADRs
+- ✅ Save all docs under the output directory with consistent naming
+- ✅ Include generation timestamp and scan scope
 
-## 后续动作
+## Follow-ups
 
-生成架构文档后，建议：
+After generating architecture docs, recommended next steps:
 
-1. **人工审核**：验证架构描述的准确性并补充业务背景
-2. **定期更新**：随项目演进定期重新扫描（建议每季度或大版本发布时）
-3. **团队分享**：将文档纳入新人入职培训材料
-4. **版本管理**：将架构文档纳入 Git 版本控制，跟踪演进历史
-5. **持续改进**：根据团队反馈优化文档结构与内容深度
+1. **Human review**: validate accuracy and add business context
+2. **Periodic updates**: rescan regularly as the project evolves (quarterly or per major release)
+3. **Team sharing**: include docs in onboarding materials
+4. **Versioning**: store docs in Git to track evolution
+5. **Continuous improvement**: refine structure and depth based on team feedback

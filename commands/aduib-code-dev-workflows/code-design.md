@@ -1,119 +1,119 @@
-# 设计分析与文档生成
+# Design Analysis & Documentation Generation
 
-## 用法
+## Usage
 
 `/code-design [OPTIONS]`
 
-## 参数
+## Parameters
 
-- `[OPTIONS]`：可选参数
-  - `--scope <PATH>`：指定分析范围（文件路径或目录路径）
-  - `--output-path <PATH>`：指定输出路径（默认：`./.claude/docs/design/`）
-  - `--depth <LEVEL>`：分析深度（shallow/standard/deep，默认：standard）
-  - `--include-diagrams`：生成UML类图与关系图
+- `[OPTIONS]`: Optional parameters
+  - `--scope <PATH>`: Analysis scope (file path or directory path)
+  - `--output-path <PATH>`: Output path (default: `./.claude/docs/design/`)
+  - `--depth <LEVEL>`: Analysis depth (shallow/standard/deep, default: standard)
+  - `--include-diagrams`: Generate UML-style class and relationship diagrams
 
-## 上下文
+## Context
 
-- 将深度分析项目中的抽象类、接口定义与设计模式。
-- 识别核心抽象层、继承关系与组合结构。
-- 提取设计原则（SOLID）的应用情况与架构意图。
+- Deeply analyze abstract classes, interface definitions, and design patterns in the project.
+- Identify core abstraction layers, inheritance hierarchies, and composition structures.
+- Assess how design principles (SOLID) are applied and infer architectural intent.
 
-## 你的角色
+## Your Role
 
-你是设计分析协调者，负责指挥3位专业智能体：
+You are the design analysis coordinator, responsible for directing three specialist agents:
 
-1. **抽象识别专家** —— 识别抽象类、接口、trait与协议定义。
-2. **关系分析师** —— 分析继承层次、实现关系与组合依赖。
-3. **模式专家** —— 识别设计模式、设计原则与架构意图。
+1. **Abstraction Identifier** — Identifies abstract classes, interfaces, traits, and protocol definitions.
+2. **Relationship Analyst** — Analyzes inheritance hierarchies, implementation relationships, and composition dependencies.
+3. **Pattern Expert** — Identifies design patterns, design principles, and architectural intent.
 
-## 流程
+## Process
 
-1. **设计元素扫描**：识别所有抽象类、接口与抽象方法
-2. **关系建模**：提取抽象定义、构建继承树、识别设计模式
-3. **设计意图分析**：识别关注点分离、开闭原则、接口隔离与依赖倒置
-4. **模式识别**：识别创建型、结构型、行为型模式与架构模式
-5. **保存输出**：保存到指定路径
+1. **Design element scanning**: Identify abstract classes, interfaces, and abstract methods
+2. **Relationship modeling**: Extract abstractions, build inheritance trees, and recognize patterns
+3. **Design intent analysis**: Identify separation of concerns, OCP, ISP, and DIP
+4. **Pattern recognition**: Identify creational/structural/behavioral patterns and architectural patterns
+5. **Save outputs**: Save to the specified path
 
 ```text
 ./.claude/docs/design/{scope}/
-├── design-overview.md             # 设计总览
-├── abstractions.md                # 抽象类与接口详解
-├── design-patterns.md             # 设计模式识别
-├── principles-analysis.md         # 设计原则分析
-├── diagrams/                      # 图表目录
-│   ├── class-hierarchy.mmd       # 类层次图（Mermaid）
-│   └── dependency-graph.mmd      # 依赖关系图
-└── recommendations.md             # 设计改进建议
+├── design-overview.md             # Design overview
+├── abstractions.md                # Abstractions & interfaces
+├── design-patterns.md             # Design pattern identification
+├── principles-analysis.md         # Design principles analysis
+├── diagrams/                      # Diagrams
+│   ├── class-hierarchy.mmd        # Class hierarchy (Mermaid)
+│   └── dependency-graph.mmd       # Dependency graph
+└── recommendations.md             # Design improvement recommendations
 ```
 
-## 输出格式
+## Output Format
 
-1. **设计总览** —— 设计概述、核心抽象层与设计原则评估
-2. **抽象详解** —— 详细的抽象类与接口说明，包含职责与实现要求
-3. **模式识别** —— GoF设计模式、架构模式与应用场景
-4. **原则分析** —— SOLID原则应用情况，包含良好示例与改进建议
-5. **优化建议** —— 具体可行的设计改进方案与重构计划
+1. **Design overview** — Summary, core abstraction layers, and principles evaluation
+2. **Abstractions** — Detailed explanations of abstract classes and interfaces, including responsibilities and implementation requirements
+3. **Pattern identification** — GoF patterns, architectural patterns, and scenarios
+4. **Principles analysis** — SOLID assessment, with good examples and improvement suggestions
+5. **Recommendations** — Concrete, feasible design improvements and refactoring plan
 
-## 智能分析策略
+## Intelligent Analysis Strategy
 
-### 抽象识别规则
-- **抽象类**：包含 `abstract` 关键字或抽象方法的类
-- **接口**：`interface`、`protocol`、`trait` 定义
-- **隐式抽象**：纯虚函数、未实现方法
+### Abstraction identification rules
+- **Abstract classes**: classes with the `abstract` keyword or abstract methods
+- **Interfaces**: `interface`, `protocol`, `trait` definitions
+- **Implicit abstractions**: pure virtual functions and unimplemented methods
 
-### 关系提取策略
-- **继承**：`extends`、`:`、继承符号
-- **实现**：`implements`、`:`、接口实现
-- **组合**：成员变量、构造函数注入
-- **依赖**：方法参数、返回值类型
+### Relationship extraction strategy
+- **Inheritance**: `extends`, `:`, inheritance symbols
+- **Implementation**: `implements`, `:`, interface implementations
+- **Composition**: member fields and constructor injection
+- **Dependencies**: method parameters and return types
 
-### 模式匹配启发式
-- **工厂模式**：`create*`、`make*`、`build*` 方法 + 返回抽象类型
-- **单例模式**：私有构造函数 + 静态实例方法
-- **策略模式**：接口 + 多实现 + 运行时切换
-- **观察者模式**：`subscribe`、`notify`、`listener` 相关方法
+### Pattern matching heuristics
+- **Factory**: `create*`/`make*`/`build*` methods returning abstract types
+- **Singleton**: private constructor + static instance accessor
+- **Strategy**: interface + multiple implementations + runtime switching
+- **Observer**: `subscribe`/`notify`/`listener`-related methods
 
-## 关键约束
+## Key Constraints
 
-### 必须执行
-- **完整识别**：找出所有抽象类、接口与关键设计模式
-- **关系建模**：构建完整的继承与实现关系图
-- **意图分析**：解释每个抽象的设计意图与应用场景
-- **模式评估**：评价设计模式应用的合理性
-- **改进建议**：提供可行的设计优化方案
+### Must do
+- **Complete identification**: find all abstractions, interfaces, and key patterns
+- **Relationship modeling**: build complete inheritance and implementation graphs
+- **Intent analysis**: explain the intent and scenarios for each abstraction
+- **Pattern evaluation**: evaluate whether pattern usage is appropriate
+- **Actionable recommendations**: provide feasible optimization proposals
 
-### 避免执行
-- **遗漏核心抽象**：不能忽略主要的抽象层
-- **误判模式**：避免将普通代码误认为设计模式
-- **空泛建议**：改进建议需具体可行
-- **忽视上下文**：分析需考虑项目实际情况
-- **过度批评**：客观评价现有设计的优缺点
+### Avoid
+- **Missing core abstractions**: do not ignore major abstraction layers
+- **False positives**: avoid treating ordinary code as a design pattern
+- **Vague recommendations**: recommendations must be specific and feasible
+- **Ignoring context**: analysis must consider real project constraints
+- **Overly harsh critique**: objectively evaluate pros and cons
 
-## 质量标准
+## Quality Bar
 
-生成的设计文档应满足：
+Generated design docs should be:
 
-1. **完整性**：覆盖所有核心抽象与设计模式
-2. **准确性**：正确识别继承关系、实现关系与设计意图
-3. **深度性**：不仅描述"是什么"，更要解释"为什么"
-4. **实用性**：提供可落地的改进建议与重构方案
-5. **可视化**：包含类图、关系图等视觉辅助
+1. **Complete**: cover all core abstractions and patterns
+2. **Accurate**: correctly identify relationships and intent
+3. **Deep**: not just "what", but also "why"
+4. **Practical**: provide actionable improvements and refactoring ideas
+5. **Visual**: include class/relationship diagrams
 
-## 成功标准
+## Success Criteria
 
-- ✅ 识别所有抽象类、接口与核心抽象层
-- ✅ 构建完整的继承层次图与实现关系图
-- ✅ 识别至少5种设计模式及其应用场景
-- ✅ 评估SOLID原则的应用情况（每项至少2个示例）
-- ✅ 提供至少3条具体的设计改进建议
-- ✅ 生成结构化文档并保存到指定目录
+- ✅ Identify all abstract classes, interfaces, and core abstraction layers
+- ✅ Build complete inheritance and implementation diagrams
+- ✅ Identify at least 5 design patterns and their usage scenarios
+- ✅ Assess SOLID (at least 2 examples per principle)
+- ✅ Provide at least 3 concrete design improvement recommendations
+- ✅ Generate structured docs and save to the output directory
 
-## 后续动作
+## Follow-ups
 
-生成设计文档后，建议：
+After generating design docs, recommended next steps:
 
-1. **团队评审**：与架构师和高级开发者一起评审设计分析结果
-2. **重构规划**：基于改进建议制定重构计划与优先级
-3. **知识分享**：将设计模式与最佳实践分享给团队成员
-4. **持续跟踪**：定期（每季度）重新分析以监测设计演进
-5. **设计评审**：将此文档纳入新功能设计评审的参考资料
+1. **Team review**: review results with architects and senior engineers
+2. **Refactoring plan**: convert recommendations into a prioritized plan
+3. **Knowledge sharing**: share patterns and best practices with the team
+4. **Continuous tracking**: re-run periodically (quarterly) to monitor evolution
+5. **Design review**: use this doc as a reference for new feature design reviews

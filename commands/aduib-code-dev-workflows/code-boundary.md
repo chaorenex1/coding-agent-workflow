@@ -1,117 +1,117 @@
-# 模块边界分析与文档生成
+# Module Boundary Analysis & Documentation Generation
 
-## 用法
+## Usage
 
 `/code-boundary [OPTIONS]`
 
-## 参数
+## Parameters
 
-- `[OPTIONS]`：可选参数
-  - `--scope <PATH>`：指定分析范围（文件路径或目录路径）
-  - `--output-path <PATH>`：指定输出路径（默认：`./.claude/docs/boundaries/`）
-  - `--include-runtime`：包含运行时边界分析
-  - `--include-dependencies`：包含跨模块依赖分析
+- `[OPTIONS]`: Optional parameters
+  - `--scope <PATH>`: Analysis scope (file path or directory path)
+  - `--output-path <PATH>`: Output path (default: `./.claude/docs/boundaries/`)
+  - `--include-runtime`: Include runtime boundary analysis
+  - `--include-dependencies`: Include cross-module dependency analysis
 
-## 上下文
+## Context
 
-- 将分析项目的模块划分、边界定义与职责分配。
-- 识别模块间的依赖关系、通信方式与耦合程度。
-- 评估模块边界的合理性与架构健康度。
+- Analyze the project’s module partitioning, boundary definitions, and responsibility allocation.
+- Identify inter-module dependencies, communication patterns, and coupling.
+- Evaluate boundary soundness and overall architectural health.
 
-## 你的角色
+## Your Role
 
-你是模块边界分析协调者，负责指挥3位专业智能体：
+You are the module boundary analysis coordinator, responsible for directing three specialist agents:
 
-1. **模块识别专家** —— 识别系统中的逻辑模块、物理包与部署单元。
-2. **边界分析师** —— 分析模块职责、边界定义与接口契约。
-3. **依赖追踪者** —— 追踪模块间依赖、识别耦合问题与循环依赖。
+1. **Module Identifier** — Identifies logical modules, physical packages, and deployment units.
+2. **Boundary Analyst** — Analyzes module responsibilities, boundary definitions, and interface contracts.
+3. **Dependency Tracker** — Tracks dependencies, identifies coupling issues, and detects cyclic dependencies.
 
-## 流程
+## Process
 
-1. **模块发现**：识别物理模块、逻辑模块与部署单元
-2. **边界定义**：划分模块边界、分析模块职责、构建依赖图
-3. **健康度评估**：评估内聚性、耦合度、依赖方向与循环依赖
-4. **运行时分析**（如启用）：分析进程边界、服务调用与数据共享
-5. **保存输出**：保存到指定路径
+1. **Module discovery**: Identify physical modules, logical modules, and deployment units
+2. **Boundary definition**: Split module boundaries, analyze responsibilities, and build a dependency graph
+3. **Health assessment**: Evaluate cohesion, coupling, dependency direction, and cycles
+4. **Runtime analysis** (if enabled): Analyze process boundaries, service calls, and data sharing
+5. **Save outputs**: Save to the specified path
 
 ```text
 ./.claude/docs/boundaries/{scope}/
-├── boundary-overview.md           # 边界总览
-├── module-catalog.md              # 模块目录
-├── dependency-analysis.md          # 依赖分析
-├── coupling-report.md             # 耦合度报告
-├── diagrams/                      # 图表目录
-│   ├── module-structure.mmd      # 模块结构图（Mermaid）
-│   └── dependency-graph.mmd      # 依赖关系图
-└── recommendations.md             # 边界优化建议
+├── boundary-overview.md           # Boundary overview
+├── module-catalog.md              # Module catalog
+├── dependency-analysis.md         # Dependency analysis
+├── coupling-report.md             # Coupling report
+├── diagrams/                      # Diagrams
+│   ├── module-structure.mmd       # Module structure diagram (Mermaid)
+│   └── dependency-graph.mmd       # Dependency graph
+└── recommendations.md             # Boundary optimization recommendations
 ```
 
-## 输出格式
+## Output Format
 
-1. **边界总览** —— 系统概览、模块分类与架构分层
-2. **模块目录** —— 详细的模块职责、接口与依赖关系
-3. **依赖分析** —— 依赖关系图、分层验证与循环依赖检测
-4. **耦合报告** —— 耦合度评估、高耦合模块识别与内聚性分析
-5. **优化建议** —— 消除循环依赖、拆分超大模块与建立分层边界
+1. **Boundary overview** — System overview, module taxonomy, and architectural layering
+2. **Module catalog** — Detailed responsibilities, interfaces, and dependencies per module
+3. **Dependency analysis** — Graphs, layering validation, and cyclic dependency detection
+4. **Coupling report** — Coupling evaluation, hotspot identification, and cohesion analysis
+5. **Recommendations** — Break cycles, split oversized modules, and establish layered boundaries
 
-## 智能分析策略
+## Intelligent Analysis Strategy
 
-### 模块识别规则
-- **物理模块**：目录结构、包名、命名空间
-- **逻辑模块**：通过前缀、命名约定、注释标记识别
-- **部署单元**：检测 Dockerfile、配置文件、入口点
+### Module identification rules
+- **Physical modules**: directory structure, package names, namespaces
+- **Logical modules**: prefixes, naming conventions, and annotation/comment markers
+- **Deployment units**: detect Dockerfiles, config files, and entry points
 
-### 依赖提取策略
-- **静态依赖**：import/require/using 语句
-- **动态依赖**：反射、依赖注入配置
-- **运行时依赖**：HTTP调用、RPC、消息队列
+### Dependency extraction strategy
+- **Static dependencies**: import/require/using statements
+- **Dynamic dependencies**: reflection and dependency injection configuration
+- **Runtime dependencies**: HTTP calls, RPC, message queues
 
-### 边界违规检测
-- **分层违规**：下层依赖上层
-- **循环依赖**：使用拓扑排序算法检测
-- **过度耦合**：单一模块被过多模块依赖
+### Boundary violation detection
+- **Layering violations**: lower layers depend on upper layers
+- **Cyclic dependencies**: detect via topological sorting
+- **Over-coupling**: a single module depended on by too many modules
 
-## 关键约束
+## Key Constraints
 
-### 必须执行
-- **完整识别**：发现所有模块与子模块
-- **依赖追踪**：构建完整的依赖关系图
-- **循环检测**：识别所有循环依赖
-- **耦合评估**：量化模块间耦合程度
-- **改进建议**：提供具体可行的优化方案
+### Must do
+- **Complete identification**: find all modules and submodules
+- **Dependency tracking**: build a complete dependency graph
+- **Cycle detection**: identify all cycles
+- **Coupling assessment**: quantify inter-module coupling
+- **Actionable recommendations**: provide specific, feasible optimization proposals
 
-### 避免执行
-- **遗漏关键模块**：确保核心模块都被分析
-- **错误依赖**：避免将间接依赖标记为直接依赖
-- **忽视隐式耦合**：通过共享数据库、全局变量的隐式耦合
-- **空泛建议**：改进建议需具体、可量化
-- **忽略成本**：重构建议需考虑实施成本与收益
+### Avoid
+- **Missing key modules**: ensure all core modules are analyzed
+- **Incorrect dependencies**: avoid marking indirect dependencies as direct dependencies
+- **Ignoring implicit coupling**: account for coupling via shared databases or global variables
+- **Vague recommendations**: recommendations must be specific and measurable
+- **Ignoring cost**: consider implementation cost vs. benefit
 
-## 质量标准
+## Quality Bar
 
-生成的边界文档应满足：
+Generated boundary docs should be:
 
-1. **完整性**：覆盖所有主要模块与边界定义
-2. **准确性**：依赖关系图与实际代码一致
-3. **量化性**：提供耦合度、内聚性等可量化指标
-4. **可操作性**：改进建议具体可落地
-5. **可视化**：包含模块结构图、依赖图等
+1. **Complete**: cover all major modules and boundary definitions
+2. **Accurate**: dependency graphs match actual code
+3. **Quantified**: include measurable metrics (coupling, cohesion, etc.)
+4. **Actionable**: recommendations can be implemented
+5. **Visual**: include diagrams like module structure and dependency graphs
 
-## 成功标准
+## Success Criteria
 
-- ✅ 识别所有主要模块（至少到二级模块）
-- ✅ 构建完整的模块依赖关系图
-- ✅ 检测并报告所有循环依赖
-- ✅ 量化评估模块耦合度与内聚性
-- ✅ 识别至少3个高优先级边界问题
-- ✅ 提供具体可行的优化方案（含工作量评估）
+- ✅ Identify all major modules (at least to 2nd-level modules)
+- ✅ Build a complete module dependency graph
+- ✅ Detect and report all cyclic dependencies
+- ✅ Quantify coupling and cohesion
+- ✅ Identify at least 3 high-priority boundary issues
+- ✅ Provide concrete, feasible optimization proposals (with effort estimates)
 
-## 后续动作
+## Follow-ups
 
-生成边界文档后，建议：
+After generating boundary docs, recommended next steps:
 
-1. **架构评审**：与架构师和技术负责人评审边界设计
-2. **重构规划**：制定模块重构优先级与时间表
-3. **自动化检测**：引入依赖检查工具（如 dependency-cruiser、madge）
-4. **持续监控**：定期（每月）重新分析边界健康度
-5. **团队共识**：将边界规则纳入开发规范，代码评审时检查
+1. **Architecture review**: review boundary design with architects and tech leads
+2. **Refactoring plan**: define priorities and a timeline
+3. **Automated checks**: introduce dependency-check tools (e.g., dependency-cruiser, madge)
+4. **Continuous monitoring**: re-run boundary health analysis regularly (monthly)
+5. **Team alignment**: incorporate boundary rules into dev standards and enforce in code reviews
