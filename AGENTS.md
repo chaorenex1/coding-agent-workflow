@@ -1,614 +1,708 @@
-# Global Agent Policy (MCP + QA Memory + Tool-First Workflow)
+# AGENTS.md
 
-## 1. Role & Core Objective
-
-You are a coding and troubleshooting agent connected to:
-
-- MCP tools (via a wrapper server),
-- a QA Memory Service,
-- optional external documentation resources.
-
-Your mission:
-
-1) Prefer tools and validated knowledge over speculation.  
-2) Reuse existing QA memory when possible.  
-3) Produce structured, reusable answers.  
-4) Support long-term learning: your work may become new QA memory.
-
-Do not guess when tools, logs, or prior knowledge can resolve uncertainty.
-
+**Project**: coding_base
+**Purpose**: coding_base project
+**Type**: GREENFIELD_NEW
+**Codex CLI Compatibility**: Full support with reference-based architecture
 
 ---
 
-## 2. Required Workflow (Follow Every Time)
+## Quick Reference
 
-For every task:
+This project is a **Claude Code project** that can be used with **Codex CLI**.
 
-1. Understand the problem precisely.  
-2. **Discover and inspect available tools (if uncertain).**  
-3. **Retrieve QA memory for this question.**  
-4. Plan the approach using retrieved knowledge.  
-5. Call tools to collect evidence and ground your answer.  
-6. Produce a final explanation or solution.  
-7. Allow post-answer Gatekeeper logic to evaluate storage.
+**Project Statistics**:
+- **Skills**: 16 total (12 functional, 4 prompt-based)
+- **Agents**: 11 total
+- **Documentation**: ❌ No
 
-Tools first. Guessing last.
-
-
----
-
-## 3. Tool-First Philosophy
-
-### 3.1 You MUST use tools when:
-
-- The answer depends on environment/runtime state,
-- Logs, configs, or APIs determine the outcome,
-- Existing tools likely already solve the task,
-- Infrastructure/automation is involved,
-- Prior Q&A may contain proven solutions.
-
-### 3.2 You MAY avoid tools only when:
-
-- The problem is trivial or purely conceptual,
-- Tools clearly cannot help.
-
-When unsure: **prefer tools.**
-
+**For Codex CLI Users**:
+- Skills are documented below with Codex CLI usage examples
+- Use `codex exec` commands (never plain `codex`)
+- Python scripts can be executed directly
+- All file references are relative to project root
 
 ---
 
-## 4. QA Memory Retrieval (Mandatory for Technical Questions)
+## Project Overview
 
-Before you generate the final answer for:
+coding_base project
 
-- bugs, stack traces, warnings,
-- builds/deployments, pipelines,
-- configuration/infrastructure problems,
-- repeatable workflows,
+**Project Type**: GREENFIELD_NEW
+**Root Directory**: `coding_base/`
 
-you MUST call:
+---
 
+## Available Skills
 
+This project includes **16 skills** that can be used with Codex CLI.
+
+### Functional Skills (12)
+
+These skills have Python scripts that can be executed directly:
+
+#### agent-factory
+
+**Description**: Claude Code agent generation system that creates custom agents and sub-agents with enhanced YAML frontmatter, tool access patterns, and MCP integra...
+
+**Location**: `C:\Users\zarag\.claude\skills\agent-factory/`
+**Documentation**: [C:\Users\zarag\.claude\skills\agent-factory/SKILL.md](C:\Users\zarag\.claude\skills\agent-factory\SKILL.md)
+
+**Python Scripts**:
+- [agent_generator.py](C:\Users\zarag\.claude\skills\agent-factory\agent_generator.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\agent-factory
+python agent_generator.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the agent-factory skill documentation at
+  C:\Users\zarag\.claude\skills\agent-factory\SKILL.md, help me with [task]"
 ```
 
-retrieve\_qa\_kb
+#### api-document-generator
 
-````
+**Description**: Parses interface/API information from files or directories and generates OpenAPI-compliant documentation with timestamps
 
-Use:
-- `query` → a concise summary of the problem,
-- `namespace` → the current project path / environment namespace.
+**Location**: `C:\Users\zarag\.claude\skills\api-document-generator/`
+**Documentation**: [C:\Users\zarag\.claude\skills\api-document-generator/SKILL.md](C:\Users\zarag\.claude\skills\api-document-generator\SKILL.md)
+
+**Python Scripts**:
+- [api_document_generator.py](C:\Users\zarag\.claude\skills\api-document-generator\api_document_generator.py)
+- [api_parser.py](C:\Users\zarag\.claude\skills\api-document-generator\api_parser.py)
+- [file_handler.py](C:\Users\zarag\.claude\skills\api-document-generator\file_handler.py)
+- [openapi_generator.py](C:\Users\zarag\.claude\skills\api-document-generator\openapi_generator.py)
+- [test_simple.py](C:\Users\zarag\.claude\skills\api-document-generator\test_simple.py)
+- [test_skill.py](C:\Users\zarag\.claude\skills\api-document-generator\test_skill.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\api-document-generator
+python api_document_generator.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the api-document-generator skill documentation at
+  C:\Users\zarag\.claude\skills\api-document-generator\SKILL.md, help me with [task]"
+```
+
+#### code-refactor-analyzer
+
+**Description**: Analyzes codebase for refactoring needs, generates todo reports, and validates completion
+
+**Location**: `C:\Users\zarag\.claude\skills\code-refactor-analyzer/`
+**Documentation**: [C:\Users\zarag\.claude\skills\code-refactor-analyzer/SKILL.md](C:\Users\zarag\.claude\skills\code-refactor-analyzer\SKILL.md)
+
+**Python Scripts**:
+- [code_analyzer.py](C:\Users\zarag\.claude\skills\code-refactor-analyzer\code_analyzer.py)
+- [main.py](C:\Users\zarag\.claude\skills\code-refactor-analyzer\main.py)
+- [report_manager.py](C:\Users\zarag\.claude\skills\code-refactor-analyzer\report_manager.py)
+- [state_manager.py](C:\Users\zarag\.claude\skills\code-refactor-analyzer\state_manager.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\code-refactor-analyzer
+python code_analyzer.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the code-refactor-analyzer skill documentation at
+  C:\Users\zarag\.claude\skills\code-refactor-analyzer\SKILL.md, help me with [task]"
+```
+
+#### codex-cli-bridge
+
+**Description**: Bridge between Claude Code and OpenAI Codex CLI - generates AGENTS.md from CLAUDE.md, provides Codex CLI execution helpers, and enables seamless in...
+
+**Location**: `C:\Users\zarag\.claude\skills\codex-cli-bridge/`
+**Documentation**: [C:\Users\zarag\.claude\skills\codex-cli-bridge/SKILL.md](C:\Users\zarag\.claude\skills\codex-cli-bridge\SKILL.md)
+
+**Python Scripts**:
+- [agents_md_generator.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\agents_md_generator.py)
+- [bridge.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\bridge.py)
+- [claude_parser.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\claude_parser.py)
+- [codex_executor.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\codex_executor.py)
+- [project_analyzer.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\project_analyzer.py)
+- [safety_mechanism.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\safety_mechanism.py)
+- [skill_documenter.py](C:\Users\zarag\.claude\skills\codex-cli-bridge\skill_documenter.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\codex-cli-bridge
+python agents_md_generator.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the codex-cli-bridge skill documentation at
+  C:\Users\zarag\.claude\skills\codex-cli-bridge\SKILL.md, help me with [task]"
+```
+
+#### git-code-review
+
+**Description**: Get git records for specified users and days, perform code review for each commit, and generate detailed code review reports
+
+**Location**: `C:\Users\zarag\.claude\skills\git-code-review/`
+**Documentation**: [C:\Users\zarag\.claude\skills\git-code-review/SKILL.md](C:\Users\zarag\.claude\skills\git-code-review\SKILL.md)
+
+**Python Scripts**:
+- [git_code_review.py](C:\Users\zarag\.claude\skills\git-code-review\git_code_review.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\git-code-review
+python git_code_review.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the git-code-review skill documentation at
+  C:\Users\zarag\.claude\skills\git-code-review\SKILL.md, help me with [task]"
+```
+
+#### git-commit-summarizer
+
+**Description**: Summarizes git commits for specified users over a given time period and generates markdown reports
+
+**Location**: `C:\Users\zarag\.claude\skills\git-commit-summarizer/`
+**Documentation**: [C:\Users\zarag\.claude\skills\git-commit-summarizer/SKILL.md](C:\Users\zarag\.claude\skills\git-commit-summarizer\SKILL.md)
+
+**Python Scripts**:
+- [git_commit_analyzer.py](C:\Users\zarag\.claude\skills\git-commit-summarizer\git_commit_analyzer.py)
+- [report_generator.py](C:\Users\zarag\.claude\skills\git-commit-summarizer\report_generator.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\git-commit-summarizer
+python git_commit_analyzer.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the git-commit-summarizer skill documentation at
+  C:\Users\zarag\.claude\skills\git-commit-summarizer\SKILL.md, help me with [task]"
+```
+
+#### github-stars-analyzer
+
+**Description**: Analyzes GitHub repository data to generate comprehensive research reports about stars, popularity trends, and comparative insights
+
+**Location**: `C:\Users\zarag\.claude\skills\github-stars-analyzer/`
+**Documentation**: [C:\Users\zarag\.claude\skills\github-stars-analyzer/SKILL.md](C:\Users\zarag\.claude\skills\github-stars-analyzer\SKILL.md)
+
+**Python Scripts**:
+- [analyze_repository.py](C:\Users\zarag\.claude\skills\github-stars-analyzer\analyze_repository.py)
+- [generate_reports.py](C:\Users\zarag\.claude\skills\github-stars-analyzer\generate_reports.py)
+- [github_api.py](C:\Users\zarag\.claude\skills\github-stars-analyzer\github_api.py)
+- [visualize_data.py](C:\Users\zarag\.claude\skills\github-stars-analyzer\visualize_data.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\github-stars-analyzer
+python analyze_repository.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the github-stars-analyzer skill documentation at
+  C:\Users\zarag\.claude\skills\github-stars-analyzer\SKILL.md, help me with [task]"
+```
+
+#### hook-factory
+
+**Description**: Generate production-ready Claude Code hooks with interactive Q&A, automated installation, and enhanced validation. Supports 10 templates across 7 e...
+
+**Location**: `C:\Users\zarag\.claude\skills\hook-factory/`
+**Documentation**: [C:\Users\zarag\.claude\skills\hook-factory/SKILL.md](C:\Users\zarag\.claude\skills\hook-factory\SKILL.md)
+
+**Python Scripts**:
+- [generator.py](C:\Users\zarag\.claude\skills\hook-factory\generator.py)
+- [hook_factory.py](C:\Users\zarag\.claude\skills\hook-factory\hook_factory.py)
+- [installer.py](C:\Users\zarag\.claude\skills\hook-factory\installer.py)
+- [validator.py](C:\Users\zarag\.claude\skills\hook-factory\validator.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\hook-factory
+python generator.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the hook-factory skill documentation at
+  C:\Users\zarag\.claude\skills\hook-factory\SKILL.md, help me with [task]"
+```
+
+#### repo-analyzer
+
+**Description**: Code repository analysis and technical documentation generation skill
+
+**Location**: `C:\Users\zarag\.claude\skills\repo-analyzer/`
+**Documentation**: [C:\Users\zarag\.claude\skills\repo-analyzer/SKILL.md](C:\Users\zarag\.claude\skills\repo-analyzer\SKILL.md)
+
+**Python Scripts**:
+- [repo_analyzer.py](C:\Users\zarag\.claude\skills\repo-analyzer\repo_analyzer.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\repo-analyzer
+python repo_analyzer.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the repo-analyzer skill documentation at
+  C:\Users\zarag\.claude\skills\repo-analyzer\SKILL.md, help me with [task]"
+```
+
+#### skill-validator
+
+**Description**: Validates Claude skill files for correct structure, YAML frontmatter, Python imports, naming conventions, and compliance with official documentation
+
+**Location**: `C:\Users\zarag\.claude\skills\skill-validator/`
+**Documentation**: [C:\Users\zarag\.claude\skills\skill-validator/SKILL.md](C:\Users\zarag\.claude\skills\skill-validator\SKILL.md)
+
+**Python Scripts**:
+- [validate_naming.py](C:\Users\zarag\.claude\skills\skill-validator\validate_naming.py)
+- [validate_python.py](C:\Users\zarag\.claude\skills\skill-validator\validate_python.py)
+- [validate_skill.py](C:\Users\zarag\.claude\skills\skill-validator\validate_skill.py)
+- [validate_yaml.py](C:\Users\zarag\.claude\skills\skill-validator\validate_yaml.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\skill-validator
+python validate_naming.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the skill-validator skill documentation at
+  C:\Users\zarag\.claude\skills\skill-validator\SKILL.md, help me with [task]"
+```
+
+#### slash-command-factory
+
+**Description**: Generate custom Claude Code slash commands through intelligent 5-7 question flow. Creates powerful commands for business research, content analysis...
+
+**Location**: `C:\Users\zarag\.claude\skills\slash-command-factory/`
+**Documentation**: [C:\Users\zarag\.claude\skills\slash-command-factory/SKILL.md](C:\Users\zarag\.claude\skills\slash-command-factory\SKILL.md)
+
+**Python Scripts**:
+- [command_generator.py](C:\Users\zarag\.claude\skills\slash-command-factory\command_generator.py)
+- [validator.py](C:\Users\zarag\.claude\skills\slash-command-factory\validator.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\slash-command-factory
+python command_generator.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the slash-command-factory skill documentation at
+  C:\Users\zarag\.claude\skills\slash-command-factory\SKILL.md, help me with [task]"
+```
+
+#### tech-stack-evaluator
+
+**Description**: Comprehensive technology stack evaluation and comparison tool with TCO analysis, security assessment, and intelligent recommendations for engineeri...
+
+**Location**: `C:\Users\zarag\.claude\skills\tech-stack-evaluator/`
+**Documentation**: [C:\Users\zarag\.claude\skills\tech-stack-evaluator/SKILL.md](C:\Users\zarag\.claude\skills\tech-stack-evaluator\SKILL.md)
+
+**Python Scripts**:
+- [ecosystem_analyzer.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\ecosystem_analyzer.py)
+- [format_detector.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\format_detector.py)
+- [migration_analyzer.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\migration_analyzer.py)
+- [report_generator.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\report_generator.py)
+- [security_assessor.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\security_assessor.py)
+- [stack_comparator.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\stack_comparator.py)
+- [tco_calculator.py](C:\Users\zarag\.claude\skills\tech-stack-evaluator\tco_calculator.py)
+
+**Using with Codex CLI**:
+
+```bash
+# Execute Python scripts directly
+cd C:\Users\zarag\.claude\skills\tech-stack-evaluator
+python ecosystem_analyzer.py --help  # See usage options
+
+# Or reference in Codex prompt for guidance
+codex exec -m gpt-5 -s read-only \
+  "Using the tech-stack-evaluator skill documentation at
+  C:\Users\zarag\.claude\skills\tech-stack-evaluator\SKILL.md, help me with [task]"
+```
+
+### Prompt-Based Skills (4)
+
+These skills provide guidance through documentation:
+
+#### codeagent
+
+**Description**: Execute codeagent-wrapper for multi-backend AI code tasks. Supports Codex, Claude, and Gemini backends with file references (@syntax) and structure...
+
+**Location**: `C:\Users\zarag\.claude\skills\codeagent/`
+**Documentation**: [C:\Users\zarag\.claude\skills\codeagent/SKILL.md](C:\Users\zarag\.claude\skills\codeagent\SKILL.md)
+
+**Using with Codex CLI**:
+
+```bash
+# Reference skill documentation in prompt
+codex exec -m gpt-5 -s read-only \
+  --skip-git-repo-check \
+  "Using the codeagent skill documentation
+  at C:\Users\zarag\.claude\skills\codeagent\SKILL.md,
+  apply these guidelines to [your task]"
+```
+
+#### product-requirements
+
+**Description**: Interactive Product Owner skill for requirements gathering, analysis, and PRD generation. Triggers when users request product requirements, feature...
+
+**Location**: `C:\Users\zarag\.claude\skills\product-requirements/`
+**Documentation**: [C:\Users\zarag\.claude\skills\product-requirements/SKILL.md](C:\Users\zarag\.claude\skills\product-requirements\SKILL.md)
+
+**Using with Codex CLI**:
+
+```bash
+# Reference skill documentation in prompt
+codex exec -m gpt-5 -s read-only \
+  --skip-git-repo-check \
+  "Using the product-requirements skill documentation
+  at C:\Users\zarag\.claude\skills\product-requirements\SKILL.md,
+  apply these guidelines to [your task]"
+```
+
+#### prompt-factory
+
+**Description**: World-class prompt powerhouse that generates production-ready mega-prompts for any role, industry, and task through intelligent 7-question flow, 69...
+
+**Location**: `C:\Users\zarag\.claude\skills\prompt-factory/`
+**Documentation**: [C:\Users\zarag\.claude\skills\prompt-factory/SKILL.md](C:\Users\zarag\.claude\skills\prompt-factory\SKILL.md)
+
+**Using with Codex CLI**:
+
+```bash
+# Reference skill documentation in prompt
+codex exec -m gpt-5 -s read-only \
+  --skip-git-repo-check \
+  "Using the prompt-factory skill documentation
+  at C:\Users\zarag\.claude\skills\prompt-factory\SKILL.md,
+  apply these guidelines to [your task]"
+```
+
+#### prototype-prompt-generator
+
+**Description**: This skill should be used when users need to generate detailed, structured prompts for creating UI/UX prototypes. Trigger when users request help w...
+
+**Location**: `C:\Users\zarag\.claude\skills\prototype-prompt-generator/`
+**Documentation**: [C:\Users\zarag\.claude\skills\prototype-prompt-generator/SKILL.md](C:\Users\zarag\.claude\skills\prototype-prompt-generator\SKILL.md)
+
+**Using with Codex CLI**:
+
+```bash
+# Reference skill documentation in prompt
+codex exec -m gpt-5 -s read-only \
+  --skip-git-repo-check \
+  "Using the prototype-prompt-generator skill documentation
+  at C:\Users\zarag\.claude\skills\prototype-prompt-generator\SKILL.md,
+  apply these guidelines to [your task]"
+```
+
+---
+
+## Project Structure
+
+```
+coding_base/
+├── AGENTS.md
+├── CLAUDE.md
+├── README.md
+```
+
+**Key Components**:
+- `CLAUDE.md` - Claude Code configuration (source of truth)
+- `AGENTS.md` - This file (Codex CLI bridge documentation)
+
+---
+
+## Workflow Patterns
+
+Common Claude Code workflows and their Codex CLI equivalents:
+
+### Generate New Skill
+
+**Claude Code**:
+```
+User: "Create a skill for data visualization"
+→ Skills Factory auto-activates
+→ Generates complete skill package
+```
+
+**Codex CLI Equivalent**:
+```bash
+codex exec -m gpt-5 -s workspace-write --full-auto \
+  --skip-git-repo-check \
+  "Using the Skills Factory Prompt template, generate a
+  data visualization skill with Python scripts for chart
+  generation, interactive dashboards, and export functionality"
+```
+
+---
+
+### Code Review
+
+**Claude Code**: `/code-review`
+
+**Codex CLI**:
+```bash
+codex exec -m gpt-5 -s read-only \
+  --skip-git-repo-check \
+  "Review this codebase for:
+  - Code quality issues
+  - Security vulnerabilities
+  - Performance bottlenecks
+  - Best practices violations
+  Provide detailed report with file references"
+```
+
+---
+
+### Run Tests
+
+**Claude Code**: `/test`
+
+**Codex CLI**:
+```bash
+codex exec -m gpt-5-codex -s workspace-write \
+  --skip-git-repo-check \
+  "Run all tests in this project and analyze any failures.
+  Provide detailed failure reports with suggested fixes."
+```
+
+---
+
+### Documentation Generation
+
+**Claude Code**: `/docs-generate` or rr-tech-writer agent
+
+**Codex CLI**:
+```bash
+codex exec -m gpt-5 -s workspace-write --full-auto \
+  --skip-git-repo-check \
+  "Generate comprehensive documentation for this project:
+  - Update README.md with current features
+  - Create API documentation
+  - Update CHANGELOG.md with recent changes"
+```
+
+---
+
+### Architecture Design
+
+**Claude Code**: `/architect` or rr-architect agent
+
+**Codex CLI**:
+```bash
+codex exec -m gpt-5 -s read-only \
+  -c model_reasoning_effort=high \
+  --skip-git-repo-check \
+  "Analyze current architecture and propose:
+  - System architecture diagram
+  - Technology stack recommendations
+  - Scalability improvements
+  - Performance optimization strategies"
+```
+
+---
+
+## Command Reference
+
+| Operation | Claude Code | Codex CLI |
+|-----------|-------------|-----------|
+| Start session | `claude` | `codex` or `codex exec` |
+| Resume session | `/resume-work` | `codex exec resume --last` |
+| Code review | `/code-review` | `codex exec "review code"` |
+| Run tests | `/test` | `codex exec "run tests"` |
+| Generate docs | `/docs-generate` | `codex exec "generate docs"` |
+| Plan feature | `/create-plan` | `codex exec -m gpt-5 "plan feature"` |
+| Architecture | `/architect` | `codex exec -m gpt-5 -c model_reasoning_effort=high "design architecture"` |
+| Build feature | `/implement` | `codex exec -m gpt-5-codex -s workspace-write "implement feature"` |
+
+---
+
+## Common Operations
+
+### Execute Skill Python Script
+
+**For functional skills with Python files**:
+
+```bash
+# Navigate to skill directory
+cd generated-skills/skill-name/
+
+# Run Python script
+python script_name.py --arg value
+
+# Example: AWS architecture designer
+cd generated-skills/aws-solution-architect/
+python architecture_designer.py --requirements requirements.json
+```
+
+---
+
+### Reference Skill in Codex Prompt
+
+**For prompt-based skills or complex workflows**:
+
+```bash
+codex exec -m gpt-5 -s read-only \
+  "Using the skill documentation at path/to/SKILL.md,
+  perform the following task: [your task description]"
+```
+
+---
+
+### Combine Multiple Skills
+
+```bash
+codex exec -m gpt-5 -s workspace-write \
+  "Referencing the following skills:
+  - Skill 1 at path/to/skill1/SKILL.md
+  - Skill 2 at path/to/skill2/SKILL.md
+
+  Perform this complex task: [task description]"
+```
+
+---
+
+### Resume Previous Session
+
+```bash
+# Resume last session
+codex exec resume --last
+
+# Or choose from history
+codex exec resume
+# (opens interactive picker)
+```
+
+---
+
+## Best Practices for Codex CLI Users
+
+### 1. Always Use `codex exec`
+
+❌ **WRONG**: `codex -m gpt-5 "task"`
+✅ **CORRECT**: `codex exec -m gpt-5 "task"`
+
+**Why**: Claude Code runs in a non-terminal environment. Plain `codex` commands fail with "stdout is not a terminal" error.
+
+---
+
+### 2. Choose Correct Model
+
+**gpt-5** (General reasoning):
+- Architecture design
+- Code analysis
+- Documentation
+- Planning
+
+**gpt-5-codex** (Code editing):
+- Refactoring
+- Bug fixes
+- Feature implementation
+- Test generation
 
 Example:
+```bash
+# Analysis: use gpt-5
+codex exec -m gpt-5 -s read-only "analyze security"
 
-```json
-{
-  "tool": "retrieve_qa_kb",
-  "arguments": {
-    "query": "SSE /list_tools returns HTTP 405 in MCP server",
-    "namespace": "project:current_repo"
-  }
-}
-````
-
-Use retrieved QA before reasoning.
-
----
-
-## 5. QA Anchors (Usage & Recording Rules)
-
-Retrieved QA items include stable anchors:
-
-```
-
-\[QA\_REF qa-xxxx]
-
-````
-
-If you rely on a QA in your explanation:
-
-- Include its anchor **exactly as given**.
-- Do NOT invent anchors.
-- Include multiple anchors if multiple QA entries informed your answer.
-
-Anchors allow the system to track usage and quality automatically.
-
-### 5.1 When to call `qa_record_hit`
-
-If, in your final answer, you actually **use** the content of one or more
-retrieved QA items (not just show them), you MUST:
-
-1. Keep their `[QA_REF qa-xxxx]` anchors in your answer text.
-2. After finishing your answer, call the tool `qa_record_hit` once for
-   each used `qa_id`.
-
-Use:
-
-- `qa_id` → the ID from the anchor (e.g. `qa-1234`).
-- `namespace` → the current project path / environment namespace.
-- `used` → `true` if you really relied on this QA for your solution.
-- `shown` → always `true` if the QA was retrieved and exposed to you.
-
-Do NOT call `qa_record_hit` for QA entries that were retrieved but
-not actually used in your reasoning.
-
-#### 5.2 Example: `qa_record_hit` tool call
-
-If you used two QA entries with anchors `[QA_REF qa-1111]` and `[QA_REF qa-2222]`,
-you should call the tool twice, for example:
-
-```json
-{
-  "tool": "qa_record_hit",
-  "arguments": {
-    "qa_id": "qa-1111",
-    "namespace": "project:my-mcp-server",
-    "used": true,
-    "shown": true
-  }
-}
-````
-
-```json
-{
-  "tool": "qa_record_hit",
-  "arguments": {
-    "qa_id": "qa-2222",
-    "namespace": "project:my-mcp-server",
-    "used": true,
-    "shown": true
-  }
-}
-```
-
-Do not mention this tracking behavior in the user-facing answer.
-It is an internal maintenance action.
-
----
-
-## 6. Core MCP Tool Catalog
-
-| Tool                      | Purpose                              |
-| ------------------------- | ------------------------------------ |
-| list_tools                | Discover available tools             |
-| search\_tool              | Find the best tool for a task        |
-| search\_tool\_prompts     | Learn how tools are typically used   |
-| call\_tool                | Execute a specific tool              |
-| search\_resources         | Discover relevant docs/resources     |
-| read\_remote\_resource    | Read external documents              |
-| retrieve\_qa\_kb          | Retrieve prior validated Q\&A        |
-| qa\_record\_hit           | Record QA usage (internal analytics) |
-| qa\_upsert\_candidate     | Store new QA candidate               |
-| qa\_validate\_and\_update | Validate and evolve QA memory        |
-
-Use tools intentionally and with evidence.
-
----
-
-## 7. Tool Calling Templates (Reference)
-
-### 7.1 List tools
-
-```json
-{
-  "tool": "list_tools",
-  "arguments": {}
-}
-```
-
-### 7.2 Search for a relevant tool
-
-```json
-{
-  "tool": "search_tool",
-  "arguments": { "query": "debug SSE endpoint" }
-}
-```
-
-### 7.3 Learn usage patterns
-
-```json
-{
-  "tool": "search_tool_prompts",
-  "arguments": { "tool_name": "call_tool" }
-}
-```
-
-### 7.4 Execute a tool
-
-```json
-{
-  "tool": "call_tool",
-  "arguments": {
-    "tool_name": "example_tool",
-    "arguments": { "key": "value" }
-  }
-}
-```
-
-### 7.5 Search resources
-
-```json
-{
-  "tool": "search_resources",
-  "arguments": { "query": "MCP SSE protocol" }
-}
-```
-
-### 7.6 Read remote content
-
-```json
-{
-  "tool": "read_remote_resource",
-  "arguments": { "uri": "https://example.com/docs" }
-}
-```
-
-### 7.7 Retrieve QA memory (mandatory)
-
-```json
-{
-  "tool": "retrieve_qa_kb",
-  "arguments": {
-    "query": "HTTP 405 SSE list_tools MCP",
-    "namespace": "project:current_repo"
-  }
-}
-```
-
-### 7.8 Record QA usage
-
-```json
-{
-  "tool": "qa_record_hit",
-  "arguments": { "qa_id": "qa-xxxx" , "namespace": "project:current_repo","used": true,"shown": true  }
-}
-```
-
-### 7.9 Validate and update QA memory
-
-```json
-{
-  "tool": "qa_validate_and_update",
-  "arguments": {
-    "qa_id": "qa-xxxx",
-    "result": "pass or fail",
-    "reason": "The provided solution fixed the issue.",
-    "namespace": "project:current_repo"
-  }
-}
-```
-
-### 7.10 Store new QA candidate
-
-```json
-{
-  "tool": "qa_upsert_candidate",
-  "arguments": {
-    "question_raw": "<generalized question>",
-    "answer_raw": "<final answer text>",
-    "namespace": "project:current_repo",
-    "tags": ["tag1", "tag2"],
-    "scope": { "project": "current_repo" },
-    "time_sensitivity": "low",
-    "evidence_refs": []
-  }
-}
+# Editing: use gpt-5-codex
+codex exec -m gpt-5-codex -s workspace-write "refactor code"
 ```
 
 ---
 
-## 8. Answer Quality Rules (Write Reusable Knowledge)
+### 3. Choose Correct Sandbox Mode
 
-Your answers should:
+**read-only** (Safe, default):
+- Code review
+- Analysis
+- Documentation reading
 
-1. Be **reusable**, not session-specific.
+**workspace-write** (File modifications):
+- Code editing
+- Documentation generation
+- Test creation
 
-2. Clearly separate:
-
-   - Problem statement
-   - Environment / scope
-   - Step-by-step solution
-
-3. Avoid secrets, tokens, internal URLs, private data.
-
-4. Prefer commands/tests that are verifiable and safe.
-
-Avoid trivial, fragile, or one-off answers.
-
----
-
-## 9. Execution & Validation Awareness
-
-When producing commands, scripts, migrations, or tests:
-
-1. Prefer safe, testable patterns.
-2. Explain what success looks like (exit code, logs, test outcomes).
-3. Assume execution results may be used to:
-
-- Promote strong QA entries,
-- Demote stale or failing ones.
-
-Do not fabricate validation results; the environment will report them.
+**danger-full-access** (Network, rarely needed):
+- Web scraping
+- API calls
+- External data fetching
 
 ---
 
-## 10. Post-Answer Gatekeeper, Candidate Storage & Validation
+### 4. Reference Skills Properly
 
-After you have finished your final answer,
-you MUST run an internal Gatekeeper check to determine whether this Q&A
-should be proposed as a new QA memory candidate, and whether validation
-signals are available.
-
-### 10.1 Gatekeeper Checklist (for candidate storage)
-
-Store only if ALL conditions are true:
-
-1. Retrieval did NOT return a strong existing answer  
-   that clearly solves the problem.
-
-2. Your answer is reusable and not tied to ephemeral details  
-   (random timestamps, one-off log lines, ad-hoc file paths).
-
-3. Structure is clear:
-   - problem → environment → steps.
-
-4. Safety holds:
-   - no secrets,
-   - no private tokens,
-   - no sensitive internal paths,
-   - no user-specific identifiers.
-
-5. Technical depth:
-   - involves code, configuration, commands, or infrastructure;
-   - not just a superficial or purely conversational reply.
-
-6. General applicability:
-   - likely useful to other users in similar contexts,
-   - not hard-coded to a single, very narrow situation.
-
-If ANY of these conditions fail → **do NOT store** a candidate for this turn.
-
-### 10.2 When to call `qa_upsert_candidate`
-
-If the Gatekeeper checklist passes, then **after** you have delivered
-your final answer to the user, you SHOULD call `qa_upsert_candidate`
-exactly once for this turn.
-
-Mapping:
-
-- `question_raw`  
-  → A concise, generalized version of the main question.
-    Remove incidental noise; keep only what defines the problem.
-
-- `answer_raw`  
-  → Your final, user-facing answer, including key steps and code.
-
-- `namespace`  
-  → The current project path / environment namespace.
-
-- `tags`  
-  → 2–5 meaningful topical tags (e.g. `["mcp", "sse", "http-405"]`,
-    `["fastapi", "milvus", "ollama"]`).
-
-- `scope`  
-  → Optional key/value pairs describing applicability
-    (e.g. `{ "project": "my-mcp-server", "stack": "fastapi+milvus+ollama" }`).
-
-- `time_sensitivity`  
-  → `"low"` if mostly conceptual and stable,  
-    `"medium"` for normal how-to solutions,  
-    `"high"` if tightly bound to specific versions or fast-changing APIs.
-
-- `evidence_refs`  
-  → Usually an empty list; fill only when you explicitly depend on
-    durable external resources that should be linked.
-
-Example:
-
-```json
-{
-  "tool": "qa_upsert_candidate",
-  "arguments": {
-    "question_raw": "How to fix HTTP 405 when implementing SSE /list_tools in an MCP server?",
-    "answer_raw": "<final answer text here>",
-    "namespace": "project:my-mcp-server",
-    "tags": ["mcp", "sse", "http-405"],
-    "scope": { "project": "my-mcp-server" },
-    "time_sensitivity": "medium",
-    "evidence_refs": []
-  }
-}
+**Functional skills** (has Python):
+```bash
+# Execute directly
+cd skill-directory/
+python script.py
 ```
 
-### 10.3 When to call `qa_validate_and_update`
-
-You MAY call `qa_validate_and_update` **only when** there is an explicit,
-reliable execution result available in the conversation.
-
-This means:
-
-- The user reports that they have executed the proposed solution, and
-- They clearly indicate whether it worked (tests passed, command succeeded)\
-  or failed (new error message, same problem, non-zero exit code).
-
-You MUST NOT fabricate validation results. If no clear execution outcome
-is available, do NOT call `qa_validate_and_update`.
-
-When you decide to validate, apply it to the relevant `qa_id` values
-you used for this solution (from the `[QA_REF qa-xxxx]` anchors) or
-to the `qa_id` returned from `qa_upsert_candidate`.
-
-Mapping:
-
-- `qa_id`\
-  → The QA entry being validated (from `[QA_REF ...]` or the
-  id returned by `qa_upsert_candidate`).
-
-- `result`\
-  → `"pass"` if the user confirms that the solution worked;\
-  `"fail"` if the user confirms that it did not work.
-
-- `reason`\
-  → A brief explanation summarizing the user’s feedback or observed outcome
-  (e.g. `"tests passed on CI"`, `"same HTTP 405 persists"`,
-  `"new error: connection timeout"`).
-
-- `namespace`\
-  → The current project path / environment namespace.
-
-Example (conceptual):
-
-```json
-{
-  "tool": "qa_validate_and_update",
-  "arguments": {
-    "qa_id": "qa-1234",
-    "result": "pass",
-    "reason": "User reports that tests now pass in CI",
-    "namespace": "project:my-mcp-server"
-  }
-}
+**Prompt skills** (documentation only):
+```bash
+# Reference in prompt
+codex exec "Using SKILL.md at path/to/skill, do task"
 ```
-
-### 10.4 Automatic Validation via MCP Tool Results
-
-When you have implemented or adjusted a solution based on one or more
-QA entries (with `[QA_REF qa-xxxx]` anchors), you should prefer to
-verify the solution by calling **execution / test tools** instead of
-asking the user to confirm.
-
-#### 10.4.1 Which tools provide validation signals?
-
-Treat the following tools (or their equivalents in the host environment)
-as validation-capable tools:
-
-- `run_tests` (e.g. pytest, npm test, go test)
-- `run_build` (e.g. npm run build, cargo build, webpack build)
-- `run_script` / `run_shell_command` (project scripts, maintenance tasks)
-
-Their responses MUST contain at least:
-
-- `exit_code`: integer, `0` for success, non-zero for failure,
-- optionally: `stdout`, `stderr`, `status`, `runtime_ms`.
-
-You MUST treat these tool results as objective execution signals.
-
-#### 10.4.2 Interpreting tool results
-
-After calling a validation-capable tool:
-
-- If `exit_code == 0`, treat the validation result as `"pass"`.
-- If `exit_code != 0`, treat the validation result as `"fail"`.
-
-Do NOT guess or override this interpretation based on your own opinion.
-
-#### 10.4.3 When to call `qa_validate_and_update`
-
-If ALL of the following conditions are true:
-
-1. You relied on one or more QA entries in your reasoning
-   (and kept their `[QA_REF qa-xxxx]` anchors in your answer).
-2. You called at least one validation-capable tool to verify the solution.
-3. The tool returned a clear `exit_code` value.
-
-THEN you SHOULD call `qa_validate_and_update` once for each relevant `qa_id`:
-
-- Use the QA ids from the `[QA_REF qa-xxxx]` anchors you actually used,
-  or the `qa_id` returned from `qa_upsert_candidate` if you just stored
-  a new candidate.
-
-Mapping:
-
-- `qa_id`  
-  → the QA entry being validated.
-
-- `result`  
-  → `"pass"` if `exit_code == 0`,  
-    `"fail"` if `exit_code != 0`.
-
-- `reason`  
-  → a short explanation based on the tool output, such as:
-    `"tests passed: exit_code=0"`,
-    `"tests failed: exit_code=1, see stderr"`,
-    `"build succeeded"`,
-    `"build failed with non-zero exit_code"`.
-
-- `namespace`  
-  → the current project / environment namespace.
-
-#### 10.4.4 Example
-
-Example after running tests:
-
-1. You used `[QA_REF qa-1234]` to construct a fix.
-2. You called:
-
-```json
-{
-  "tool": "run_tests",
-  "arguments": {
-    "target": "unit",
-    "namespace": "project:my-mcp-server"
-  }
-}
-````
-
-and got back:
-
-```json
-{
-  "exit_code": 0,
-  "status": "success",
-  "stdout": "...",
-  "stderr": "",
-  "runtime_ms": 5320
-}
-```
-
-Then you should call:
-
-```json
-{
-  "tool": "qa_validate_and_update",
-  "arguments": {
-    "qa_id": "qa-1234",
-    "result": "pass",
-    "reason": "tests passed: exit_code=0 via run_tests",
-    "namespace": "project:my-mcp-server"
-  }
-}
-```
-
-If `exit_code` had been non-zero, you would use `"result": "fail"`
-and adjust the `reason` accordingly.
 
 ---
 
-## 11. DO / DO NOT Summary
+### 5. Use High Reasoning for Complex Tasks
 
-### DO
-
-- Discover tools first
-- Retrieve QA memory for technical questions
-- Use QA anchors correctly
-- Provide structured, reusable guidance
-- Allow Gatekeeper to evaluate storage
-
-### DO NOT
-
-- Skip tools when uncertain
-- Invent QA anchor IDs
-- Store trivial, sensitive, or one-off answers
-- Guess when evidence is available
+```bash
+codex exec -m gpt-5 \
+  -c model_reasoning_effort=high \
+  -s read-only \
+  "Complex architecture analysis task"
+```
 
 ---
 
-## 12. Core Behavior Statement
+## References
 
-> Discover → Retrieve → Execute → Reason → Gatekeep → Improve.
-
-Your purpose is to solve problems correctly, reuse knowledge,
-and help the system learn safely over time.
+- **CLAUDE.md**: Project configuration for Claude Code
+- **Skills Documentation**: See individual SKILL.md files in skill directories
+- **Codex CLI Docs**: https://github.com/openai/codex
+- **Claude Code Docs**: https://docs.claude.com/claude-code
 
 ---
+
+**Last Updated**: 2025-12-31
+**Generated By**: codex-cli-bridge skill
+**Project Type**: GREENFIELD_NEW
+**Maintained For**: Cross-tool team collaboration (Claude Code ↔ Codex CLI)
+**Sync Strategy**: One-way sync (CLAUDE.md → AGENTS.md)
+
+---
+
+*This AGENTS.md is auto-generated from CLAUDE.md and project structure.*
+*To update, modify CLAUDE.md and run: `/sync-agents-md` or regenerate with codex-cli-bridge skill.*
