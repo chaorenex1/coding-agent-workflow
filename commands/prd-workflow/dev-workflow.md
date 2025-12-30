@@ -2,7 +2,6 @@
 description: Launch development workflow orchestrator to manage complete software development lifecycle with specialized sub-agents. Supports skipping testing and deployment phases.
 argument-hint: "[project-name] [--skip-testing] [--skip-deployment] [--phases=all|codebase|requirements|design|implementation|testing|deployment]"
 allowed-tools: Bash(git status:*), Bash(git log:*), Bash(ls:*), Read, Write
-model: DeepSeek-V3.2
 disable-model-invocation: false
 ---
 
