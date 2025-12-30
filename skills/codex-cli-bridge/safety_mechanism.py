@@ -14,6 +14,12 @@ import sys
 from typing import Dict, Optional, Tuple
 from pathlib import Path
 
+# Fix Windows console encoding for emoji support
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 
 class SafetyMechanism:
     """
@@ -35,12 +41,13 @@ class SafetyMechanism:
         self.project_root = Path(project_root).resolve()
         self.claude_md_path = self.project_root / "CLAUDE.md"
 
-    def validate_all(self, auto_init: bool = True) -> Tuple[bool, str]:
+    def validate_all(self, auto_init: bool = True, require_codex: bool = False) -> Tuple[bool, str]:
         """
         Run all safety checks.
 
         Args:
             auto_init: If True, auto-run /init if CLAUDE.md missing
+            require_codex: If True, fail if Codex CLI not installed (default: False, warning only)
 
         Returns:
             Tuple of (success: bool, message: str)
@@ -48,10 +55,14 @@ class SafetyMechanism:
         print("🔍 Running safety checks...")
         print()
 
-        # Check 1: Codex CLI installation
+        # Check 1: Codex CLI installation (optional for AGENTS.md generation)
         codex_ok, codex_msg = self.check_codex_cli()
         if not codex_ok:
-            return False, codex_msg
+            if require_codex:
+                return False, codex_msg
+            else:
+                print("⚠️  Codex CLI not available - AGENTS.md will be generated without Codex CLI examples")
+                print()
 
         # Check 2: CLAUDE.md exists
         claude_ok, claude_msg = self.check_claude_md(auto_init=auto_init)
