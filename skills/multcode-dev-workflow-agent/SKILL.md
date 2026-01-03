@@ -1,5 +1,5 @@
 ---
-name: dev-workflow-agent
+name: multcode-dev-workflow-agent
 description: "End-to-end software development workflow agent using memex-cli with multiple AI backends. Orchestrates 5 stages: (1) Requirements Analysis (Claude), (2) Functional Design (Claude), (3) UX Design (Gemini), (4) Development Planning (Codex), (5) Implementation & QA (Codex). Use for complete project development from idea to deployment."
 ---
 
