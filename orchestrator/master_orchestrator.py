@@ -29,6 +29,8 @@ try:
     from .core.executor_factory import ExecutorFactory
     from .core.dependency_analyzer import DependencyAnalyzer, Task, ParallelGroup
     from .core.parallel_scheduler import ParallelScheduler, TaskResult as SchedulerTaskResult, BatchResult
+    from .core.slash_command_registry import SlashCommandRegistry, register_builtin_commands
+    from .core.slash_command import SlashCommandResult
     V3_AVAILABLE = True
 except ImportError as e:
     # V3组件不可用时的fallback
@@ -37,6 +39,7 @@ except ImportError as e:
     ExecutorFactory = None
     DependencyAnalyzer = None
     ParallelScheduler = None
+    SlashCommandRegistry = None
     V3_AVAILABLE = False
 
 # 导入执行器
@@ -519,6 +522,7 @@ class MasterOrchestrator:
         self.registry = None
         self.factory = None
         self.scheduler = None
+        self.slash_registry = None  # V3.1: Slash Command Registry
         self.auto_discover = auto_discover
         self.enable_parallel = enable_parallel
 
@@ -542,6 +546,13 @@ class MasterOrchestrator:
                         timeout_per_task=parallel_timeout
                     )
 
+                # 5. 初始化 Slash Command Registry (V3.1)
+                self.slash_registry = SlashCommandRegistry(orchestrator=self)
+                register_builtin_commands(self.slash_registry)
+
+                # 6. 注册自定义 Slash Commands (从配置)
+                self._register_custom_slash_commands()
+
             except Exception as e:
                 print(f"[警告] V3自动发现初始化失败: {e}")
                 print("[提示] 将使用传统模式运行")
@@ -549,6 +560,7 @@ class MasterOrchestrator:
                 self.registry = None
                 self.factory = None
                 self.scheduler = None
+                self.slash_registry = None
                 self.auto_discover = False
 
         elif auto_discover and not V3_AVAILABLE:
@@ -558,15 +570,19 @@ class MasterOrchestrator:
 
     def process(self, request: str, verbose: bool = False) -> Any:
         """
-        处理用户请求
+        处理用户请求（支持 Slash Command 和自然语言）
 
         Args:
-            request: 用户请求文本
+            request: 用户请求文本（可以是 /command 或自然语言）
             verbose: 是否输出详细信息
 
         Returns:
             执行结果
         """
+        # 0. 检查是否为 Slash Command（V3.1）
+        if request.strip().startswith('/'):
+            return self._process_slash_command(request.strip(), verbose)
+
         # 1. 意图分析（优先使用Claude，失败则fallback到规则引擎）
         intent = self._analyze_intent(request, verbose)
 
@@ -971,6 +987,237 @@ class MasterOrchestrator:
             if verbose:
                 print(f"[配置重载失败] {e}")
             raise RuntimeError(f"配置重载失败: {e}")
+
+    # ================== Slash Command 系统方法 (V3.1) ==================
+
+    def _process_slash_command(self, request: str, verbose: bool = False) -> SlashCommandResult:
+        """
+        处理 Slash Command（V3.1新增）
+
+        Args:
+            request: Slash command字符串（如 "/discover", "/git-status"）
+            verbose: 详细输出
+
+        Returns:
+            SlashCommandResult
+        """
+        if not self.slash_registry:
+            # Slash Command 系统未启用
+            return SlashCommandResult(
+                command=request,
+                success=False,
+                error="Slash Command system not available (enable with auto_discover=True)"
+            )
+
+        # 解析命令和参数
+        parts = request[1:].split()  # 移除开头的 '/'
+        command_name = parts[0] if parts else ""
+        args = parts[1:] if len(parts) > 1 else []
+
+        if verbose:
+            print(f"[Slash Command] /{command_name}")
+            if args:
+                print(f"  参数: {args}")
+            print()
+
+        # 执行命令
+        result = self.slash_registry.execute(command_name, args, verbose=verbose)
+
+        if verbose:
+            print(f"\n[执行结果]")
+            print(f"  成功: {result.success}")
+            if result.duration_seconds:
+                print(f"  耗时: {result.duration_seconds:.3f}s")
+            if result.error:
+                print(f"  错误: {result.error}")
+            print()
+
+        return result
+
+    def _register_custom_slash_commands(self):
+        """
+        从配置注册自定义 Slash Commands (V3.1)
+
+        将配置中的 slash_commands 转换为 SlashCommandMetadata 并注册到 slash_registry
+        """
+        if not self.config or not self.config.slash_commands:
+            return
+
+        from .core.slash_command import SlashCommandMetadata, SlashCommandType
+
+        # 类型映射
+        type_map = {
+            "system": SlashCommandType.SYSTEM,
+            "shell": SlashCommandType.SHELL,
+            "skill": SlashCommandType.SKILL,
+            "agent": SlashCommandType.AGENT,
+            "prompt": SlashCommandType.PROMPT
+        }
+
+        for name, slash_config in self.config.slash_commands.items():
+            try:
+                # 转换为 SlashCommandMetadata
+                command_type = type_map.get(slash_config.type)
+                if not command_type:
+                    logger.warning(f"Unknown slash command type '{slash_config.type}' for '{name}'")
+                    continue
+
+                metadata = SlashCommandMetadata(
+                    name=name,
+                    type=command_type,
+                    description=slash_config.description,
+                    handler=slash_config.handler,
+                    command=slash_config.command,
+                    skill=slash_config.skill,
+                    agent_type=slash_config.agent_type,
+                    prompt_template=slash_config.prompt_template,
+                    enabled=slash_config.enabled,
+                    priority=slash_config.priority,
+                    source=slash_config.source,
+                    dependencies=slash_config.dependencies,
+                    examples=slash_config.examples,
+                    config=slash_config.config
+                )
+
+                # 注册到 registry
+                self.slash_registry.register(metadata)
+                logger.debug(f"Registered custom slash command: /{name} "
+                           f"(type={slash_config.type}, source={slash_config.source})")
+
+            except Exception as e:
+                logger.error(f"Failed to register custom slash command '{name}': {e}")
+
+    # ================== 系统级 Slash Command Handlers ==================
+
+    def _auto_discover(self, verbose: bool = False) -> Dict[str, Any]:
+        """
+        /discover 命令：重新发现并注册资源
+
+        Returns:
+            发现统计信息
+        """
+        if not V3_AVAILABLE or not self.registry:
+            raise RuntimeError("Auto-discovery requires V3 (auto_discover=True)")
+
+        # 重新加载配置并注册资源
+        self.reload_config(verbose=verbose)
+
+        # 返回统计
+        stats = self.registry.get_stats()
+
+        if verbose:
+            print(f"\n[自动发现完成]")
+            print(f"  总资源: {stats['total_resources']}")
+            print(f"  按类型: {stats['by_type']}")
+            print(f"  按来源: {stats['by_source']}")
+
+        return stats
+
+    def _list_skills(self, verbose: bool = False) -> List['ResourceMetadata']:
+        """
+        /list-skills 命令：列出所有 skills
+
+        Returns:
+            Skill列表
+        """
+        if not V3_AVAILABLE or not self.registry:
+            raise RuntimeError("list-skills requires V3 (auto_discover=True)")
+
+        from .core.unified_registry import ResourceType
+        skills = self.registry.list_resources(type_filter=ResourceType.SKILL)
+
+        if verbose:
+            print(f"\n[已注册 Skills ({len(skills)}个)]")
+            for skill in skills:
+                print(f"  - {skill.namespace} (来源:{skill.source}, 优先级:{skill.priority})")
+
+        return skills
+
+    def _list_slash_commands(self, verbose: bool = False) -> List:
+        """
+        /list-commands 命令：列出所有 Slash Commands
+
+        Returns:
+            Slash Command列表
+        """
+        if not self.slash_registry:
+            raise RuntimeError("Slash commands not available (auto_discover=True required)")
+
+        commands = self.slash_registry.list_commands()
+
+        if verbose:
+            print(f"\n[已注册 Slash Commands ({len(commands)}个)]")
+            for cmd in commands:
+                print(f"  - /{cmd.name} ({cmd.type.value}): {cmd.description}")
+
+        return commands
+
+    def _reload_config(self, verbose: bool = False) -> Dict[str, Any]:
+        """
+        /reload 命令：重新加载配置
+
+        Returns:
+            重载结果
+        """
+        # 调用现有的 reload_config 方法
+        self.reload_config(verbose=verbose)
+
+        # 重新注册 Slash Commands
+        if self.slash_registry:
+            self.slash_registry.clear()
+            register_builtin_commands(self.slash_registry)
+            self._register_custom_slash_commands()  # 重新注册自定义命令
+
+        stats = {
+            "reloaded": True,
+            "resources": len(self.registry) if self.registry else 0,
+            "slash_commands": len(self.slash_registry) if self.slash_registry else 0
+        }
+
+        if verbose:
+            print(f"\n[配置重载完成]")
+            print(f"  资源数: {stats['resources']}")
+            print(f"  Slash Commands: {stats['slash_commands']}")
+
+        return stats
+
+    def _get_stats(self, verbose: bool = False) -> Dict[str, Any]:
+        """
+        /stats 命令：获取统计信息
+
+        Returns:
+            统计信息字典
+        """
+        stats = {
+            "v3_enabled": V3_AVAILABLE and self.auto_discover,
+            "parallel_enabled": self.enable_parallel,
+        }
+
+        if self.registry:
+            stats["registry"] = self.registry.get_stats()
+
+        if self.slash_registry:
+            stats["slash_commands"] = self.slash_registry.get_stats()
+
+        if self.scheduler:
+            stats["scheduler"] = self.scheduler.get_stats()
+
+        if verbose:
+            print(f"\n[系统统计]")
+            print(f"  V3启用: {stats['v3_enabled']}")
+            print(f"  并行启用: {stats['parallel_enabled']}")
+
+            if "registry" in stats:
+                print(f"\n[资源注册表]")
+                for key, value in stats["registry"].items():
+                    print(f"  {key}: {value}")
+
+            if "slash_commands" in stats:
+                print(f"\n[Slash Commands]")
+                for key, value in stats["slash_commands"].items():
+                    print(f"  {key}: {value}")
+
+        return stats
 
 
 def main():

@@ -18,6 +18,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 import logging
 
+# ResourceScanner will be imported lazily to avoid circular dependency
+# (resource_scanner imports ResourceType from this file)
+ResourceScanner = None
+DiscoveredResource = None
+SCANNER_AVAILABLE = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +98,29 @@ class ParallelConfig:
 
 
 @dataclass
+class SlashCommandConfig:
+    """Configuration for a slash command (V3.1)."""
+    name: str
+    type: str  # "system", "shell", "skill", "agent", "prompt"
+    description: str = ""
+    enabled: bool = True
+    priority: int = 50  # 0-1000, higher = higher priority
+    source: str = "project"  # "builtin", "user", or "project"
+
+    # Type-specific fields
+    handler: Optional[str] = None  # For system commands
+    command: Optional[str] = None  # For shell commands
+    skill: Optional[str] = None  # For skill commands
+    agent_type: Optional[str] = None  # For agent commands
+    prompt_template: Optional[str] = None  # For prompt commands
+
+    # Metadata
+    examples: List[str] = field(default_factory=list)
+    dependencies: List[str] = field(default_factory=list)
+    config: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class OrchestratorConfig:
     """Root configuration for MasterOrchestrator."""
     version: str = "3.0"
@@ -101,6 +130,7 @@ class OrchestratorConfig:
     agents: Dict[str, AgentConfig] = field(default_factory=dict)
     prompts: Dict[str, PromptConfig] = field(default_factory=dict)
     parallel_config: ParallelConfig = field(default_factory=ParallelConfig)
+    slash_commands: Dict[str, SlashCommandConfig] = field(default_factory=dict)  # V3.1
 
 
 class ConfigLoader:
@@ -113,15 +143,28 @@ class ConfigLoader:
     3. Project (highest priority)
     """
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Optional[Path] = None, enable_auto_discovery: bool = True):
         """
         Initialize ConfigLoader.
 
         Args:
             project_root: Root directory of the project. Defaults to current directory.
+            enable_auto_discovery: Enable automatic resource discovery via directory scanning
         """
         self.project_root = Path(project_root) if project_root else Path.cwd()
         self.user_config_dir = Path.home() / ".claude"
+        self.enable_auto_discovery = enable_auto_discovery
+
+        # Lazy import ResourceScanner to avoid circular dependency
+        self.scanner = None
+        if self.enable_auto_discovery:
+            try:
+                from .resource_scanner import ResourceScanner
+                self.scanner = ResourceScanner()
+                logger.info("Auto-discovery enabled via ResourceScanner")
+            except ImportError as e:
+                logger.warning(f"Auto-discovery requested but ResourceScanner not available: {e}")
+                self.enable_auto_discovery = False
 
         # Determine builtin skills directory
         # From orchestrator/core/config_loader.py → orchestrator/core → orchestrator → project_root
@@ -131,6 +174,7 @@ class ConfigLoader:
         logger.debug(f"  Project root: {self.project_root}")
         logger.debug(f"  User config dir: {self.user_config_dir}")
         logger.debug(f"  Builtin skills dir: {self.builtin_skills_dir}")
+        logger.debug(f"  Auto-discovery: {self.enable_auto_discovery}")
 
     def load(self) -> OrchestratorConfig:
         """
@@ -186,6 +230,7 @@ class ConfigLoader:
         )
 
         # Load builtin YAML skills from skills/memex-cli/skills/
+        # Note: Only scan skills, as builtin commands/agents/prompts use YAML whitelist
         if self.builtin_skills_dir.exists():
             builtin_skills = self._scan_skill_directory(self.builtin_skills_dir, source="builtin")
             config.skills.update(builtin_skills)
@@ -206,10 +251,36 @@ class ConfigLoader:
         return config
 
     def _load_user_config(self) -> OrchestratorConfig:
-        """Load user-level configuration from ~/.claude/."""
+        """Load user-level configuration from ~/.claude/ and auto-discover resources."""
         config = OrchestratorConfig()
 
-        # Load user orchestrator.yaml
+        # === NEW: Auto-discovery (if enabled) ===
+        if self.enable_auto_discovery and self.scanner and self.user_config_dir.exists():
+            logger.info("Running auto-discovery for user resources...")
+            discovered = self.scanner.scan_all(self.user_config_dir, source="user")
+
+            # Convert discovered resources to config objects
+            for resource_type, resources in discovered.items():
+                for discovered_item in resources:
+                    converted = self.scanner.convert_to_config(discovered_item)
+
+                    if resource_type == ResourceType.SKILL:
+                        config.skills[converted.name] = converted  # Always add
+                    elif resource_type == ResourceType.COMMAND:
+                        config.commands[converted.name] = converted
+                    elif resource_type == ResourceType.AGENT:
+                        config.agents[converted.name] = converted
+                    elif resource_type == ResourceType.PROMPT:
+                        config.prompts[converted.name] = converted
+
+            logger.info(
+                f"User auto-discovered: {len(discovered[ResourceType.SKILL])} skills, "
+                f"{len(discovered[ResourceType.COMMAND])} commands, "
+                f"{len(discovered[ResourceType.AGENT])} agents, "
+                f"{len(discovered[ResourceType.PROMPT])} prompts"
+            )
+
+        # === LEGACY: Load user orchestrator.yaml (overrides auto-discovery) ===
         user_config_file = self.user_config_dir / "orchestrator.yaml"
         if user_config_file.exists():
             try:
@@ -221,20 +292,49 @@ class ConfigLoader:
             except Exception as e:
                 logger.error(f"Failed to load user config from {user_config_file}: {e}")
 
-        # Load user skills from ~/.claude/skills/
-        user_skills_dir = self.user_config_dir / "skills"
-        if user_skills_dir.exists():
-            user_skills = self._scan_skill_directory(user_skills_dir, source="user")
-            config.skills.update(user_skills)
-            logger.debug(f"Loaded {len(user_skills)} user skills from {user_skills_dir}")
+        # === LEGACY: Load user skills from ~/.claude/skills/ (YAML-only) ===
+        if not self.enable_auto_discovery:
+            user_skills_dir = self.user_config_dir / "skills"
+            if user_skills_dir.exists():
+                user_skills = self._scan_skill_directory(user_skills_dir, source="user")
+                for name, skill_config in user_skills.items():
+                    if name not in config.skills:
+                        config.skills[name] = skill_config
+                logger.debug(f"Loaded {len(user_skills)} user skills from {user_skills_dir}")
 
         return config
 
     def _load_project_config(self) -> OrchestratorConfig:
-        """Load project-level configuration from ./orchestrator.yaml."""
+        """Load project-level configuration from ./orchestrator.yaml and auto-discover resources."""
         config = OrchestratorConfig()
 
-        # Load project orchestrator.yaml
+        # === NEW: Auto-discovery (if enabled) ===
+        if self.enable_auto_discovery and self.scanner:
+            logger.info("Running auto-discovery for project resources...")
+            discovered = self.scanner.scan_all(self.project_root, source="project")
+
+            # Convert discovered resources to config objects
+            for resource_type, resources in discovered.items():
+                for discovered_item in resources:
+                    converted = self.scanner.convert_to_config(discovered_item)
+
+                    if resource_type == ResourceType.SKILL:
+                        config.skills[converted.name] = converted  # Always add, override later if needed
+                    elif resource_type == ResourceType.COMMAND:
+                        config.commands[converted.name] = converted
+                    elif resource_type == ResourceType.AGENT:
+                        config.agents[converted.name] = converted
+                    elif resource_type == ResourceType.PROMPT:
+                        config.prompts[converted.name] = converted
+
+            logger.info(
+                f"Auto-discovered: {len(discovered[ResourceType.SKILL])} skills, "
+                f"{len(discovered[ResourceType.COMMAND])} commands, "
+                f"{len(discovered[ResourceType.AGENT])} agents, "
+                f"{len(discovered[ResourceType.PROMPT])} prompts"
+            )
+
+        # === LEGACY: Load project orchestrator.yaml (overrides auto-discovery) ===
         project_config_file = self.project_root / "orchestrator.yaml"
         if project_config_file.exists():
             try:
@@ -246,12 +346,16 @@ class ConfigLoader:
             except Exception as e:
                 logger.error(f"Failed to load project config from {project_config_file}: {e}")
 
-        # Load project skills from ./skills/
-        project_skills_dir = self.project_root / "skills"
-        if project_skills_dir.exists():
-            project_skills = self._scan_skill_directory(project_skills_dir, source="project")
-            config.skills.update(project_skills)
-            logger.debug(f"Loaded {len(project_skills)} project skills from {project_skills_dir}")
+        # === LEGACY: Load skills from ./skills/ (YAML-only, kept for backward compatibility) ===
+        if not self.enable_auto_discovery:
+            project_skills_dir = self.project_root / "skills"
+            if project_skills_dir.exists():
+                project_skills = self._scan_skill_directory(project_skills_dir, source="project")
+                # Merge with existing (don't override auto-discovered)
+                for name, skill_config in project_skills.items():
+                    if name not in config.skills:
+                        config.skills[name] = skill_config
+                logger.debug(f"Loaded {len(project_skills)} project skills from {project_skills_dir}")
 
         return config
 
@@ -431,6 +535,110 @@ class ConfigLoader:
                 sequential_modes=parallel_data.get('sequential_modes', ["skill"])
             )
 
+        # Load slash commands (V3.1)
+        if 'slash_commands' in data:
+            slash_data = data['slash_commands']
+
+            # Parse system commands
+            if 'system' in slash_data:
+                for cmd_data in slash_data['system']:
+                    name = cmd_data.get('name')
+                    if not name:
+                        continue
+
+                    config.slash_commands[name] = SlashCommandConfig(
+                        name=name,
+                        type="system",
+                        description=cmd_data.get('description', ''),
+                        handler=cmd_data.get('handler'),
+                        enabled=cmd_data.get('enabled', True),
+                        priority=cmd_data.get('priority', 50),
+                        source=source,
+                        examples=cmd_data.get('examples', []),
+                        dependencies=cmd_data.get('dependencies', []),
+                        config=cmd_data
+                    )
+
+            # Parse shell commands
+            if 'shell' in slash_data:
+                for cmd_data in slash_data['shell']:
+                    name = cmd_data.get('name')
+                    if not name:
+                        continue
+
+                    config.slash_commands[name] = SlashCommandConfig(
+                        name=name,
+                        type="shell",
+                        description=cmd_data.get('description', ''),
+                        command=cmd_data.get('command'),
+                        enabled=cmd_data.get('enabled', True),
+                        priority=cmd_data.get('priority', 50),
+                        source=source,
+                        examples=cmd_data.get('examples', []),
+                        dependencies=cmd_data.get('dependencies', []),
+                        config=cmd_data
+                    )
+
+            # Parse skill commands
+            if 'skill' in slash_data:
+                for cmd_data in slash_data['skill']:
+                    name = cmd_data.get('name')
+                    if not name:
+                        continue
+
+                    config.slash_commands[name] = SlashCommandConfig(
+                        name=name,
+                        type="skill",
+                        description=cmd_data.get('description', ''),
+                        skill=cmd_data.get('skill'),
+                        enabled=cmd_data.get('enabled', True),
+                        priority=cmd_data.get('priority', 50),
+                        source=source,
+                        examples=cmd_data.get('examples', []),
+                        dependencies=cmd_data.get('dependencies', []),
+                        config=cmd_data
+                    )
+
+            # Parse agent commands
+            if 'agent' in slash_data:
+                for cmd_data in slash_data['agent']:
+                    name = cmd_data.get('name')
+                    if not name:
+                        continue
+
+                    config.slash_commands[name] = SlashCommandConfig(
+                        name=name,
+                        type="agent",
+                        description=cmd_data.get('description', ''),
+                        agent_type=cmd_data.get('agent_type'),
+                        enabled=cmd_data.get('enabled', True),
+                        priority=cmd_data.get('priority', 50),
+                        source=source,
+                        examples=cmd_data.get('examples', []),
+                        dependencies=cmd_data.get('dependencies', []),
+                        config=cmd_data
+                    )
+
+            # Parse prompt commands
+            if 'prompt' in slash_data:
+                for cmd_data in slash_data['prompt']:
+                    name = cmd_data.get('name')
+                    if not name:
+                        continue
+
+                    config.slash_commands[name] = SlashCommandConfig(
+                        name=name,
+                        type="prompt",
+                        description=cmd_data.get('description', ''),
+                        prompt_template=cmd_data.get('prompt_template'),
+                        enabled=cmd_data.get('enabled', True),
+                        priority=cmd_data.get('priority', 50),
+                        source=source,
+                        examples=cmd_data.get('examples', []),
+                        dependencies=cmd_data.get('dependencies', []),
+                        config=cmd_data
+                    )
+
     def _merge_configs(self, configs: List[OrchestratorConfig]) -> OrchestratorConfig:
         """
         Merge multiple configurations with priority (later configs override earlier ones).
@@ -491,6 +699,16 @@ class ConfigLoader:
                                    f"(priority {prompt.priority})")
                 else:
                     merged.prompts[name] = prompt
+
+            # Merge slash commands (V3.1, priority-based)
+            for name, slash_cmd in config.slash_commands.items():
+                if name in merged.slash_commands:
+                    if slash_cmd.priority >= merged.slash_commands[name].priority:
+                        merged.slash_commands[name] = slash_cmd
+                        logger.debug(f"Slash command '{name}' overridden by {slash_cmd.source} "
+                                   f"(priority {slash_cmd.priority})")
+                else:
+                    merged.slash_commands[name] = slash_cmd
 
             # Merge parallel config (later overrides)
             if config.parallel_config:

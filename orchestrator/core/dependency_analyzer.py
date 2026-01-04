@@ -117,13 +117,8 @@ class DependencyAnalyzer:
         Raises:
             CyclicDependencyError: If circular dependencies detected
         """
-        # Calculate in-degrees
-        in_degree = {node: 0 for node in graph}
-
-        for node, deps in graph.items():
-            for dep in deps:
-                if dep in in_degree:
-                    in_degree[dep] += 1
+        # Calculate in-degrees (number of dependencies each node has)
+        in_degree = {node: len(deps) for node, deps in graph.items()}
 
         # Find all nodes with zero in-degree (no dependencies)
         current_level = [node for node, degree in in_degree.items() if degree == 0]
@@ -279,8 +274,8 @@ class DependencyAnalyzer:
             for dep in task.dependencies:
                 # Check if dependency exists in tasks
                 if dep not in task_namespaces:
-                    # Check if dependency exists in registry
-                    if self.registry and not self.registry.exists(dep):
+                    # Check if dependency exists in registry (if registry available)
+                    if not self.registry or not self.registry.exists(dep):
                         errors.append(f"Task '{task.namespace}' depends on unknown resource '{dep}'")
 
         return errors
