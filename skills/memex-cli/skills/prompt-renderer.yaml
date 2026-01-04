@@ -1,0 +1,222 @@
+# Prompt Renderer Skill
+# 提示词模板渲染和执行
+
+name: prompt-renderer
+version: 1.0.0
+description: 渲染提示词模板并执行，支持代码审查、文档生成等预定义模板
+
+# Backend配置（可被覆盖）
+backend: claude
+model: claude-3-5-sonnet-20241022
+temperature: 0.3
+max_tokens: 4000
+
+# 输出格式
+output_format: text
+
+# 系统提示词
+system_prompt: |
+  你是提示词模板执行专家。根据模板类型执行相应的任务。
+
+  支持的模板类型：
+  1. code-review - 代码审查
+  2. code-generation - 代码生成
+  3. documentation - 文档生成
+  4. bug-analysis - Bug分析
+  5. refactoring - 重构建议
+  6. test-generation - 测试用例生成
+
+  执行流程：
+  1. 识别模板类型
+  2. 提取变量（code, language, requirements等）
+  3. 应用模板逻辑
+  4. 返回结果
+
+  输出格式应清晰、结构化，便于理解。
+
+# 用户提示词模板
+user_prompt_template: |
+  模板类型：{{template_name}}
+
+  {% if template_name == "code-review" %}
+  请审查以下{{language}}代码：
+
+  ```{{language}}
+  {{code}}
+  ```
+
+  审查要点：
+  1. 代码质量和可读性
+  2. 潜在bug和边界情况
+  3. 性能优化建议
+  4. 最佳实践遵循
+
+  {% elif template_name == "code-generation" %}
+  请生成{{language}}代码实现以下需求：
+
+  需求：{{requirements}}
+
+  {% if constraints %}
+  约束条件：{{constraints}}
+  {% endif %}
+
+  {% elif template_name == "documentation" %}
+  请为以下{{language}}代码生成文档：
+
+  ```{{language}}
+  {{code}}
+  ```
+
+  文档应包括：
+  - 功能说明
+  - 参数说明
+  - 返回值说明
+  - 使用示例
+
+  {% elif template_name == "bug-analysis" %}
+  请分析以下Bug：
+
+  错误信息：
+  {{error_message}}
+
+  相关代码：
+  ```{{language}}
+  {{code}}
+  ```
+
+  请提供：
+  1. Bug原因分析
+  2. 修复建议
+  3. 预防措施
+
+  {% elif template_name == "refactoring" %}
+  请提供以下代码的重构建议：
+
+  ```{{language}}
+  {{code}}
+  ```
+
+  重构目标：{{refactoring_goal}}
+
+  {% elif template_name == "test-generation" %}
+  请为以下{{language}}代码生成测试用例：
+
+  ```{{language}}
+  {{code}}
+  ```
+
+  测试应覆盖：
+  - 正常情况
+  - 边界情况
+  - 异常情况
+
+  {% else %}
+  任务：{{request}}
+  {% endif %}
+
+# 示例
+examples:
+  - name: 代码审查
+    input:
+      template_name: "code-review"
+      language: "python"
+      code: |
+        def calculate_total(items):
+            total = 0
+            for item in items:
+                total += item['price']
+            return total
+    output: |
+      代码审查结果：
+
+      ✓ 优点：
+      1. 逻辑清晰，易于理解
+      2. 函数命名准确
+
+      ⚠ 问题：
+      1. 缺少输入验证（items可能为None）
+      2. 没有处理price字段缺失的情况
+      3. 没有类型注解
+
+      💡 建议：
+      ```python
+      def calculate_total(items: list[dict]) -> float:
+          """计算商品总价"""
+          if not items:
+              return 0.0
+
+          total = 0.0
+          for item in items:
+              price = item.get('price', 0)
+              if isinstance(price, (int, float)) and price >= 0:
+                  total += price
+          return total
+      ```
+
+      改进点：
+      - 添加类型注解
+      - 处理None和空列表
+      - 使用get()避免KeyError
+      - 验证price类型和值
+
+  - name: 文档生成
+    input:
+      template_name: "documentation"
+      language: "python"
+      code: |
+        def fetch_user(user_id: int) -> dict:
+            return db.query("SELECT * FROM users WHERE id = ?", user_id)
+    output: |
+      # fetch_user
+
+      从数据库获取用户信息。
+
+      ## 参数
+      - `user_id` (int): 用户ID
+
+      ## 返回值
+      - `dict`: 用户信息字典，包含所有用户字段
+
+      ## 示例
+      ```python
+      user = fetch_user(123)
+      print(user['name'])
+      ```
+
+      ## 注意事项
+      - 如果用户不存在，返回空字典
+      - 需要确保数据库连接已建立
+
+  - name: Bug分析
+    input:
+      template_name: "bug-analysis"
+      language: "python"
+      error_message: "IndexError: list index out of range"
+      code: |
+        def get_first_item(items):
+            return items[0]
+    output: |
+      Bug分析：
+
+      ## 原因
+      当传入空列表时，尝试访问items[0]导致IndexError。
+
+      ## 修复建议
+      ```python
+      def get_first_item(items):
+          if not items:
+              return None  # 或抛出自定义异常
+          return items[0]
+      ```
+
+      ## 预防措施
+      1. 始终验证列表非空
+      2. 使用items[0] if items else None的模式
+      3. 添加单元测试覆盖空列表情况
+
+# Skill配置
+skill_config:
+  retry_on_error: true
+  max_retries: 1
+  timeout: 60
+  parse_output: false  # 保留原始格式

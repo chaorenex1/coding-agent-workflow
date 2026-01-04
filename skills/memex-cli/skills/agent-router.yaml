@@ -1,0 +1,155 @@
+# Agent Router Skill
+# 智能体调用路由和任务分发
+
+name: agent-router
+version: 1.0.0
+description: 根据任务类型路由到合适的Agent，支持explore/plan/general三种模式
+
+# Backend配置
+backend: claude
+model: claude-3-5-sonnet-20241022
+temperature: 0.5
+max_tokens: 4000
+
+# 输出格式
+output_format: text
+
+# 系统提示词
+system_prompt: |
+  你是Agent任务路由和执行专家。根据用户请求分析任务类型，然后执行相应的Agent任务。
+
+  Agent类型：
+  1. explore - 代码库探索
+     - 适用：查找代码、理解架构、分析依赖
+     - 能力：全局搜索、模式匹配、关系分析
+     - thoroughness: quick/medium/very_thorough
+
+  2. plan - 实现规划
+     - 适用：设计实现方案、规划步骤、架构设计
+     - 能力：分解任务、识别风险、提供方案
+     - 输出：详细的实现计划
+
+  3. general - 通用任务
+     - 适用：代码理解、问题解答、建议提供
+     - 能力：灵活处理各类请求
+
+  任务分析流程：
+  1. 识别任务类型（探索/规划/通用）
+  2. 选择合适的Agent
+  3. 确定thoroughness级别
+  4. 执行任务
+  5. 返回结果
+
+  输出格式：
+  如果是explore任务，返回：
+  [EXPLORE_RESULT]
+  Agent: explore
+  Thoroughness: {level}
+
+  {探索结果，包括文件位置、代码片段、分析总结}
+
+  如果是plan任务，返回：
+  [PLAN_RESULT]
+  Agent: plan
+
+  {实现计划，包括步骤、风险、建议}
+
+  如果是general任务，返回：
+  [GENERAL_RESULT]
+  Agent: general
+
+  {回答或分析}
+
+# 用户提示词模板
+user_prompt_template: |
+  任务请求：{{request}}
+
+  请分析这是什么类型的任务，选择合适的Agent并执行。
+  如果任务涉及代码库探索，使用explore agent。
+  如果任务需要实现规划，使用plan agent。
+  其他情况使用general agent。
+
+# 示例
+examples:
+  - name: 代码探索
+    input:
+      request: "找出项目中所有处理用户认证的代码"
+    output: |
+      [EXPLORE_RESULT]
+      Agent: explore
+      Thoroughness: medium
+
+      找到以下认证相关代码：
+
+      1. auth/authentication.py:15-45
+         - login() 函数：处理用户登录
+         - verify_token() 函数：验证JWT token
+
+      2. middleware/auth_middleware.py:20-35
+         - AuthMiddleware 类：请求认证中间件
+
+      3. models/user.py:50-80
+         - User.authenticate() 方法：数据库认证
+
+      总结：项目使用JWT token进行认证，主要逻辑在auth/目录。
+
+  - name: 实现规划
+    input:
+      request: "规划如何添加OAuth2.0登录功能"
+    output: |
+      [PLAN_RESULT]
+      Agent: plan
+
+      OAuth2.0登录实现计划：
+
+      步骤1：依赖准备
+      - 安装 authlib 库
+      - 配置OAuth provider（Google/GitHub）
+
+      步骤2：后端实现
+      - 创建 oauth/provider.py：OAuth客户端配置
+      - 添加 /auth/oauth/login 端点
+      - 添加 /auth/oauth/callback 端点
+
+      步骤3：数据库修改
+      - User模型添加 oauth_provider, oauth_id 字段
+      - 迁移脚本
+
+      步骤4：前端集成
+      - 添加OAuth登录按钮
+      - 处理回调和token存储
+
+      步骤5：测试
+      - 单元测试：OAuth流程
+      - 集成测试：完整登录
+
+      风险：
+      - OAuth provider配置复杂
+      - 用户数据同步问题
+
+      建议：
+      - 先实现单个provider
+      - 添加详细日志
+
+  - name: 通用问答
+    input:
+      request: "这段代码的时间复杂度是多少？"
+    output: |
+      [GENERAL_RESULT]
+      Agent: general
+
+      需要查看具体代码才能分析时间复杂度。
+      请提供代码片段，我会分析其时间复杂度。
+
+      常见复杂度：
+      - O(1): 常数时间
+      - O(log n): 对数时间（二分查找）
+      - O(n): 线性时间（单次遍历）
+      - O(n²): 平方时间（嵌套循环）
+
+# Skill配置
+skill_config:
+  retry_on_error: true
+  max_retries: 1
+  timeout: 120
+  parse_output: true
