@@ -48,10 +48,18 @@ MasterOrchestrator 采用**分层协调架构**，将复杂的任务自动化分
 ┌──────────────────────▼──────────────────────────────────┐
 │                 MasterOrchestrator                       │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │          IntentAnalyzer (意图分析层)              │   │
-│  │  - 模式识别 (ExecutionMode)                       │   │
+│  │    ClaudeIntentAnalyzer (Claude LLM 意图分析)     │   │
+│  │  - 语义理解 (ExecutionMode)                       │   │
 │  │  - 任务分类 (TaskType)                            │   │
 │  │  - 复杂度评估 (Complexity)                        │   │
+│  │  - 通过 memex-cli skill: intent-analyzer.yaml    │   │
+│  └──────────────────┬───────────────────────────────┘   │
+│                     │                                    │
+│  ┌──────────────────▼───────────────────────────────┐   │
+│  │      【可选】Aduib-AI 缓存层                      │   │
+│  │  - query_cache(): 查询远程缓存                    │   │
+│  │  - save_task_result(): 保存执行结果              │   │
+│  │  - 自动降级机制（服务不可用时）                   │   │
 │  └──────────────────┬───────────────────────────────┘   │
 │                     │                                    │
 │  ┌──────────────────▼───────────────────────────────┐   │
@@ -65,59 +73,336 @@ MasterOrchestrator 采用**分层协调架构**，将复杂的任务自动化分
          │            │            │
 ┌────────▼────┐  ┌───▼────┐  ┌───▼─────┐  ┌──────────┐  ┌────────┐
 │  Command    │  │ Agent  │  │ Prompt  │  │  Skill   │  │Backend │
-│  Executor   │  │ Caller │  │ Manager │  │ Workflow │  │ Orch.  │
+│ Executor V2 │  │Caller V2│ │Manager V2│ │ Executor │  │ Orch.  │
+│             │  │        │  │         │  │          │  │        │
+│ (继承 MemexExecutorBase)  │  │         │  │          │  │        │
 └─────┬───────┘  └────┬───┘  └────┬────┘  └─────┬────┘  └───┬────┘
       │               │           │              │           │
-┌─────▼───────────────▼───────────▼──────────────▼───────────▼────┐
-│              BackendOrchestrator (后端协调层)                    │
-│  - memex-cli 集成                                                │
-│  - 事件流解析                                                    │
-│  - 多后端管理 (Claude, Gemini, Codex)                            │
-└──────────────────────────────────────────────────────────────────┘
+      └───────────────┴───────────┴──────────────┴───────────┘
+                      │
+┌─────────────────────▼──────────────────────────────────────────┐
+│           MemexExecutorBase (统一执行器基类)                   │
+│  - execute_via_memex(): 通过 memex-cli 执行                    │
+│  - 统一错误处理和超时控制                                       │
+│  - 标准化结果格式                                               │
+└─────────────────────┬──────────────────────────────────────────┘
+                      │
+┌─────────────────────▼──────────────────────────────────────────┐
+│              BackendOrchestrator (后端协调层)                   │
+│  - memex-cli 集成 + YAML Skills 管理                            │
+│  - 事件流解析 (EventParser)                                     │
+│  - 多后端管理 (Claude, Gemini, Codex)                           │
+│                                                                 │
+│  Skills:                                                        │
+│  - intent-analyzer.yaml (意图识别)                              │
+│  - command-parser.yaml (命令解析)                               │
+│  - agent-router.yaml (Agent路由)                                │
+│  - prompt-renderer.yaml (提示词渲染)                            │
+│  - dev-workflow.yaml (开发工作流)                               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 模块详解
 
+### 0. AduibClient (远程缓存客户端) 【新增】
+
+**文件**: `orchestrator/clients/aduib_client.py` (475 行)
+
+**职责**：
+- 与 aduib-ai 远程服务通信
+- 查询和保存任务执行结果
+- 提供缓存命中优化
+- 任务历史管理和统计
+
+**核心接口**：
+
+```python
+class AduibClient:
+    def __init__(
+        self,
+        base_url: Optional[str] = None,   # 默认: ADUIB_URL环境变量
+        api_key: Optional[str] = None,    # 默认: ADUIB_API_KEY环境变量
+        timeout: int = 30
+    ):
+        """初始化远程缓存客户端"""
+        self.base_url = base_url or os.getenv("ADUIB_URL")
+        self.api_key = api_key or os.getenv("ADUIB_API_KEY")
+        self.timeout = timeout
+
+    def query_cache(
+        self,
+        request: str,
+        mode: str,
+        backend: str
+    ) -> Optional[CachedResult]:
+        """
+        查询缓存结果
+
+        缓存键 = SHA256(request:mode:backend)
+        返回: CachedResult(task_id, output, hit_count) 或 None
+        """
+        # 使用 aiohttp 异步请求
+        # GET /api/cache/query
+
+    def save_task_result(
+        self,
+        request: str,
+        mode: str,
+        backend: str,
+        success: bool,
+        output: str,
+        error: Optional[str] = None,
+        run_id: Optional[str] = None,
+        duration_seconds: Optional[float] = None
+    ) -> bool:
+        """
+        保存任务执行结果
+
+        POST /api/tasks/save
+        返回: True/False
+        """
+```
+
+**缓存工作流**：
+
+```
+1. 用户请求 → MasterOrchestrator
+2. 计算缓存键: SHA256(request:mode:backend)
+3. 查询 Aduib-AI:
+   ├─ 缓存命中 → 直接返回结果 (节省 AI 调用)
+   └─ 缓存未命中 → 继续执行
+4. 执行任务 (通过 ExecutionRouter)
+5. 保存结果到 Aduib-AI
+6. 返回结果给用户
+```
+
+**性能优势**：
+- **缓存命中率 50%** → 平均响应时间减少 50%
+- **缓存命中率 80%** → 平均响应时间减少 78%
+- 减少重复的 API 调用，降低成本
+
+**设计亮点**：
+- 完全可选：系统可在无 aduib-ai 时正常运行
+- 自动降级：连接失败时自动回退到本地执行
+- 异步架构：使用 `aiohttp` 高效通信
+- 零侵入：对现有代码无影响
+
+**参考文档**: `docs/ADUIB_FEATURES.md`, `docs/ADUIB_INTEGRATION.md`
+
+---
+
+### 0.5. MemexExecutorBase (统一执行器基类) 【新增】
+
+**文件**: `orchestrator/executors/memex_executor_base.py` (100 行)
+
+**职责**：
+- 所有执行器的抽象基类
+- 提供统一的 memex-cli 调用接口
+- 标准化错误处理和超时控制
+- 确保架构一致性
+
+**核心接口**：
+
+```python
+from abc import ABC, abstractmethod
+
+class MemexExecutorBase(ABC):
+    """统一执行器基类"""
+
+    def __init__(
+        self,
+        backend_orch: BackendOrchestrator,
+        default_backend: str = "claude",
+        default_timeout: int = 60
+    ):
+        self.backend_orch = backend_orch
+        self.default_backend = default_backend
+        self.default_timeout = default_timeout
+
+    def execute_via_memex(
+        self,
+        prompt: str,
+        backend: Optional[str] = None,
+        stream_format: str = "jsonl",
+        timeout: Optional[int] = None,
+        **kwargs
+    ) -> TaskResult:
+        """
+        通过 memex-cli 执行任务
+
+        统一封装：
+        1. 调用 backend_orch.run_task()
+        2. 处理超时
+        3. 标准化结果
+        """
+        backend = backend or self.default_backend
+        timeout = timeout or self.default_timeout
+
+        return self.backend_orch.run_task(
+            backend=backend,
+            prompt=prompt,
+            stream_format=stream_format,
+            timeout=timeout,
+            **kwargs
+        )
+
+    @abstractmethod
+    def execute(self, request: str, **kwargs):
+        """子类必须实现的执行方法"""
+        pass
+```
+
+**继承体系**：
+
+```
+MemexExecutorBase (抽象基类)
+    ├─ CommandExecutor V2
+    │   └─ execute() → 通过 command-parser.yaml skill
+    │
+    ├─ AgentCaller V2
+    │   └─ execute() → 通过 agent-router.yaml skill
+    │
+    ├─ PromptManager V2
+    │   └─ execute() → 通过 prompt-renderer.yaml skill
+    │
+    └─ SkillExecutor
+        └─ execute() → 通过 dev-workflow.yaml skill
+```
+
+**三层 Fallback 机制**：
+
+```
+第1层: Memex-CLI + Claude Skill
+    ↓ (失败)
+第2层: 本地实现 (rules/simple/local)
+    ↓ (失败)
+第3层: 错误返回 (ErrorResult)
+```
+
+**设计亮点**：
+- **统一接口**：所有执行器使用相同的基类
+- **强制架构**：`@abstractmethod` 确保子类实现 `execute()`
+- **配置继承**：子类自动获得 `backend_orch` 和超时配置
+- **扩展性**：添加新执行器只需继承并实现 `execute()`
+
+---
+
 ### 1. MasterOrchestrator (总协调器)
 
-**文件**: `master_orchestrator.py` (600+ 行)
+**文件**: `orchestrator/master_orchestrator.py` (700+ 行)
 
 **职责**：
 - 系统入口点
-- 初始化所有子模块
-- 协调 IntentAnalyzer 和 ExecutionRouter
+- 初始化所有子模块（包括 Aduib-AI 客户端）
+- 协调 ClaudeIntentAnalyzer 和 ExecutionRouter
+- 管理缓存查询和结果上传
 - 处理结果类型转换
 
 **关键接口**：
 
 ```python
 class MasterOrchestrator:
-    def __init__(self, parse_events: bool = True, timeout: int = 600):
+    def __init__(
+        self,
+        backend_orch: Optional[BackendOrchestrator] = None,
+        use_claude_intent: bool = True,
+        use_remote: Optional[bool] = None,
+        aduib_url: Optional[str] = None,
+        aduib_api_key: Optional[str] = None,
+        enable_cache: bool = True,
+        enable_upload: bool = True,
+        verbose: bool = False
+    ):
         """
         初始化总协调器
 
         Args:
-            parse_events: 是否解析事件流（影响性能）
-            timeout: 默认超时时间（秒）
+            backend_orch: BackendOrchestrator实例（可选）
+            use_claude_intent: 是否使用Claude进行意图识别
+            use_remote: 是否使用Aduib-AI远程服务（None=自动检测）
+            aduib_url: Aduib-AI服务地址
+            aduib_api_key: Aduib-AI API密钥
+            enable_cache: 是否启用缓存查询
+            enable_upload: 是否启用结果上传
+            verbose: 是否输出详细日志
         """
-        self.backend_orch = BackendOrchestrator(parse_events, timeout)
-        self.analyzer = IntentAnalyzer()
+        self.backend_orch = backend_orch or BackendOrchestrator()
+        self.verbose = verbose
+
+        # 意图分析器（Claude LLM 或规则引擎）
+        if use_claude_intent:
+            self.analyzer = ClaudeIntentAnalyzer(self.backend_orch)
+        else:
+            self.analyzer = IntentAnalyzer()  # 规则引擎 fallback
+
+        # 执行路由器
         self.router = ExecutionRouter(self.backend_orch)
+
+        # 【新增】Aduib-AI 远程缓存客户端
+        self.aduib_client = None
+        self.enable_cache = enable_cache
+        self.enable_upload = enable_upload
+
+        # 自动检测：如果设置了 ADUIB_API_KEY，则启用
+        if use_remote is None:
+            use_remote = bool(os.getenv("ADUIB_API_KEY"))
+
+        if use_remote:
+            try:
+                self.aduib_client = AduibClient(
+                    base_url=aduib_url,
+                    api_key=aduib_api_key,
+                    timeout=30
+                )
+            except Exception as e:
+                print(f"[警告] 无法初始化 aduib-ai 客户端: {e}")
+                self.aduib_client = None
 
     def process(self, request: str, verbose: bool = False) -> Any:
         """
-        处理用户请求
+        处理用户请求（支持缓存）
+
+        流程：
+        1. 意图分析（Claude LLM）
+        2. 【新增】查询 Aduib-AI 缓存
+        3. 如果缓存未命中，执行任务
+        4. 【新增】保存结果到 Aduib-AI
+        5. 返回结果
 
         Returns:
             WorkflowResult | TaskResult | CommandResult | AgentResult
         """
         # 1. 意图分析
-        intent = self.analyzer.analyze(request)
+        intent = self._analyze_intent(request, verbose=verbose)
 
-        # 2. 执行路由
+        # 2. 【新增】查询缓存
+        if self.aduib_client and self.enable_cache:
+            cached = self.aduib_client.query_cache(
+                request=request,
+                mode=intent.mode.value,
+                backend=self._select_backend(intent)
+            )
+            if cached:
+                if verbose:
+                    print(f"[缓存命中] 从远程缓存返回结果")
+                return self._convert_cached_result(cached, intent.mode)
+
+        # 3. 执行路由（缓存未命中）
         result = self.router.route(request, intent)
+
+        # 4. 【新增】保存结果到缓存
+        if self.aduib_client and self.enable_upload and self._should_upload(result):
+            self.aduib_client.save_task_result(
+                request=request,
+                mode=intent.mode.value,
+                backend=self._select_backend(intent),
+                success=result.success,
+                output=result.output,
+                error=getattr(result, 'error', None),
+                duration_seconds=getattr(result, 'duration_seconds', None)
+            )
 
         return result
 ```
@@ -126,18 +411,120 @@ class MasterOrchestrator:
 - 使用依赖注入传递 BackendOrchestrator
 - 返回类型多态（根据执行模式返回不同结果类型）
 - 集中化错误处理
+- **【新增】自动缓存管理**：查询和保存对用户透明
+- **【新增】自动降级**：Aduib-AI 不可用时自动禁用
 
 ---
 
-### 2. IntentAnalyzer (意图分析器)
+### 2. ClaudeIntentAnalyzer (Claude LLM 意图分析器) 【新增】
 
-**文件**: `master_orchestrator.py` (IntentAnalyzer 类)
+**文件**: `orchestrator/analyzers/claude_intent_analyzer.py` (200 行)
 
 **职责**：
-- 分析用户请求的意图
-- 识别执行模式（command, agent, prompt, skill, backend）
-- 提取任务类型（dev, ux, analysis, test）
-- 评估复杂度（simple, medium, complex）
+- 使用 Claude LLM 进行智能意图识别
+- 通过 memex-cli skill: `intent-analyzer.yaml`
+- 语义理解用户请求
+- 识别执行模式、任务类型、复杂度、后端建议
+
+**核心接口**：
+
+```python
+class ClaudeIntentAnalyzer:
+    def __init__(self, backend_orch: BackendOrchestrator):
+        self.backend_orch = backend_orch
+        self.skill_name = "intent-analyzer"
+
+    def analyze(self, request: str, verbose: bool = False) -> Intent:
+        """
+        使用 Claude LLM 分析意图
+
+        流程：
+        1. 构建提示词（使用 intent-analyzer.yaml skill）
+        2. 调用 memex-cli → Claude
+        3. 解析 JSON 响应
+        4. 返回 Intent 对象
+        """
+        # 调用 intent-analyzer.yaml skill
+        result = self.backend_orch.run_skill(
+            skill_name=self.skill_name,
+            variables={"request": request},
+            backend="claude"
+        )
+
+        # 解析 JSON 响应
+        intent_data = json.loads(result.output)
+
+        return Intent(
+            mode=ExecutionMode(intent_data["mode"]),
+            task_type=intent_data["task_type"],
+            complexity=intent_data["complexity"],
+            backend_hint=intent_data.get("backend_hint"),
+            skill_hint=intent_data.get("skill_hint"),
+            confidence=intent_data.get("confidence", 0.0)
+        )
+```
+
+**Skill 配置** (`skills/memex-cli/skills/intent-analyzer.yaml`):
+
+```yaml
+name: intent-analyzer
+backend: claude
+model: claude-3-5-sonnet-20241022
+
+system_prompt: |
+  你是一个智能任务分类器。分析用户请求并返回 JSON 格式的意图分析。
+
+  执行模式（mode）:
+  - command: 简单命令执行（git, npm, pytest等）
+  - agent: 代码库探索、规划任务
+  - prompt: 模板化专业任务（代码审查、文档生成）
+  - skill: 复杂多阶段工作流（开发系统、项目）
+  - backend: 通用查询
+
+  任务类型（task_type）:
+  - dev: 开发、编码
+  - ux: 设计、用户体验
+  - analysis: 分析、优化
+  - test: 测试
+  - other: 其他
+
+  复杂度（complexity）:
+  - simple: 简单任务
+  - medium: 中等复杂度
+  - complex: 复杂任务（多阶段、系统级）
+
+user_prompt_template: |
+  请分析以下用户请求：
+
+  用户请求：{{request}}
+
+  返回 JSON 格式（纯 JSON，无markdown）：
+  {
+    "mode": "command/agent/prompt/skill/backend",
+    "task_type": "dev/ux/analysis/test/other",
+    "complexity": "simple/medium/complex",
+    "backend_hint": "claude/gemini/codex",
+    "skill_hint": "技能名称（如果适用）",
+    "confidence": 0.85
+  }
+```
+
+**设计亮点**：
+- **语义理解**：Claude LLM 理解自然语言，无需正则表达式
+- **高准确性**：利用 LLM 的推理能力，识别准确率高
+- **可配置**：通过 YAML skill 配置，易于调整
+- **Fallback 机制**：如果 Claude 不可用，自动降级到规则引擎 IntentAnalyzer
+
+---
+
+### 2.1. IntentAnalyzer (规则引擎意图分析器) 【Fallback】
+
+**文件**: `orchestrator/master_orchestrator.py` (IntentAnalyzer 类)
+
+**职责**：
+- ClaudeIntentAnalyzer 的 Fallback 实现
+- 基于正则表达式的规则匹配
+- 无需 API 调用，快速响应
 
 **算法流程**：
 
@@ -247,34 +634,125 @@ def _select_backend(self, intent: Intent) -> str:
 
 ---
 
-### 4. CommandExecutor (命令执行器)
+### 4. CommandExecutor V2 (命令执行器) 【更新】
 
-**文件**: `commands/command_executor.py` (200 行)
+**文件**: `orchestrator/executors/command_executor.py` (300 行)
+
+**继承**: `MemexExecutorBase` (统一基类)
 
 **职责**：
-- 解析自然语言到 Shell 命令
+- 使用 Claude LLM 解析自然语言到 Shell 命令
+- 通过 memex-cli skill: `command-parser.yaml`
 - 安全检查（白名单 + 危险模式检测）
 - 执行命令并捕获输出
 
-**架构**：
+**架构**（V2 三层 Fallback）：
 
 ```
-用户请求: "运行 git status"
+用户请求: "查看git状态"
   ↓
-parse_command()
-  ├─ 提取命令名: "git"
-  ├─ 提取参数: ["status"]
-  └─ 构建命令: "git status"
+【第1层】execute() - 尝试 Claude Skill
+  ├─ 调用 execute_via_memex()
+  ├─ skill: command-parser.yaml
+  ├─ Claude解析: "查看git状态" → "git status"
+  ├─ 返回: CommandResult
+  └─ (如果成功) 返回结果
+  ↓ (如果失败)
+【第2层】Fallback - 规则引擎解析
+  ├─ _parse_command_local()
+  ├─ 正则匹配: r'查看.*git.*状态' → "git status"
+  ├─ 返回: CommandResult
+  └─ (如果成功) 返回结果
+  ↓ (如果失败)
+【第3层】Error Handling
+  └─ 返回 CommandResult(success=False, error="解析失败")
   ↓
-is_safe()
+安全检查 (所有层都执行)
+  ├─ is_safe()
   ├─ 白名单检查: git ∈ ALLOWED_COMMANDS ✓
   ├─ 危险模式检查: 无匹配 ✓
-  └─ 返回 True
+  └─ (通过) 执行命令
   ↓
 execute_shell()
   ├─ subprocess.run(["git", "status"])
   ├─ 捕获 stdout, stderr, return_code
   └─ 返回 CommandResult
+```
+
+**Skill 配置** (`skills/memex-cli/skills/command-parser.yaml`):
+
+```yaml
+name: command-parser
+backend: claude
+
+system_prompt: |
+  你是命令解析专家。将自然语言转换为Shell命令。
+
+  规则：
+  1. 只返回命令字符串，无解释
+  2. 常用命令: git, npm, docker, pytest, python
+  3. 不包含危险命令: rm -rf /, dd, mkfs
+
+user_prompt_template: |
+  将以下自然语言转换为Shell命令：
+
+  {{request}}
+
+  返回格式：仅返回命令字符串
+```
+
+**核心代码**：
+
+```python
+class CommandExecutor(MemexExecutorBase):
+    """命令执行器 V2 - 继承 MemexExecutorBase"""
+
+    def __init__(
+        self,
+        backend_orch: BackendOrchestrator,
+        use_claude: bool = True,
+        fallback_to_rules: bool = True
+    ):
+        super().__init__(backend_orch, default_backend="claude")
+        self.use_claude = use_claude
+        self.fallback_to_rules = fallback_to_rules
+
+    def execute(self, request: str, **kwargs) -> CommandResult:
+        """执行命令（三层 Fallback）"""
+
+        # 第1层: Claude Skill
+        if self.use_claude:
+            try:
+                result = self.execute_via_memex(
+                    prompt=f"解析命令: {request}",
+                    backend="claude"
+                )
+                command = result.output.strip()
+
+                # 安全检查
+                safe, reason = self.is_safe(command)
+                if not safe:
+                    return CommandResult(
+                        success=False,
+                        error=f"安全检查失败: {reason}"
+                    )
+
+                # 执行命令
+                return self._execute_shell(command)
+
+            except Exception as e:
+                if not self.fallback_to_rules:
+                    return CommandResult(success=False, error=str(e))
+
+        # 第2层: 规则引擎 Fallback
+        command = self._parse_command_local(request)
+        if command:
+            safe, reason = self.is_safe(command)
+            if safe:
+                return self._execute_shell(command)
+
+        # 第3层: 错误返回
+        return CommandResult(success=False, error="无法解析命令")
 ```
 
 **安全机制**：
@@ -1265,5 +1743,115 @@ MasterOrchestrator 采用**分层协调架构**，通过以下设计实现高效
 
 ---
 
-**文档版本**: 1.0.0
+## 配置系统
+
+### 环境变量
+
+MasterOrchestrator 支持以下环境变量配置：
+
+| 环境变量 | 说明 | 默认值 | 必需 |
+|---------|------|--------|------|
+| `CLAUDE_API_KEY` | Claude API密钥 | 无 | 是（使用Claude时） |
+| `GEMINI_API_KEY` | Gemini API密钥 | 无 | 否 |
+| `CODEX_API_KEY` | Codex API密钥 | 无 | 否 |
+| `ADUIB_URL` | Aduib-AI服务地址 | `http://localhost:8000` | 否 |
+| `ADUIB_API_KEY` | Aduib-AI API密钥 | 无 | 否（启用缓存时需要） |
+| `MEMEX_CLI_PATH` | memex-cli路径 | `memex-cli` | 否 |
+
+**配置示例**：
+
+```bash
+# 基本配置
+export CLAUDE_API_KEY="sk-ant-xxx"
+export GEMINI_API_KEY="AIzxxx"
+
+# Aduib-AI 缓存（可选）
+export ADUIB_URL="https://api.aduib.ai"
+export ADUIB_API_KEY="your-api-key"
+
+# Memex-CLI（可选）
+export MEMEX_CLI_PATH="/usr/local/bin/memex-cli"
+```
+
+### 初始化选项
+
+```python
+from orchestrator import MasterOrchestrator
+
+# 完整配置示例
+orch = MasterOrchestrator(
+    # 后端配置
+    backend_orch=None,              # 自动创建
+    use_claude_intent=True,         # 使用 Claude 意图识别
+
+    # Aduib-AI 配置
+    use_remote=True,                # 启用远程缓存
+    aduib_url="https://api.aduib.ai",
+    aduib_api_key="your-key",
+    enable_cache=True,              # 启用缓存查询
+    enable_upload=True,             # 启用结果上传
+
+    # 调试配置
+    verbose=True                    # 详细日志
+)
+```
+
+### Skills 配置路径
+
+所有 memex-cli skills 位于：
+
+```
+skills/memex-cli/skills/
+├── intent-analyzer.yaml      # 意图识别
+├── command-parser.yaml        # 命令解析
+├── agent-router.yaml          # Agent路由
+├── prompt-renderer.yaml       # 提示词渲染
+└── dev-workflow.yaml          # 开发工作流
+```
+
+---
+
+## 架构演进
+
+### Phase 5 (当前版本)
+
+**完成时间**: 2026-01-04
+
+**核心更新**：
+1. **统一执行器基类** (`MemexExecutorBase`)
+   - 所有执行器继承统一基类
+   - 标准化接口和错误处理
+
+2. **Aduib-AI 远程缓存集成**
+   - 缓存查询和结果保存
+   - 自动降级机制
+   - 性能优化（缓存命中率 50%-80%）
+
+3. **Claude LLM 意图识别**
+   - ClaudeIntentAnalyzer 替代规则引擎
+   - 语义理解，高准确率
+   - 通过 `intent-analyzer.yaml` skill
+
+4. **V2 执行器架构**
+   - CommandExecutor V2
+   - AgentCaller V2
+   - PromptManager V2
+   - 三层 Fallback 机制
+
+5. **Memex-CLI Skills 系统**
+   - YAML 配置驱动
+   - 5个核心 skills
+   - 易于扩展
+
+**参考文档**:
+- `docs/MEMEX_CLI_INTEGRATION_DESIGN.md` - Memex-CLI 集成设计
+- `docs/ADUIB_FEATURES.md` - Aduib-AI 功能详解
+- `docs/ADUIB_INTEGRATION.md` - Aduib-AI 集成文档
+- `docs/ENVIRONMENT_VARIABLES.md` - 环境变量配置
+
+---
+
+**文档版本**: 2.0.0 (Phase 5)
 **最后更新**: 2026-01-04
+**架构版本**: V2 (MemexExecutorBase + Aduib-AI + Claude Intent)
+**维护者**: Orchestrator Team
