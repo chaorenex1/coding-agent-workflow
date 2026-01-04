@@ -22,6 +22,23 @@ from enum import Enum
 from .core.event_parser import EventStream
 from .core.backend_orchestrator import BackendOrchestrator, TaskResult
 
+# V3 新增：配置和注册系统
+try:
+    from .core.config_loader import ConfigLoader, OrchestratorConfig
+    from .core.unified_registry import UnifiedRegistry, ResourceMetadata, create_registry_from_config
+    from .core.executor_factory import ExecutorFactory
+    from .core.dependency_analyzer import DependencyAnalyzer, Task, ParallelGroup
+    from .core.parallel_scheduler import ParallelScheduler, TaskResult as SchedulerTaskResult, BatchResult
+    V3_AVAILABLE = True
+except ImportError as e:
+    # V3组件不可用时的fallback
+    ConfigLoader = None
+    UnifiedRegistry = None
+    ExecutorFactory = None
+    DependencyAnalyzer = None
+    ParallelScheduler = None
+    V3_AVAILABLE = False
+
 # 导入执行器
 from .executors.command_executor import CommandExecutor, CommandResult
 from .executors.prompt_manager import PromptManager
@@ -411,7 +428,13 @@ class MasterOrchestrator:
         enable_upload: bool = True,
         use_claude_intent: bool = True,
         intent_confidence_threshold: float = 0.7,
-        fallback_to_rules: bool = True
+        fallback_to_rules: bool = True,
+        # V3 新增参数
+        config_path: Optional[Path] = None,
+        auto_discover: bool = False,
+        enable_parallel: bool = False,
+        max_parallel_workers: int = 3,
+        parallel_timeout: int = 120
     ):
         """
         初始化总协调器
@@ -427,6 +450,11 @@ class MasterOrchestrator:
             use_claude_intent: 是否使用Claude进行意图识别（默认True）
             intent_confidence_threshold: Claude意图识别置信度阈值
             fallback_to_rules: 低置信度或失败时是否回退到规则引擎
+            config_path: V3配置文件路径（None=使用当前目录）
+            auto_discover: V3自动发现和注册资源（默认False，保持向后兼容）
+            enable_parallel: V3启用并行执行（默认False）
+            max_parallel_workers: V3最大并行工作线程数
+            parallel_timeout: V3单任务超时时间（秒）
         """
         # 本地组件（必需）
         self.backend_orch = BackendOrchestrator(
@@ -485,6 +513,48 @@ class MasterOrchestrator:
             print("[警告] aduib-ai 客户端不可用（可能缺少 requests 库）")
             print("[提示] 安装: pip install requests")
             print("[提示] 将以纯本地模式运行")
+
+        # V3 配置和注册系统（可选）
+        self.config = None
+        self.registry = None
+        self.factory = None
+        self.scheduler = None
+        self.auto_discover = auto_discover
+        self.enable_parallel = enable_parallel
+
+        if auto_discover and V3_AVAILABLE:
+            try:
+                # 1. 加载配置
+                loader = ConfigLoader(project_root=config_path or Path.cwd())
+                self.config = loader.load()
+
+                # 2. 初始化注册表
+                self.registry = create_registry_from_config(self.config)
+
+                # 3. 初始化执行器工厂
+                self.factory = ExecutorFactory(self.backend_orch, self.registry)
+
+                # 4. 初始化并行调度器（如果启用）
+                if enable_parallel:
+                    self.scheduler = ParallelScheduler(
+                        factory=self.factory,
+                        max_workers=max_parallel_workers,
+                        timeout_per_task=parallel_timeout
+                    )
+
+            except Exception as e:
+                print(f"[警告] V3自动发现初始化失败: {e}")
+                print("[提示] 将使用传统模式运行")
+                self.config = None
+                self.registry = None
+                self.factory = None
+                self.scheduler = None
+                self.auto_discover = False
+
+        elif auto_discover and not V3_AVAILABLE:
+            print("[警告] V3组件不可用（可能缺少依赖）")
+            print("[提示] 将使用传统模式运行")
+            self.auto_discover = False
 
     def process(self, request: str, verbose: bool = False) -> Any:
         """
@@ -699,6 +769,208 @@ class MasterOrchestrator:
             if verbose:
                 print(f"[警告] 上传结果时发生异常: {e}")
                 print()
+
+    # ========== V3 新增方法 ==========
+
+    def process_batch(
+        self,
+        requests: List[str],
+        enable_parallel: Optional[bool] = None,
+        verbose: bool = False
+    ) -> 'BatchResult':
+        """
+        批量处理请求（V3功能，支持并行）
+
+        Args:
+            requests: 请求列表
+            enable_parallel: 是否启用并行（None=使用初始化配置）
+            verbose: 详细输出
+
+        Returns:
+            BatchResult批处理结果
+        """
+        if not V3_AVAILABLE or not self.factory:
+            raise RuntimeError("V3批处理功能未启用（需要 auto_discover=True）")
+
+        if enable_parallel is None:
+            enable_parallel = self.enable_parallel
+
+        # 1. 分析所有请求的意图，创建任务列表
+        tasks = []
+        for request in requests:
+            intent = self._analyze_intent(request, verbose=False)
+            namespace = self._intent_to_namespace(intent)
+
+            task = Task(
+                namespace=namespace,
+                request=request,
+                dependencies=[],
+                metadata={"intent": intent}
+            )
+            tasks.append(task)
+
+            if verbose:
+                print(f"[任务创建] {request[:50]}... → {namespace}")
+
+        # 2. 执行任务（并行或串行）
+        if enable_parallel and self.scheduler:
+            if verbose:
+                print(f"\n[并行执行] {len(tasks)} 个任务，最多 {self.scheduler.max_workers} 个并行...")
+
+            # 启用依赖分析和并行执行
+            result = self.scheduler.execute_tasks(
+                tasks=tasks,
+                enable_dependency_analysis=True
+            )
+        else:
+            if verbose:
+                print(f"\n[串行执行] {len(tasks)} 个任务...")
+
+            # 串行执行
+            analyzer = DependencyAnalyzer(self.registry)
+            single_group = ParallelGroup(level=0, tasks=tasks)
+
+            if self.scheduler:
+                result = self.scheduler.execute_parallel_groups([single_group])
+            else:
+                # 没有调度器，手动串行执行
+                task_results = []
+                import time
+                start_time = time.time()
+
+                for task in tasks:
+                    try:
+                        executor = self.factory.create_executor(task.namespace)
+                        if executor:
+                            output = executor.execute(task.request)
+                            task_results.append(SchedulerTaskResult(
+                                namespace=task.namespace,
+                                success=True,
+                                output=output,
+                                duration_seconds=0.0
+                            ))
+                        else:
+                            task_results.append(SchedulerTaskResult(
+                                namespace=task.namespace,
+                                success=False,
+                                error=f"No executor for {task.namespace}",
+                                duration_seconds=0.0
+                            ))
+                    except Exception as e:
+                        task_results.append(SchedulerTaskResult(
+                            namespace=task.namespace,
+                            success=False,
+                            error=str(e),
+                            duration_seconds=0.0
+                        ))
+
+                total_duration = time.time() - start_time
+                result = BatchResult(
+                    total_tasks=len(task_results),
+                    successful=sum(1 for r in task_results if r.success),
+                    failed=sum(1 for r in task_results if not r.success),
+                    total_duration_seconds=total_duration,
+                    task_results=task_results
+                )
+
+        if verbose:
+            print(f"\n[批处理完成] {result}")
+
+        return result
+
+    def _intent_to_namespace(self, intent: Intent) -> str:
+        """
+        将意图转换为资源命名空间
+
+        Args:
+            intent: Intent对象
+
+        Returns:
+            资源命名空间字符串
+        """
+        mode = intent.mode.value
+
+        if mode == "command":
+            # 尝试从请求中提取命令
+            return f"command:default"
+        elif mode == "skill" and intent.skill_hint:
+            return f"skill:{intent.skill_hint}"
+        elif mode == "agent":
+            # 根据任务类型选择agent
+            agent_type = "general"
+            if intent.task_type == "dev":
+                agent_type = "explore"
+            return f"agent:{agent_type}"
+        elif mode == "prompt":
+            return f"prompt:default"
+        else:
+            return f"{mode}:default"
+
+    def list_resources(
+        self,
+        type_filter: Optional[str] = None,
+        source_filter: Optional[str] = None
+    ) -> List['ResourceMetadata']:
+        """
+        列出已注册的资源（V3功能）
+
+        Args:
+            type_filter: 按类型过滤（skill/command/agent/prompt）
+            source_filter: 按来源过滤（builtin/user/project）
+
+        Returns:
+            ResourceMetadata列表
+        """
+        if not V3_AVAILABLE or not self.registry:
+            raise RuntimeError("V3资源注册功能未启用（需要 auto_discover=True）")
+
+        # 转换type_filter字符串为ResourceType
+        from .core.unified_registry import ResourceType
+
+        rt_filter = None
+        if type_filter:
+            try:
+                rt_filter = ResourceType(type_filter)
+            except ValueError:
+                raise ValueError(f"无效的类型过滤器: {type_filter}")
+
+        return self.registry.list_resources(
+            type_filter=rt_filter,
+            source_filter=source_filter,
+            enabled_only=True
+        )
+
+    def reload_config(self, verbose: bool = False):
+        """
+        重新加载配置（V3功能）
+
+        Args:
+            verbose: 详细输出
+        """
+        if not V3_AVAILABLE or not self.auto_discover:
+            raise RuntimeError("V3配置重载功能未启用（需要 auto_discover=True）")
+
+        try:
+            # 重新加载配置
+            loader = ConfigLoader(project_root=Path.cwd())
+            self.config = loader.load()
+
+            # 清空并重新填充注册表
+            self.registry.clear()
+            self.registry = create_registry_from_config(self.config)
+
+            # 重新创建工厂（清除缓存）
+            if self.factory:
+                self.factory.clear_cache()
+            self.factory = ExecutorFactory(self.backend_orch, self.registry)
+
+            if verbose:
+                print(f"[配置重载成功] 加载了 {len(self.registry)} 个资源")
+
+        except Exception as e:
+            if verbose:
+                print(f"[配置重载失败] {e}")
+            raise RuntimeError(f"配置重载失败: {e}")
 
 
 def main():

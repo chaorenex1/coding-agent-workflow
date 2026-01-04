@@ -20,6 +20,20 @@ from enum import Enum
 # 导入 BackendOrchestrator（使用相对导入）
 from ..core.backend_orchestrator import BackendOrchestrator, TaskResult
 
+# V3 并行执行组件（可选）
+try:
+    from ..core.dependency_analyzer import DependencyAnalyzer, Task, ParallelGroup
+    from ..core.parallel_scheduler import ParallelScheduler, TaskResult as SchedulerTaskResult
+    from ..core.executor_factory import ExecutorFactory
+    from ..core.unified_registry import UnifiedRegistry
+    V3_PARALLEL_AVAILABLE = True
+except ImportError:
+    DependencyAnalyzer = None
+    Task = None
+    ParallelGroup = None
+    ParallelScheduler = None
+    V3_PARALLEL_AVAILABLE = False
+
 
 class WorkflowStage(Enum):
     """工作流阶段"""
@@ -225,13 +239,24 @@ class DevWorkflowAgent:
         }
     }
 
-    def __init__(self, parse_events: bool = True, timeout: int = 600):
+    # 阶段依赖关系（用于并行执行）
+    STAGE_DEPENDENCIES = {
+        WorkflowStage.REQUIREMENTS: [],  # 无依赖
+        WorkflowStage.FEATURE_DESIGN: [WorkflowStage.REQUIREMENTS],  # 依赖需求分析
+        WorkflowStage.UX_DESIGN: [WorkflowStage.REQUIREMENTS],  # 依赖需求分析（并行模式：独立于功能设计）
+        WorkflowStage.DEV_PLAN: [WorkflowStage.FEATURE_DESIGN, WorkflowStage.UX_DESIGN],  # 依赖功能设计和UX设计
+        WorkflowStage.IMPLEMENTATION: [WorkflowStage.DEV_PLAN]  # 依赖开发计划
+    }
+
+    def __init__(self, parse_events: bool = True, timeout: int = 600, enable_parallel: bool = False, max_workers: int = 2):
         """
         初始化工作流智能体
 
         Args:
             parse_events: 是否解析事件流
             timeout: 每个阶段的超时时间（秒）
+            enable_parallel: 是否启用并行执行（V3功能）
+            max_workers: 最大并行工作线程数
         """
         self.backend_orch = BackendOrchestrator(
             parse_events=parse_events,
@@ -239,15 +264,41 @@ class DevWorkflowAgent:
         )
         self.parse_events = parse_events
         self.timeout = timeout
+        self.enable_parallel = enable_parallel
+        self.max_workers = max_workers
 
     def run(self, requirement: str, start_from: WorkflowStage = WorkflowStage.REQUIREMENTS,
-            verbose: bool = False) -> WorkflowResult:
+            verbose: bool = False, enable_parallel: Optional[bool] = None) -> WorkflowResult:
         """
         执行完整的开发工作流
 
         Args:
             requirement: 用户需求描述
             start_from: 从哪个阶段开始（用于恢复）
+            verbose: 是否输出详细信息
+            enable_parallel: 是否启用并行（None=使用初始化配置）
+
+        Returns:
+            WorkflowResult
+        """
+        # 使用参数或默认配置
+        if enable_parallel is None:
+            enable_parallel = self.enable_parallel
+
+        # 选择执行模式
+        if enable_parallel and V3_PARALLEL_AVAILABLE:
+            return self._run_parallel(requirement, start_from, verbose)
+        else:
+            return self._run_sequential(requirement, start_from, verbose)
+
+    def _run_sequential(self, requirement: str, start_from: WorkflowStage = WorkflowStage.REQUIREMENTS,
+                       verbose: bool = False) -> WorkflowResult:
+        """
+        串行执行工作流（原有实现）
+
+        Args:
+            requirement: 用户需求描述
+            start_from: 从哪个阶段开始
             verbose: 是否输出详细信息
 
         Returns:
@@ -433,6 +484,282 @@ class DevWorkflowAgent:
                 ux_design=variables.get("ux_design", "[待完成]")
             )
 
+    def _run_parallel(self, requirement: str, start_from: WorkflowStage = WorkflowStage.REQUIREMENTS,
+                     verbose: bool = False) -> WorkflowResult:
+        """
+        并行执行工作流（V3功能）
+
+        根据阶段依赖关系自动识别可并行的阶段并执行。
+
+        Args:
+            requirement: 用户需求描述
+            start_from: 从哪个阶段开始
+            verbose: 是否输出详细信息
+
+        Returns:
+            WorkflowResult
+        """
+        import time
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        start_time = time.time()
+
+        if verbose:
+            print(f"\n[并行模式] 启用 V3 并行执行")
+            print(f"最大并行数: {self.max_workers}")
+
+        # 定义阶段顺序
+        stage_order = [
+            WorkflowStage.REQUIREMENTS,
+            WorkflowStage.FEATURE_DESIGN,
+            WorkflowStage.UX_DESIGN,
+            WorkflowStage.DEV_PLAN,
+            WorkflowStage.IMPLEMENTATION
+        ]
+
+        # 找到起始位置
+        start_index = stage_order.index(start_from)
+        stages_to_execute = stage_order[start_index:]
+
+        # 构建依赖图（基于 STAGE_DEPENDENCIES）
+        graph = {}
+        for stage in stages_to_execute:
+            deps = self.STAGE_DEPENDENCIES.get(stage, [])
+            # 只保留在执行列表中的依赖
+            filtered_deps = [d for d in deps if d in stages_to_execute]
+            graph[stage] = set(filtered_deps)
+
+        # 使用 DependencyAnalyzer 进行拓扑排序
+        analyzer = DependencyAnalyzer(registry=None)
+
+        # 将依赖图转换为字符串键（DependencyAnalyzer 需要）
+        str_graph = {stage.value: {d.value for d in deps} for stage, deps in graph.items()}
+
+        try:
+            # 拓扑排序得到分层
+            levels = analyzer.topological_sort(str_graph)
+
+            if verbose:
+                print(f"\n[依赖分析] 识别出 {len(levels)} 个执行层级：")
+                for i, level in enumerate(levels):
+                    stage_names = [WorkflowStage(s) for s in level]
+                    print(f"  Level {i}: {[s.value for s in stage_names]}")
+
+        except Exception as e:
+            if verbose:
+                print(f"[警告] 依赖分析失败: {e}")
+                print("[提示] 回退到串行执行")
+            return self._run_sequential(requirement, start_from, verbose)
+
+        # 按层级执行
+        stage_results = {}
+        all_results = []
+
+        for level_index, level_stage_values in enumerate(levels):
+            level_stages = [WorkflowStage(v) for v in level_stage_values]
+
+            if verbose:
+                print(f"\n{'='*60}")
+                print(f"执行 Level {level_index}: {len(level_stages)} 个阶段")
+                if len(level_stages) > 1:
+                    print(f"[并行] {[s.value for s in level_stages]}")
+                print(f"{'='*60}")
+
+            # 层内并行执行
+            if len(level_stages) == 1:
+                # 单阶段，直接执行
+                stage = level_stages[0]
+                result = self._execute_stage_parallel(
+                    stage=stage,
+                    requirement=requirement,
+                    previous_results=stage_results,
+                    verbose=verbose
+                )
+                all_results.append(result)
+                stage_results[stage] = result
+
+                if not result.success:
+                    # 失败，终止执行
+                    total_duration = time.time() - start_time
+                    return WorkflowResult(
+                        requirement=requirement,
+                        stages=all_results,
+                        total_duration_seconds=round(total_duration, 3),
+                        success=False,
+                        completed_stages=len(all_results) - 1,
+                        failed_stage=stage
+                    )
+
+            else:
+                # 多阶段，并行执行
+                with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    # 提交所有任务
+                    future_to_stage = {
+                        executor.submit(
+                            self._execute_stage_parallel,
+                            stage=stage,
+                            requirement=requirement,
+                            previous_results=stage_results,
+                            verbose=verbose
+                        ): stage
+                        for stage in level_stages
+                    }
+
+                    # 收集结果
+                    level_failed = False
+                    for future in as_completed(future_to_stage):
+                        stage = future_to_stage[future]
+
+                        try:
+                            result = future.result(timeout=self.timeout)
+                            all_results.append(result)
+                            stage_results[stage] = result
+
+                            if not result.success:
+                                level_failed = True
+
+                        except Exception as e:
+                            if verbose:
+                                print(f"[错误] 阶段 {stage.value} 执行异常: {e}")
+
+                            # 创建失败结果
+                            result = StageResult(
+                                stage=stage,
+                                success=False,
+                                output="",
+                                duration_seconds=0.0,
+                                error=str(e)
+                            )
+                            all_results.append(result)
+                            stage_results[stage] = result
+                            level_failed = True
+
+                # 检查是否有失败
+                if level_failed:
+                    total_duration = time.time() - start_time
+                    failed_stages = [s for s in level_stages if not stage_results[s].success]
+
+                    return WorkflowResult(
+                        requirement=requirement,
+                        stages=all_results,
+                        total_duration_seconds=round(total_duration, 3),
+                        success=False,
+                        completed_stages=len(all_results) - len(failed_stages),
+                        failed_stage=failed_stages[0] if failed_stages else None
+                    )
+
+        # 全部成功
+        total_duration = time.time() - start_time
+
+        if verbose:
+            print(f"\n[并行执行完成] 总耗时: {total_duration:.2f}s")
+
+        return WorkflowResult(
+            requirement=requirement,
+            stages=all_results,
+            total_duration_seconds=round(total_duration, 3),
+            success=True,
+            completed_stages=len(all_results)
+        )
+
+    def _execute_stage_parallel(
+        self,
+        stage: WorkflowStage,
+        requirement: str,
+        previous_results: Dict[WorkflowStage, StageResult],
+        verbose: bool = False
+    ) -> StageResult:
+        """
+        并行模式下执行单个阶段
+
+        与 _execute_stage 类似，但使用 previous_results 而不是 previous_outputs。
+
+        Args:
+            stage: 阶段类型
+            requirement: 原始需求
+            previous_results: 之前阶段的结果（StageResult）
+            verbose: 是否详细输出
+
+        Returns:
+            StageResult
+        """
+        import time
+
+        config = self.STAGE_CONFIG[stage]
+        backend = config["backend"]
+        validator = config["validator"]
+        template = config["prompt_template"]
+
+        # 构建 previous_outputs（从 StageResult 提取 output）
+        previous_outputs = {s: r.output for s, r in previous_results.items()}
+
+        # 构建提示词
+        prompt = self._build_prompt(
+            template=template,
+            requirement=requirement,
+            previous_outputs=previous_outputs
+        )
+
+        if verbose:
+            print(f"\n[{stage.value}]")
+            print(f"  后端: {backend}")
+            print(f"  提示词长度: {len(prompt)} 字符")
+
+        # 执行任务
+        stage_start = time.time()
+        task_result = self.backend_orch.run_task(
+            backend=backend,
+            prompt=prompt,
+            stream_format="jsonl"
+        )
+        duration = time.time() - stage_start
+
+        if not task_result.success:
+            if verbose:
+                print(f"  [失败] {task_result.error}")
+
+            return StageResult(
+                stage=stage,
+                success=False,
+                output="",
+                duration_seconds=round(duration, 3),
+                error=task_result.error
+            )
+
+        # 获取输出
+        output = task_result.get_final_output()
+
+        if verbose:
+            print(f"  输出长度: {len(output)} 字符")
+            print(f"  耗时: {duration:.2f}s")
+
+        # 验证输出
+        is_valid, validation_error = validator(output)
+
+        if not is_valid:
+            if verbose:
+                print(f"  [验证失败] {validation_error}")
+
+            return StageResult(
+                stage=stage,
+                success=False,
+                output=output,
+                duration_seconds=round(duration, 3),
+                run_id=task_result.run_id,
+                error=f"Validation failed: {validation_error}"
+            )
+
+        if verbose:
+            print(f"  [OK] 验证通过")
+
+        return StageResult(
+            stage=stage,
+            success=True,
+            output=output,
+            duration_seconds=round(duration, 3),
+            run_id=task_result.run_id
+        )
+
 
 # 使用示例
 if __name__ == "__main__":
@@ -442,14 +769,29 @@ if __name__ == "__main__":
     parser.add_argument("requirement", help="用户需求描述")
     parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
     parser.add_argument("--timeout", type=int, default=600, help="每阶段超时（秒）")
+    parser.add_argument("--enable-parallel", action="store_true", help="启用并行执行（V3功能）")
+    parser.add_argument("--max-workers", type=int, default=2, help="最大并行工作线程数")
 
     args = parser.parse_args()
 
     # 创建智能体
-    agent = DevWorkflowAgent(parse_events=True, timeout=args.timeout)
+    agent = DevWorkflowAgent(
+        parse_events=True,
+        timeout=args.timeout,
+        enable_parallel=args.enable_parallel,
+        max_workers=args.max_workers
+    )
 
     print(f"[DevWorkflowAgent] 开始执行 5 阶段开发工作流")
-    print(f"需求: {args.requirement}\n")
+    print(f"需求: {args.requirement}")
+    if args.enable_parallel:
+        if V3_PARALLEL_AVAILABLE:
+            print(f"模式: 并行执行 (max_workers={args.max_workers})")
+        else:
+            print(f"模式: 并行执行（未启用，V3组件不可用）")
+    else:
+        print(f"模式: 串行执行")
+    print()
 
     # 执行工作流
     result = agent.run(args.requirement, verbose=args.verbose)
