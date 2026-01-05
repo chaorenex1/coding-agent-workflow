@@ -51,7 +51,6 @@ All artifacts are saved to `./.claude/<RUN_ID>/`:
 ├── stage5-implementation/
 │   ├── src/
 │   └── tests/
-└── run.events.jsonl
 ```
 
 ## Skill Dependencies
@@ -258,10 +257,4 @@ memex-cli resume --run-id <ID> --backend "codex" --prompt "开发计划，写入
 
 # 5. Architecture Detection + Implementation (Codex)
 memex-cli resume --run-id <ID> --backend "codex" --prompt "识别架构类型并实现，写入 ./.claude/<ID>/stage5-implementation/" --stream-format "jsonl"
-```
-
-## Replay & Audit
-
-```bash
-memex-cli replay --events ./.claude/<RUN_ID>/run.events.jsonl --format text
 ```
