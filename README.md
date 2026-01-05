@@ -16,7 +16,6 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 - 🔄 **端到端自动化** - 从一句话需求到完整代码实现
 - 🛠️ **20+ 技能集成** - 代码分析、重构、文档生成等专业技能
 - 🎯 **30+ 智能代理** - BMAD 工作流、迭代开发、需求分析等专业代理
-- 💾 **记忆与缓存** - MCP 集成的知识库和任务缓存系统
 
 ## 🏗️ 系统架构
 
@@ -80,15 +79,6 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 │  • bmad-release-manager       - 发布管理员                       │
 │                                                                   │
 │  PRD 工作流代理 (5) / 快速代码代理 (5) / 自动化代理 (2)          │
-│                                                                   │
-├─────────────────────────────────────────────────────────────────┤
-│                     记忆与缓存系统 (MCP)                          │
-├─────────────────────────────────────────────────────────────────┤
-│  • QA 知识库检索              - 存储和检索 QA 对                 │
-│  • 文档知识库                 - 技术文档检索                     │
-│  • 浏览器历史检索             - 本地浏览器历史搜索               │
-│  • GitHub 集成                - 仓库/Issue/代码搜索             │
-│  • Web 内容爬取               - URL 内容提取                     │
 │                                                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -309,51 +299,6 @@ coding-workflow/
 - ✅ 每阶段输出验证
 - ✅ 失败自动中止
 - ✅ 完整进度追踪
-
-### 4. 记忆与缓存系统
-
-基于 MCP (Model Context Protocol) 的智能记忆系统：
-
-**QA 知识库**:
-```python
-# 检索历史 QA
-retrieve_qa_kb(query="如何实现用户认证", namespace="coding", top_k=5)
-
-# 记录成功解决方案
-qa_upsert_candidate(
-    question="如何实现 JWT 认证",
-    answer="使用 PyJWT 库...",
-    namespace="coding"
-)
-
-# 验证和更新
-qa_validate_and_update(
-    qa_id="qa-123",
-    result="pass",
-    signal_strength="strong"
-)
-```
-
-**浏览器历史检索**:
-```python
-# 搜索访问过的技术文档
-retrieve_from_browser_history(
-    query="React hooks documentation",
-    start_time="2024-01-01"
-)
-```
-
-**GitHub 集成**:
-```python
-# 搜索仓库
-search_github_repositories(repo_name="react")
-
-# 搜索 Issue
-search_github_issues(issue_snippet="authentication bug")
-
-# 搜索代码
-search_github_code(code_snippet="def authenticate")
-```
 
 ## 🔧 技能系统详解
 
