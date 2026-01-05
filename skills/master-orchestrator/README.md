@@ -336,7 +336,7 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ## 致谢
 
-- [memex-cli](https://github.com/anthropics/memex-cli) - AI 后端调用
+- [memex-cli](https://github.com/chaorenex1/memex-cli) - AI 后端调用
 - Claude, Gemini, Codex - AI 模型支持
 
 ## 联系方式

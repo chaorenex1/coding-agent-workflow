@@ -28,58 +28,73 @@ MasterOrchestrator 是一个智能任务协调系统，能够：
 
 ### 场景 1: 开发完整系统
 ```bash
-python master_orchestrator.py "开发一个博客系统，支持文章发布、评论、用户管理"
+cd C:\Users\zarag\Documents\coding_base\skills
+python -m orchestrator.master_orchestrator "开发一个博客系统，支持文章发布、评论、用户管理" -v
 ```
 自动执行 5 阶段工作流：需求分析 → 功能设计 → UX设计 → 开发计划 → 代码实现
 
 ### 场景 2: 代码审查
 ```bash
-python master_orchestrator.py "代码审查：审查 src/auth.py 的安全性"
+python -m orchestrator.master_orchestrator "代码审查：审查 src/auth.py 的安全性"
 ```
 自动使用 code-review 模板，生成专业的审查报告
 
 ### 场景 3: 命令执行
 ```bash
-python master_orchestrator.py "运行项目测试"
+python -m orchestrator.master_orchestrator "运行项目测试"
 ```
 安全解析并执行命令（白名单机制）
 
 ### 场景 4: 代码库探索
 ```bash
-python master_orchestrator.py "查找所有的数据库查询代码"
+python -m orchestrator.master_orchestrator "查找所有的数据库查询代码"
 ```
 自动触发 Explore 智能体，返回相关代码位置
 
 ### 场景 5: 并行任务执行
 ```bash
-python master_orchestrator.py "分析项目性能瓶颈，并生成优化报告"
+python -m orchestrator.master_orchestrator "分析项目性能瓶颈，并生成优化报告"
 ```
 自动识别可并行子任务，并行执行提升效率
 
 ## 命令行选项
 
 ```bash
-# 基本用法
-python master_orchestrator.py "你的需求" [选项]
+# 基本用法（需要从父目录作为模块运行）
+cd C:\Users\zarag\Documents\coding_base\skills
+python -m orchestrator.master_orchestrator "你的需求" [选项]
 
 # 可用选项
 --verbose, -v          # 详细输出模式
---timeout SECONDS      # 设置超时时间（默认600秒）
---backend BACKEND      # 指定后端（claude/gemini/codex）
---no-parallel          # 禁用并行执行
---dry-run              # 仅分析意图，不实际执行
+
+# 环境变量配置
+export ORCHESTRATOR_TIMEOUT=600        # 超时时间（秒，默认300）
+export ADUIB_URL="http://..."          # 远程服务地址（可选）
+export ADUIB_API_KEY="..."             # API密钥（可选）
 ```
 
 ## API 使用
 
 ```python
-from master_orchestrator import MasterOrchestrator
+from pathlib import Path
+from orchestrator.master_orchestrator import MasterOrchestrator, WorkflowResult, TaskResult
 
-# 初始化协调器
+# 初始化协调器（完整参数）
 orch = MasterOrchestrator(
-    parse_events=True,   # 解析事件流
-    timeout=600,         # 超时时间
-    config_path=None     # 自定义配置文件路径
+    timeout=600,                          # 超时时间（秒）
+    config_path=Path("./orchestrator.yaml"),  # 配置文件路径（可选）
+    auto_discover=True,                   # V3自动发现资源
+    enable_parallel=True,                 # 启用并行执行
+    max_parallel_workers=3,               # 最大并行数
+    use_claude_intent=True,               # 使用Claude意图分析
+    intent_confidence_threshold=0.7,      # 置信度阈值
+    fallback_to_rules=True,               # 低置信度回退规则引擎
+    # 远程服务配置（可选）
+    use_remote=False,
+    aduib_url=None,
+    aduib_api_key=None,
+    enable_cache=True,
+    enable_upload=True
 )
 
 # 处理请求
@@ -89,13 +104,15 @@ result = orch.process("开发一个用户管理系统", verbose=True)
 if isinstance(result, WorkflowResult):
     # 5阶段工作流结果
     print(f"完成阶段: {result.completed_stages}/5")
-    print(f"总耗时: {result.total_duration}s")
+    print(f"总耗时: {result.total_duration_seconds:.2f}s")
     for stage_result in result.stages:
-        print(f"[{stage_result.stage.value}] {stage_result.duration}s")
+        print(f"[{stage_result.stage.value}] {stage_result.duration_seconds:.2f}s")
 elif isinstance(result, TaskResult):
     # 单次任务结果
+    print(f"后端: {result.backend}")
     print(f"输出: {result.get_final_output()}")
     print(f"成功: {result.success}")
+    print(f"耗时: {result.duration_seconds}s")
 ```
 
 ## 系统架构
@@ -144,30 +161,45 @@ elif isinstance(result, TaskResult):
 
 ## 配置文件
 
-支持通过 `orchestrator.yaml` 自定义配置：
+支持通过 `orchestrator.yaml` 自定义配置（完整示例）：
 
 ```yaml
-# 后端配置
-backends:
-  claude:
-    enabled: true
-    priority: 1
-  gemini:
-    enabled: true
-    priority: 2
+version: "3.0"
 
-# 执行器配置
-executors:
-  command:
-    timeout: 300
-    whitelist: [git, npm, pytest]
-  agent:
-    default_timeout: 600
+# 全局配置
+global:
+  default_backend: claude
+  timeout: 300
+  enable_parallel: false
+  max_parallel_tasks: 3
 
-# 并行执行配置
-parallel:
-  enabled: true
-  max_concurrent: 3
+# 技能配置
+skills:
+  scan_paths:
+    - ./skills/*.yaml
+    - ~/.claude/skills/*.yaml
+  manual: []
+
+# 命令白名单（安全特性）
+commands:
+  whitelist:
+    - git
+    - npm
+    - python
+    - pytest
+    - docker
+    - kubectl
+
+# 智能体配置
+agents:
+  timeout: 600
+  max_retries: 3
+
+# 提示词模板配置
+prompts:
+  template_dirs:
+    - ./prompts
+    - ~/.claude/prompts
 ```
 
 ## 环境要求
@@ -194,42 +226,61 @@ memex-cli --version  # 验证安装
 
 ### 超时错误
 ```bash
-# 增加超时时间
-python master_orchestrator.py "复杂任务" --timeout 1200
+# 增加超时时间（通过环境变量）
+export ORCHESTRATOR_TIMEOUT=1200
+python -m orchestrator.master_orchestrator "复杂任务"
+
+# 或在 API 中设置
+orch = MasterOrchestrator(timeout=1200)
 ```
 
 ### 并行执行失败
-```bash
-# 禁用并行执行
-python master_orchestrator.py "任务" --no-parallel
+```python
+# 通过 API 禁用并行执行
+orch = MasterOrchestrator(enable_parallel=False)
+
+# 或在配置文件中禁用
+# orchestrator.yaml:
+# global:
+#   enable_parallel: false
 ```
 
 ## 扩展开发
 
 ### 添加自定义执行器
 ```python
-from master_orchestrator import MasterOrchestrator
+from orchestrator.master_orchestrator import MasterOrchestrator
+from orchestrator.analyzers.claude_intent_analyzer import Intent
 
 class CustomExecutor:
-    def execute(self, intent):
-        # 自定义执行逻辑
-        pass
+    def execute(self, intent: Intent, request: str):
+        """自定义执行逻辑"""
+        print(f"执行自定义逻辑: {request}")
+        return {"success": True, "output": "自定义结果"}
 
-# 注册执行器
+# 创建协调器
 orch = MasterOrchestrator()
-orch.router.register_executor("custom", CustomExecutor())
+
+# 注意：当前版本不支持动态注册执行器
+# 需要修改 ExecutionRouter.route() 方法添加自定义分支
 ```
 
 ### 添加自定义技能
 ```python
-from skills.skill_registry import SkillRegistry
+from orchestrator.skills.skill_registry import SkillRegistry
 
 registry = SkillRegistry()
-registry.register_skill(
-    name="my-skill",
-    entry_point="path/to/script.py",
-    description="自定义技能描述"
-)
+
+# 通过 YAML 文件注册技能
+registry.register_from_yaml("path/to/skill.yaml")
+
+# 或在 orchestrator.yaml 中配置
+# skills:
+#   manual:
+#     - name: my-skill
+#       path: ./skills/my-skill.yaml
+#       enabled: true
+#       priority: 100
 ```
 
 ## 相关文档
