@@ -1,6 +1,6 @@
-# Coding Base - AI 智能工作流系统
+# Coding Workflow - AI 智能工作流系统
 
-**基于多后端AI协调的智能代码助手和自动化工作流平台**
+**Claude Code 扩展工具库，包含 Skills、Agents 和 Commands (Slash Commands)，用于增强 Claude Code 的能力**
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -8,7 +8,7 @@
 
 ## 📖 项目概述
 
-Coding Base 是一个企业级 AI 智能工作流系统，通过统一协调多个 AI 后端（Claude、Gemini、Codex），结合智能路由、技能系统和代理架构，为开发者提供从需求分析到代码实现的全自动化解决方案。
+Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 后端（Claude、Gemini、Codex），结合智能路由、技能系统和代理架构，为开发者提供从需求分析到代码实现的全自动化解决方案。
 
 **核心价值**：
 - 🤖 **多后端协调** - 自动选择最适合的 AI 后端执行任务
@@ -22,7 +22,7 @@ Coding Base 是一个企业级 AI 智能工作流系统，通过统一协调多�
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Coding Base 智能工作流系统                      │
+│                    Coding Workflow 智能工作流系统                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -99,8 +99,8 @@ Coding Base 是一个企业级 AI 智能工作流系统，通过统一协调多�
 
 ```bash
 # 克隆项目
-git clone <repository-url>
-cd coding_base
+git clone https://github.com/chaorenex1/coding-workflow.git
+cd coding-workflow
 
 # 安装 Python 依赖
 pip install chardet pyyaml
@@ -145,7 +145,7 @@ if result.success:
 ## 📁 项目结构
 
 ```
-coding_base/
+coding-workflow/
 ├── README.md                           # 本文档
 ├── AGENTS.md                           # 代理系统文档
 │
@@ -565,4 +565,4 @@ python master_orchestrator.py "复杂任务" --timeout 1200
 
 ---
 
-**从一句话需求到完整代码，Coding Base 让 AI 开发触手可及** 🚀
+**从一句话需求到完整代码，Coding Workflow 让 AI 开发触手可及** 🚀
