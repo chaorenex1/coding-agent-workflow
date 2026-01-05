@@ -59,10 +59,6 @@ from .executors.command_executor import CommandExecutor, CommandResult
 from .executors.prompt_manager import PromptManager
 from .executors.agent_caller import AgentCaller, AgentRequest, AgentResult, AgentType
 
-# 导入技能系统
-from .skills.skill_registry import SkillRegistry
-from .skills.dev_workflow import DevWorkflowAgent, WorkflowResult
-
 # 导入客户端
 try:
     from .clients.aduib_client import AduibClient, CachedResult
@@ -330,8 +326,6 @@ class ExecutionRouter:
             use_claude_router=True,      # 启用Claude路由
             fallback_to_simple=True      # 允许fallback到简单实现
         )
-        self.workflow_agent = DevWorkflowAgent(parse_events=True, timeout=600)
-        self.skill_registry = SkillRegistry()
 
     def route(self, intent: Intent, request: str) -> Any:
         """

@@ -8,7 +8,7 @@
 name: master-orchestrator
 description: 智能任务协调系统，支持意图分析、多模式执行、5阶段开发工作流
 version: 3.0.0
-entry: "@../../master_orchestrator.py"
+entry: "master_orchestrator.py"
 category: automation
 tags: [orchestrator, workflow, ai-coordination, multi-backend]
 ```
@@ -28,31 +28,31 @@ MasterOrchestrator 是一个智能任务协调系统，能够：
 
 ### 场景 1: 开发完整系统
 ```bash
-python @../../master_orchestrator.py "开发一个博客系统，支持文章发布、评论、用户管理"
+python master_orchestrator.py "开发一个博客系统，支持文章发布、评论、用户管理"
 ```
 自动执行 5 阶段工作流：需求分析 → 功能设计 → UX设计 → 开发计划 → 代码实现
 
 ### 场景 2: 代码审查
 ```bash
-python @../../master_orchestrator.py "代码审查：审查 src/auth.py 的安全性"
+python master_orchestrator.py "代码审查：审查 src/auth.py 的安全性"
 ```
 自动使用 code-review 模板，生成专业的审查报告
 
 ### 场景 3: 命令执行
 ```bash
-python @../../master_orchestrator.py "运行项目测试"
+python master_orchestrator.py "运行项目测试"
 ```
 安全解析并执行命令（白名单机制）
 
 ### 场景 4: 代码库探索
 ```bash
-python @../../master_orchestrator.py "查找所有的数据库查询代码"
+python master_orchestrator.py "查找所有的数据库查询代码"
 ```
 自动触发 Explore 智能体，返回相关代码位置
 
 ### 场景 5: 并行任务执行
 ```bash
-python @../../master_orchestrator.py "分析项目性能瓶颈，并生成优化报告"
+python master_orchestrator.py "分析项目性能瓶颈，并生成优化报告"
 ```
 自动识别可并行子任务，并行执行提升效率
 
@@ -60,7 +60,7 @@ python @../../master_orchestrator.py "分析项目性能瓶颈，并生成优化
 
 ```bash
 # 基本用法
-python @../../master_orchestrator.py "你的需求" [选项]
+python master_orchestrator.py "你的需求" [选项]
 
 # 可用选项
 --verbose, -v          # 详细输出模式
@@ -195,13 +195,13 @@ memex-cli --version  # 验证安装
 ### 超时错误
 ```bash
 # 增加超时时间
-python @../../master_orchestrator.py "复杂任务" --timeout 1200
+python master_orchestrator.py "复杂任务" --timeout 1200
 ```
 
 ### 并行执行失败
 ```bash
 # 禁用并行执行
-python @../../master_orchestrator.py "任务" --no-parallel
+python master_orchestrator.py "任务" --no-parallel
 ```
 
 ## 扩展开发
