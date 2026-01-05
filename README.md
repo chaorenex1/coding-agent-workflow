@@ -15,7 +15,7 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 - 🧠 **智能意图识别** - 自动分析用户需求并选择最佳执行路径
 - 🔄 **端到端自动化** - 从一句话需求到完整代码实现
 - 🛠️ **20+ 技能集成** - 代码分析、重构、文档生成等专业技能
-- 🎯 **11+ 智能代理** - 需求分析、架构设计、开发测试等专业代理
+- 🎯 **30+ 智能代理** - BMAD 工作流、迭代开发、需求分析等专业代理
 - 💾 **记忆与缓存** - MCP 集成的知识库和任务缓存系统
 
 ## 🏗️ 系统架构
@@ -65,21 +65,21 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 │  • ...更多技能                                                   │
 │                                                                   │
 ├─────────────────────────────────────────────────────────────────┤
-│                      代理系统 (11+ Agents)                        │
+│                      代理系统 (30+ Agents)                        │
 ├─────────────────────────────────────────────────────────────────┤
-│  PRD 工作流代理:                                                  │
-│  • requirement-analysis-agent  - 需求分析                        │
-│  • design-architecture-agent   - 架构设计                        │
-│  • implementation-agent        - 代码实现                        │
-│  • testing-qa-agent            - 测试和 QA                       │
-│  • deployment-release-agent    - 部署发布                        │
+│  BMAD 完整工作流代理 (8):                                         │
+│  • bmad-orchestrator          - 工作流总协调器                   │
+│  • bmad-analyst/architect     - 需求分析/架构设计                │
+│  • bmad-fullstack-dev/qa      - 全栈开发/质量保证                │
+│  • bmad-devops                - DevOps 工程师                    │
 │                                                                   │
-│  快速代码代理:                                                    │
-│  • fa-orchestrator            - 快速功能协调器                   │
-│  • fa-requirements-analyst    - 需求分析师                       │
-│  • fa-developer               - 开发者                           │
-│  • fa-code-reviewer           - 代码审查员                       │
-│  • fa-tester                  - 测试员                           │
+│  BMAD 迭代开发代理 (7):                                           │
+│  • bmad-iter-orchestrator     - 迭代协调器                       │
+│  • bmad-diff-analyst          - 差异分析师                       │
+│  • bmad-iter-developer        - 迭代开发者                       │
+│  • bmad-release-manager       - 发布管理员                       │
+│                                                                   │
+│  PRD 工作流代理 (5) / 快速代码代理 (5) / 自动化代理 (2)          │
 │                                                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │                     记忆与缓存系统 (MCP)                          │
@@ -147,64 +147,102 @@ if result.success:
 ```
 coding-workflow/
 ├── README.md                           # 本文档
+├── CLAUDE.md                           # Claude Code 项目指南
 ├── AGENTS.md                           # 代理系统文档
+├── .claude/                            # Claude Code 配置
 │
-├── skills/                             # 技能系统 (20+)
+├── skills/                             # 技能系统 (23 个)
 │   ├── master-orchestrator/            # ⭐ 主协调器
 │   │   ├── master_orchestrator.py      # 总入口
 │   │   ├── core/                       # 核心模块
-│   │   │   ├── backend_orchestrator.py # 后端协调
-│   │   │   ├── event_parser.py         # 事件解析
-│   │   │   ├── config_loader.py        # 配置加载
-│   │   │   ├── unified_registry.py     # 统一注册
-│   │   │   ├── executor_factory.py     # 执行器工厂
-│   │   │   ├── dependency_analyzer.py  # 依赖分析
-│   │   │   └── parallel_scheduler.py   # 并行调度
-│   │   ├── analyzers/                  # 分析器
-│   │   │   └── claude_intent_analyzer.py
-│   │   └── tests/                      # 测试套件
-│   │
+│   │   └── analyzers/                  # 分析器
+│   ├── cross-backend-orchestrator/     # 跨后端 AI 协调器
 │   ├── codex-cli-bridge/               # Codex CLI 桥接
+│   ├── code-with-codex/                # Codex 代码协作
 │   ├── repo-analyzer/                  # 代码库分析
 │   ├── code-refactoring-assistant/     # 代码重构助手
+│   ├── code-refactor-analyzer/         # 代码重构分析器
+│   ├── code-fix-assistant/             # 代码修复助手
 │   ├── api-document-generator/         # API 文档生成
+│   ├── chinese-interface-doc-generator/# 中文接口文档生成
 │   ├── tech-stack-evaluator/           # 技术栈评估
 │   ├── git-code-review/                # Git 代码审查
-│   └── ...                             # 更多技能
+│   ├── git-commit-summarizer/          # Git 提交智能总结
+│   ├── git-batch-commit/               # Git 批量提交工具
+│   ├── github-stars-analyzer/          # GitHub Stars 分析
+│   ├── skill-validator/                # Skill 验证器
+│   ├── memex-cli/                      # Memex CLI 工具
+│   ├── ux-design-gemini/               # UX 设计 (Gemini)
+│   ├── cross-platform-command-generator/# 跨平台命令生成
+│   ├── priority-optimization-assistant/# 优先级优化助手
+│   └── multcode-dev-workflow-agent/    # 多代码开发工作流
 │
-├── agents/                             # 代理系统 (11+)
-│   ├── prd-workflow/                   # PRD 工作流代理
+├── agents/                             # 代理系统 (30+ 个)
+│   ├── bmad-workflow/                  # ⭐ BMAD 完整工作流 (8 个)
+│   │   ├── bmad-orchestrator.md        # 工作流总协调器
+│   │   ├── bmad-analyst.md             # 需求分析师
+│   │   ├── bmad-product-owner.md       # 产品负责人
+│   │   ├── bmad-architect.md           # 系统架构师
+│   │   ├── bmad-scrum-master.md        # Scrum Master
+│   │   ├── bmad-fullstack-dev.md       # 全栈开发者
+│   │   ├── bmad-qa.md                  # 质量保证
+│   │   └── bmad-devops.md              # DevOps 工程师
+│   │
+│   ├── bmad-iterate/                   # ⭐ BMAD 迭代开发 (7 个)
+│   │   ├── bmad-iter-orchestrator.md   # 迭代协调器
+│   │   ├── bmad-diff-analyst.md        # 差异分析师
+│   │   ├── bmad-iteration-planner.md   # 迭代规划师
+│   │   ├── bmad-impact-analyst.md      # 影响分析师
+│   │   ├── bmad-iter-developer.md      # 迭代开发者
+│   │   ├── bmad-regression-tester.md   # 回归测试员
+│   │   └── bmad-release-manager.md     # 发布管理员
+│   │
+│   ├── prd-workflow/                   # PRD 工作流代理 (5 个)
 │   │   ├── requirement-analysis-agent.md
 │   │   ├── design-architecture-agent.md
 │   │   ├── implementation-agent.md
 │   │   ├── testing-qa-agent.md
 │   │   └── deployment-release-agent.md
 │   │
-│   ├── quick-code/                     # 快速代码代理
-│   │   ├── fa-orchestrator-quick-feature.md
-│   │   ├── fa-requirements-analyst-quick-feature.md
-│   │   ├── fa-developer-quick-feature.md
-│   │   ├── fa-code-reviewer-quick-feature.md
-│   │   └── fa-tester-quick-feature.md
+│   ├── quick-code/                     # 快速代码代理 (5 个)
 │   │
-│   └── feature-workflow/               # 功能开发代理
+│   ├── feature-workflow/               # 功能开发代理
+│   │
+│   └── automation/                     # 自动化代理
+│       ├── comprehensive-analysis-report-generator.md
+│       └── documentation-sync-agent.md
 │
-├── prompts/                            # 提示词模板库
-│   ├── code-review.md                  # 代码审查模板
-│   ├── refactor-analyzer.md            # 重构分析模板
-│   └── ...                             # 更多模板
-│
-├── commands/                           # 命令系统
+├── commands/                           # Slash Commands 命令系统
+│   ├── bmad-workflow/                  # BMAD 工作流命令 (7 个)
+│   │   ├── bmad.md                     # /bmad 主命令
+│   │   ├── bmad-analyze.md             # /bmad-analyze
+│   │   ├── bmad-plan.md                # /bmad-plan
+│   │   ├── bmad-architect.md           # /bmad-architect
+│   │   ├── bmad-develop.md             # /bmad-develop
+│   │   ├── bmad-test.md                # /bmad-test
+│   │   └── bmad-deploy.md              # /bmad-deploy
+│   │
+│   ├── bmad-iterate/                   # BMAD 迭代命令 (7 个)
+│   │   ├── bmad-iter.md                # /bmad-iter 主命令
+│   │   ├── bmad-iter-diff.md           # /bmad-iter-diff
+│   │   ├── bmad-iter-plan.md           # /bmad-iter-plan
+│   │   ├── bmad-iter-impact.md         # /bmad-iter-impact
+│   │   ├── bmad-iter-dev.md            # /bmad-iter-dev
+│   │   ├── bmad-iter-test.md           # /bmad-iter-test
+│   │   └── bmad-iter-release.md        # /bmad-iter-release
+│   │
+│   ├── prd-workflow/                   # PRD 工作流命令
 │   ├── quick-code/                     # 快速代码命令
 │   ├── project-analyzer/               # 项目分析命令
 │   └── scaffold/                       # 脚手架命令
+│
+├── prompts/                            # 提示词模板库
 │
 ├── scripts/                            # 工具脚本
 │
 └── docs/                               # 文档
     ├── ARCHITECTURE.md                 # 架构设计
-    ├── USER_GUIDE.md                   # 用户指南
-    └── ADUIB_INTEGRATION.md            # Aduib 集成
+    └── USER_GUIDE.md                   # 用户指南
 ```
 
 ## 🎯 核心功能
@@ -463,17 +501,11 @@ def _select_backend(self, intent: Intent) -> str:
 ## 🧪 测试
 
 ```bash
-# 测试 Phase 2: 意图分析和路由
-python skills/master-orchestrator/tests/test_phase2.py
+# 运行主协调器测试
+python -m pytest skills/master-orchestrator/tests/ -v
 
-# 测试 Phase 3: 执行器集成
-python skills/master-orchestrator/tests/test_phase3.py
-
-# 测试 Phase 4: 技能自动化
-python skills/master-orchestrator/tests/test_phase4.py
-
-# 测试并行执行
-python skills/master-orchestrator/tests/test_auto_parallel.py
+# 测试单个功能
+python skills/master-orchestrator/master_orchestrator.py "测试任务" --dry-run
 ```
 
 ## 📈 性能指标
