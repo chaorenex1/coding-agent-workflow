@@ -1,0 +1,291 @@
+# Orchestrator V3 配置文件模板
+# 版本: 3.1 (支持 Slash Commands)
+
+version: "3.1"
+
+# ============================================================================
+# 全局配置
+# ============================================================================
+global:
+  # 默认后端 (claude/gemini/codex)
+  default_backend: claude
+
+  # 默认超时 (秒)
+  timeout: 300
+
+  # 是否启用详细日志
+  verbose: false
+
+  # 是否启用 V3 自动发现
+  enable_v3: true
+
+# ============================================================================
+# Slash Command 配置 (V3.1 新增)
+# ============================================================================
+slash_commands:
+  # 是否启用自定义 Slash Commands
+  enabled: true
+
+  # 自定义系统命令
+  system:
+    # 示例: 自定义状态命令
+    - name: my-stats
+      description: "显示自定义统计信息"
+      handler: "_get_stats"  # MasterOrchestrator 中的方法
+      enabled: true
+      priority: 80  # 低于内置命令 (100)
+      examples:
+        - "/my-stats"
+
+  # 自定义 Shell 命令
+  shell:
+    # 示例: 自定义 git 命令
+    - name: gst
+      description: "Git status 简写"
+      command: "git status -sb"
+      enabled: true
+      priority: 60
+      examples:
+        - "/gst"
+
+    - name: glog
+      description: "Git log with graph"
+      command: "git log --oneline --graph -10"
+      enabled: true
+      priority: 60
+      examples:
+        - "/glog"
+        - "/glog -20"
+
+    # 示例: 项目构建命令
+    - name: build
+      description: "运行项目构建"
+      command: "npm run build"
+      enabled: true
+      priority: 70
+      examples:
+        - "/build"
+
+    - name: test
+      description: "运行所有测试"
+      command: "pytest tests/"
+      enabled: true
+      priority: 70
+      examples:
+        - "/test"
+        - "/test -v"
+
+  # 自定义 Skill 命令
+  skill:
+    # 示例: 代码审查
+    - name: review
+      description: "代码审查当前分支"
+      skill: "code-review"  # skills/ 目录下的 skill
+      enabled: true
+      priority: 80
+      examples:
+        - "/review"
+        - "/review path/to/file.py"
+
+    # 示例: 生成文档
+    - name: gendoc
+      description: "生成API文档"
+      skill: "api-document-generator"
+      enabled: true
+      priority: 80
+      examples:
+        - "/gendoc src/"
+
+  # 自定义 Agent 命令
+  agent:
+    # 示例: 快速探索
+    - name: explore
+      description: "探索代码库"
+      agent_type: "EXPLORE"
+      thoroughness: "medium"
+      enabled: true
+      priority: 75
+      examples:
+        - "/explore auth system"
+
+    - name: plan
+      description: "规划实现方案"
+      agent_type: "PLAN"
+      enabled: true
+      priority: 75
+      examples:
+        - "/plan add user authentication"
+
+  # 自定义 Prompt 模板命令
+  prompt:
+    # 示例: API 文档模板
+    - name: apidoc
+      description: "生成API文档模板"
+      prompt_template: "api-doc"
+      enabled: true
+      priority: 60
+      examples:
+        - "/apidoc MyClass"
+
+# ============================================================================
+# Skills 配置
+# ============================================================================
+skills:
+  # Skills 扫描路径
+  scan_paths:
+    - ./skills/*.yaml
+    - ./skills/*/*.yaml
+    - ~/.claude/skills/*.yaml
+
+  # 手动注册 Skills
+  manual:
+    - name: code-review
+      path: ./skills/code-review/skill.yaml
+      enabled: true
+      priority: 100
+
+    - name: api-document-generator
+      path: ./skills/api-document-generator/skill.yaml
+      enabled: true
+      priority: 100
+
+    - name: dev-workflow
+      path: ./skills/dev-workflow-agent/skill.yaml
+      enabled: true
+      priority: 100
+
+# ============================================================================
+# Commands 配置 (Shell 命令白名单)
+# ============================================================================
+commands:
+  # 允许的命令白名单
+  whitelist:
+    - git
+    - npm
+    - python
+    - pytest
+    - pip
+    - node
+    - yarn
+    - docker
+    - kubectl
+
+  # 危险命令黑名单 (总是拒绝)
+  blacklist:
+    - rm
+    - dd
+    - mkfs
+    - iptables
+    - reboot
+    - shutdown
+
+  # 命令别名
+  aliases:
+    - name: gst
+      command: git status
+    - name: glog
+      command: git log --oneline -10
+    - name: gd
+      command: git diff
+
+# ============================================================================
+# Agents 配置
+# ============================================================================
+agents:
+  # 默认 Agent 配置
+  default:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.3
+    max_tokens: 4000
+
+  # 特定 Agent 配置
+  explore:
+    model: claude-3-5-sonnet-20241022
+    thoroughness: medium
+
+  plan:
+    model: claude-3-5-sonnet-20241022
+    max_tokens: 8000
+
+# ============================================================================
+# Prompts 配置
+# ============================================================================
+prompts:
+  # 自定义 Prompt 模板
+  templates:
+    - name: custom-review
+      category: code-review
+      template: |
+        请审查以下代码:
+
+        {code}
+
+        重点关注: {focus_areas}
+      variables:
+        - code
+        - focus_areas
+      description: "自定义代码审查模板"
+
+# ============================================================================
+# 并行执行配置 (Phase 7 - 未来支持)
+# ============================================================================
+parallel:
+  # 是否启用并行执行
+  enabled: false
+
+  # 最大并行任务数
+  max_workers: 3
+
+  # 每个任务的超时时间 (秒)
+  timeout_per_task: 120
+
+  # 允许并行的模式
+  allowed_modes:
+    - command
+    - backend
+
+  # 必须串行的模式
+  sequential_modes:
+    - skill
+
+# ============================================================================
+# 日志配置
+# ============================================================================
+logging:
+  # 日志级别 (DEBUG/INFO/WARNING/ERROR)
+  level: INFO
+
+  # 日志输出路径
+  file: ./logs/orchestrator.log
+
+  # 是否输出到控制台
+  console: true
+
+  # 日志格式
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# ============================================================================
+# 缓存配置
+# ============================================================================
+cache:
+  # 是否启用缓存
+  enabled: false
+
+  # 缓存目录
+  directory: ./.cache/orchestrator
+
+  # 缓存过期时间 (秒)
+  ttl: 3600
+
+# ============================================================================
+# 安全配置
+# ============================================================================
+security:
+  # 是否启用安全模式 (阻止危险命令)
+  safe_mode: true
+
+  # 是否需要确认危险操作
+  require_confirmation: true
+
+  # 允许的最大文件大小 (MB)
+  max_file_size: 10

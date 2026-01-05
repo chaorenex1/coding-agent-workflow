@@ -1,0 +1,98 @@
+# MasterOrchestrator V3 Configuration
+# This file configures auto-discovery and parallel execution features
+# Priority: Project-level (this file) > User-level (~/.claude/orchestrator.yaml) > Builtin
+
+version: "3.0"
+
+# Global settings
+global:
+  # Default backend for execution (claude, gemini, codex)
+  default_backend: claude
+
+  # Default timeout for all operations (seconds)
+  timeout: 300
+
+  # Enable parallel execution (can be overridden at runtime)
+  enable_parallel: false
+
+  # Maximum number of parallel tasks
+  max_parallel_tasks: 3
+
+# Skills configuration
+skills:
+  # Automatically scan these paths for skill YAML files
+  scan_paths:
+    - ./skills/*.yaml
+    - ~/.claude/skills/*.yaml
+
+  # Manually declared skills (higher priority than scanned)
+  manual:
+    # Example: Custom code review skill
+    # - name: code-review
+    #   path: ./skills/code-review.yaml
+    #   enabled: true
+    #   priority: 100  # Higher priority overrides lower
+    #   backend: claude
+    #   dependencies: []
+
+# Commands configuration
+commands:
+  # Whitelist of allowed commands (security feature)
+  whitelist:
+    - git
+    - npm
+    - python
+    - pytest
+    - docker
+    - kubectl
+    - pip
+    - yarn
+    - pnpm
+
+  # Command aliases for convenience
+  aliases:
+    # Example: Git shortcuts
+    # - name: gst
+    #   command: git status
+    # - name: glog
+    #   command: git log --oneline -10
+    # - name: gco
+    #   command: git checkout
+
+# Agents configuration
+agents:
+  # Example: Custom agent configurations
+  # - name: security-auditor
+  #   type: general
+  #   enabled: true
+  #   priority: 50
+  #   dependencies: []
+
+# Prompt templates configuration
+prompts:
+  # Example: Reusable prompt templates
+  # - name: api-doc
+  #   template: "Generate {language} API documentation for:\n\n{code}\n\nInclude: parameters, return values, exceptions, examples."
+  #   variables: [language, code]
+  #   enabled: true
+  #   priority: 50
+
+# Parallel execution configuration
+parallel:
+  # Enable parallel execution globally
+  enabled: true
+
+  # Maximum number of worker threads
+  max_workers: 3
+
+  # Timeout per individual task (seconds)
+  timeout_per_task: 120
+
+  # Modes that support parallel execution
+  allowed_modes:
+    - command
+    - backend
+
+  # Modes that must run sequentially
+  sequential_modes:
+    - skill

@@ -1,0 +1,21 @@
+# Development dependencies for MasterOrchestrator
+# Install: pip install -r requirements.txt -r requirements-dev.txt
+
+# Include base requirements
+-r requirements.txt
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0       # Coverage reporting
+pytest-timeout>=2.2.0   # Test timeout handling
+
+# Code quality
+black>=23.0.0           # Code formatting
+isort>=5.13.0           # Import sorting
+flake8>=7.0.0           # Linting
+mypy>=1.7.0             # Static type checking
+
+# Documentation
+sphinx>=7.2.0           # Documentation generation
+sphinx-rtd-theme>=2.0.0 # Read the Docs theme
