@@ -48,6 +48,10 @@ class Intent:
     entity: Optional[str] = None            # 主要推断的资源实体 (如 "skill:code-review")
     candidates: list = None                  # 候选资源列表 (如 ["skill:code-review", "skill:security-scanner"])
 
+    # 并行执行推断
+    enable_parallel: bool = False           # 是否适合并行执行
+    parallel_reasoning: Optional[str] = None  # 并行推断的理由
+
     def __post_init__(self):
         """初始化默认值"""
         if self.candidates is None:
@@ -99,6 +103,14 @@ class ClaudeIntentAnalyzer:
 - code-with-codex: 代码实现
 - null: 无特定技能
 
+并行执行推断 (enable_parallel):
+判断任务是否适合并行执行，考虑以下因素：
+- 用户明确提到"批量"、"多个"、"同时"、"并行"等关键词
+- 任务可分解为多个独立子任务（如：批量处理文件、多模块测试）
+- 子任务之间无明显依赖关系（如：可同时运行的测试、独立的代码审查）
+- 复杂度为medium/complex且任务类型为dev/test时优先考虑
+- 返回 true 或 false，以及简短的推断理由
+
 用户请求：
 {request}
 
@@ -110,18 +122,23 @@ class ClaudeIntentAnalyzer:
   "backend_hint": "claude|gemini|codex|null",
   "skill_hint": "技能名称|null",
   "confidence": 0.0-1.0,
-  "reasoning": "简短解释为什么选择这个模式（1-2句话）"
+  "reasoning": "简短解释为什么选择这个模式（1-2句话）",
+  "enable_parallel": true|false,
+  "parallel_reasoning": "是否适合并行的简短理由（1句话）"
 }}
 
 示例：
 请求："运行git status查看状态"
-返回：{{"mode":"command","task_type":"general","complexity":"simple","backend_hint":null,"skill_hint":null,"confidence":0.95,"reasoning":"明确的git命令，直接执行即可"}}
+返回：{{"mode":"command","task_type":"general","complexity":"simple","backend_hint":null,"skill_hint":null,"confidence":0.95,"reasoning":"明确的git命令，直接执行即可","enable_parallel":false,"parallel_reasoning":"单一命令，无需并行"}}
 
 请求："开发一个电商管理系统，包含用户管理、商品管理、订单处理"
-返回：{{"mode":"skill","task_type":"dev","complexity":"complex","backend_hint":"codex","skill_hint":"multcode-dev-workflow-agent","confidence":0.9,"reasoning":"复杂系统开发，需要多阶段规划和实现流程"}}
+返回：{{"mode":"skill","task_type":"dev","complexity":"complex","backend_hint":"codex","skill_hint":"multcode-dev-workflow-agent","confidence":0.9,"reasoning":"复杂系统开发，需要多阶段规划和实现流程","enable_parallel":true,"parallel_reasoning":"包含多个独立模块，可并行开发"}}
+
+请求："批量处理src目录下的所有Python文件进行代码审查"
+返回：{{"mode":"prompt","task_type":"analysis","complexity":"medium","backend_hint":"claude","skill_hint":null,"confidence":0.88,"reasoning":"批量代码审查任务，使用审查模板处理","enable_parallel":true,"parallel_reasoning":"多个文件可独立审查，适合并行处理"}}
 
 请求："分析这个函数的时间复杂度"
-返回：{{"mode":"backend","task_type":"analysis","complexity":"medium","backend_hint":"claude","skill_hint":null,"confidence":0.85,"reasoning":"代码分析任务，需要推理但不需要多阶段流程"}}
+返回：{{"mode":"backend","task_type":"analysis","complexity":"medium","backend_hint":"claude","skill_hint":null,"confidence":0.85,"reasoning":"代码分析任务，需要推理但不需要多阶段流程","enable_parallel":false,"parallel_reasoning":"单一分析任务，无法并行"}}
 
 现在分析上述用户请求并返回JSON："""
 
@@ -194,7 +211,9 @@ class ClaudeIntentAnalyzer:
                 confidence=float(intent_data.get("confidence", 0.8)),
                 reasoning=intent_data.get("reasoning"),
                 entity=entity,
-                candidates=candidates
+                candidates=candidates,
+                enable_parallel=bool(intent_data.get("enable_parallel", False)),
+                parallel_reasoning=intent_data.get("parallel_reasoning")
             )
 
         except Exception as e:

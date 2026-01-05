@@ -100,7 +100,7 @@ class BackendOrchestrator:
     Orchestrate AI tasks across multiple backends.
     
     Supported backends:
-        - codex: Code-optimized backend (uses deepseek-reasoner model)
+        - codex: Code-optimized backend
         - claude: General-purpose reasoning
         - gemini: Visual and UX understanding
     """

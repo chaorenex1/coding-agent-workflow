@@ -97,6 +97,8 @@ except ImportError:
         confidence: float = 0.0
         entity: Optional[str] = None
         candidates: list = None
+        enable_parallel: bool = False
+        parallel_reasoning: Optional[str] = None
 
         def __post_init__(self):
             if self.candidates is None:
@@ -146,6 +148,11 @@ class IntentAnalyzer:
         "complex": ["复杂", "完整", "系统", "项目", "complex", "full", "system"],
     }
 
+    PARALLEL_KEYWORDS = {
+        "explicit": ["批量", "多个", "同时", "并行", "并发", "batch", "multiple", "parallel", "concurrent"],
+        "implicit": ["所有", "每个", "分别", "各个", "all", "each", "every"],
+    }
+
     def analyze(self, request: str) -> Intent:
         """
         分析用户请求，返回意图
@@ -161,6 +168,7 @@ class IntentAnalyzer:
         complexity = self._classify_complexity(request)
         backend_hint = self._extract_backend_hint(request)
         skill_hint = self._extract_skill_hint(request)
+        enable_parallel, parallel_reasoning = self._classify_parallelizable(request, task_type, complexity)
 
         return Intent(
             mode=mode,
@@ -168,7 +176,9 @@ class IntentAnalyzer:
             complexity=complexity,
             backend_hint=backend_hint,
             skill_hint=skill_hint,
-            confidence=0.8
+            confidence=0.8,
+            enable_parallel=enable_parallel,
+            parallel_reasoning=parallel_reasoning
         )
 
     def _classify_mode(self, request: str) -> ExecutionMode:
@@ -220,6 +230,50 @@ class IntentAnalyzer:
         if "代码" in request and "实现" in request:
             return "code-with-codex"
         return None
+
+    def _classify_parallelizable(self, request: str, task_type: str, complexity: str) -> tuple:
+        """
+        判断任务是否适合并行执行
+
+        Args:
+            request: 用户请求文本
+            task_type: 任务类型
+            complexity: 复杂度
+
+        Returns:
+            (enable_parallel, parallel_reasoning) - 是否并行及原因
+        """
+        request_lower = request.lower()
+
+        # 1. 检查明确的并行关键词
+        has_explicit_keywords = any(kw in request for kw in self.PARALLEL_KEYWORDS["explicit"])
+        if has_explicit_keywords:
+            return True, "用户明确提到批量/并行处理"
+
+        # 2. 检查隐式的并行关键词（需要结合其他条件）
+        has_implicit_keywords = any(kw in request for kw in self.PARALLEL_KEYWORDS["implicit"])
+
+        # 3. 检查是否涉及多个文件/模块（通过关键词推断）
+        multi_file_indicators = ["文件", "模块", "组件", "服务", "目录", "files", "modules", "components", "services", "directory"]
+        has_multi_file = any(kw in request for kw in multi_file_indicators)
+
+        # 4. 根据任务类型和复杂度推断
+        if has_implicit_keywords and has_multi_file:
+            if task_type in ["dev", "test", "analysis"] and complexity in ["medium", "complex"]:
+                return True, "涉及多个独立单元，适合并行处理"
+
+        # 5. 复杂开发任务，包含多个独立模块
+        if complexity == "complex" and task_type == "dev":
+            module_keywords = ["包含", "以及", "和", "还有", "include", "with", "and"]
+            if any(kw in request for kw in module_keywords) and has_multi_file:
+                return True, "复杂任务包含多个独立模块，可并行开发"
+
+        # 6. 测试任务通常可以并行
+        if task_type == "test" and complexity in ["medium", "complex"]:
+            return True, "测试任务通常可并行执行"
+
+        # 默认不启用并行
+        return False, "单一任务或有依赖关系，不适合并行"
 
 
 class ExecutionRouter:
@@ -922,6 +976,10 @@ class MasterOrchestrator:
                 print(f"  后端提示: {intent.backend_hint}")
             if intent.skill_hint:
                 print(f"  技能提示: {intent.skill_hint}")
+            if hasattr(intent, 'enable_parallel'):
+                print(f"  并行执行: {'是' if intent.enable_parallel else '否'}")
+                if intent.parallel_reasoning:
+                    print(f"  并行理由: {intent.parallel_reasoning}")
             print()
 
         # 2. 任务分级（需求2：Task Tiering Expert Agent）
@@ -976,7 +1034,35 @@ class MasterOrchestrator:
                     duration_seconds=0.0
                 )
 
-        # 3. 本地执行
+        # 3. 并行执行判断（如果推断为并行且启用了并行调度器）
+        if hasattr(intent, 'enable_parallel') and intent.enable_parallel:
+            # 尝试拆分任务
+            subtasks = self._split_parallel_tasks(request, intent, verbose)
+
+            if subtasks and len(subtasks) > 1:
+                if self.scheduler and self.enable_parallel:
+                    # 使用并行调度器执行
+                    if verbose:
+                        print(f"[并行执行] 检测到 {len(subtasks)} 个子任务，启动并行处理")
+                        print(f"  推断理由: {intent.parallel_reasoning}")
+                        for i, task in enumerate(subtasks, 1):
+                            print(f"  子任务 {i}: {task[:50]}...")
+                        print()
+
+                    batch_result = self.process_batch(
+                        requests=subtasks,
+                        enable_parallel=True,
+                        verbose=verbose
+                    )
+
+                    # 将批处理结果转换为单一结果返回
+                    return self._batch_result_to_task_result(batch_result, request, intent)
+                elif verbose:
+                    print(f"[警告] 并行调度器未启用，将串行执行")
+                    print(f"  提示: 初始化时设置 enable_parallel=True, auto_discover=True")
+                    print()
+
+        # 4. 本地执行（串行）
         if verbose and self.aduib_client and self.enable_cache:
             print(f"[缓存未命中] 本地执行任务")
             print()
@@ -1470,6 +1556,174 @@ class MasterOrchestrator:
 
             except Exception as e:
                 logger.error(f"Failed to register custom slash command '{name}': {e}")
+
+    # ================== 并行执行辅助方法 ==================
+
+    def _split_parallel_tasks(
+        self,
+        request: str,
+        intent: Intent,
+        verbose: bool = False
+    ) -> List[str]:
+        """
+        将用户请求拆分为并行子任务
+
+        策略：
+        1. 批量文件处理：识别文件模式（如 "所有Python文件"）
+        2. 多模块开发：识别模块列表（如 "用户管理、商品管理、订单处理"）
+        3. 列表任务：识别逗号/顿号分隔的任务列表
+
+        Args:
+            request: 用户请求
+            intent: 意图对象
+            verbose: 详细输出
+
+        Returns:
+            子任务列表（如果无法拆分，返回空列表）
+        """
+        import re
+
+        # 策略1: 检测"包含"模式（优先级最高，避免被逗号拆分误匹配）
+        # 例如："开发系统，包含用户管理、商品管理、订单处理"
+        if '包含' in request or 'include' in request.lower():
+            pattern = r'包含(.+)'
+            match = re.search(pattern, request)
+
+            if match:
+                items_part = match.group(1).strip()
+                # 分割并清理空项
+                items = re.split(r'[、，和]', items_part)
+                items = [item.strip() for item in items if item.strip() and len(item.strip()) > 1]
+
+                if len(items) >= 2:
+                    # 提取主任务前缀（去除尾部逗号）
+                    prefix_match = re.search(r'^(.+?)[，,]?\s*包含', request)
+                    prefix = prefix_match.group(1).strip() if prefix_match else "实现"
+
+                    subtasks = [f"{prefix} - {item}" for item in items]
+
+                    if verbose:
+                        print(f"[任务拆分] 检测到'包含'模式")
+                        print(f"  主任务: {prefix}")
+                        print(f"  子模块: {items}")
+                        print()
+
+                    return subtasks
+
+        # 策略2: 检测逗号/顿号分隔的任务列表
+        # 例如："实现用户管理、商品管理、订单处理"
+        if '、' in request or '，' in request:
+            # 提取任务前缀和列表部分
+            # 匹配模式：<动词><列表项>、<列表项>、...
+            pattern = r'(实现|开发|测试|分析|处理|审查|优化)(.+?)(、|，)(.+)'
+            match = re.search(pattern, request)
+
+            if match:
+                verb = match.group(1)  # 动词：实现、开发等
+                items_part = match.group(2) + match.group(3) + match.group(4)
+
+                # 分割列表项
+                items = re.split(r'[、，]', items_part)
+                items = [item.strip() for item in items if item.strip()]
+
+                if len(items) >= 2:
+                    # 为每个项构造子任务
+                    subtasks = [f"{verb}{item}" for item in items]
+
+                    if verbose:
+                        print(f"[任务拆分] 检测到列表分隔模式")
+                        print(f"  动词: {verb}")
+                        print(f"  列表项: {items}")
+                        print()
+
+                    return subtasks
+
+        # 策略3: 批量文件处理
+        # 例如："批量处理所有Python文件"
+        batch_patterns = [
+            (r'批量处理(.+?)(文件|模块|组件)', '处理'),
+            (r'对(.+?)(文件|模块|组件)进行(.+)', lambda m: m.group(3)),
+            (r'(所有|每个)(.+?)(文件|模块|组件)(.+)', lambda m: m.group(4))
+        ]
+
+        for pattern, action in batch_patterns:
+            match = re.search(pattern, request)
+            if match:
+                # 这种情况下，需要实际扫描文件系统来拆分任务
+                # 简化实现：返回空列表，由调用者决定是否使用通配符
+                if verbose:
+                    print(f"[任务拆分] 检测到批量文件模式，但需要文件系统支持")
+                    print(f"  提示: 考虑使用 Glob 工具先列出文件")
+                    print()
+                return []
+
+        # 无法拆分
+        if verbose:
+            print(f"[任务拆分] 无法识别可拆分的模式，将串行执行")
+            print()
+
+        return []
+
+    def _batch_result_to_task_result(
+        self,
+        batch_result: 'BatchResult',
+        original_request: str,
+        intent: Intent
+    ) -> TaskResult:
+        """
+        将批处理结果转换为单一 TaskResult
+
+        Args:
+            batch_result: 批处理结果
+            original_request: 原始请求
+            intent: 意图对象
+
+        Returns:
+            TaskResult 对象
+        """
+        # 汇总所有子任务的输出
+        outputs = []
+        for i, task_result in enumerate(batch_result.task_results, 1):
+            if task_result.success:
+                outputs.append(f"=== 子任务 {i}/{batch_result.total_tasks} ===")
+                outputs.append(f"资源: {task_result.namespace}")
+                outputs.append(f"输出:\n{task_result.output}")
+                outputs.append("")
+            else:
+                outputs.append(f"=== 子任务 {i}/{batch_result.total_tasks} [失败] ===")
+                outputs.append(f"资源: {task_result.namespace}")
+                outputs.append(f"错误: {task_result.error}")
+                outputs.append("")
+
+        combined_output = "\n".join(outputs)
+
+        # 添加总结
+        summary = f"""
+{'='*70}
+批处理总结
+{'='*70}
+总任务数: {batch_result.total_tasks}
+成功: {batch_result.successful}
+失败: {batch_result.failed}
+总耗时: {batch_result.total_duration_seconds:.2f}s
+{'='*70}
+"""
+
+        final_output = combined_output + summary
+
+        # 构造 TaskResult
+        backend = self._select_backend_for_intent(intent)
+
+        return TaskResult(
+            backend=backend,
+            prompt=original_request,
+            output=final_output,
+            success=(batch_result.failed == 0),
+            error=None if batch_result.failed == 0 else f"{batch_result.failed} 个子任务失败",
+            run_id=None,
+            event_stream=None,
+            duration_seconds=batch_result.total_duration_seconds
+        )
 
     # ================== 系统级 Slash Command Handlers ==================
 
