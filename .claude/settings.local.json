@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(codex-cli-bridge)",
+      "Bash(::*)",
+      "Bash(dir \"C:\\\\Users\\\\zarag\\\\Documents\\\\coding_base\\\\skills\\\\cross-backend-orchestrator\\\\scripts\")",
+      "Bash(python:*)",
+      "Bash(move orchestrator.py master_orchestrator.py)",
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: remove obsolete test files from master-orchestrator\n\nClean up 27 test files that are no longer needed after project restructuring.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}
