@@ -83,7 +83,7 @@ All scripts wrap memex-cli commands:
 
 ```bash
 # Direct memex-cli usage
-memex-cli run --backend "codex" --model "deepseek-reasoner" --model-provider "aduib_ai" --prompt "Task" --stream-format "jsonl"
+memex-cli run --backend "codex" --prompt "Task" --stream-format "jsonl"
 memex-cli run --backend "claude" --prompt "Task" --stream-format "jsonl"
 memex-cli run --backend "gemini" --prompt "Task" --stream-format "jsonl"
 

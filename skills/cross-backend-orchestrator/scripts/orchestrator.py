@@ -161,11 +161,7 @@ class BackendOrchestrator:
     ) -> List[str]:
         """Build the memex-cli command for a given backend."""
         cmd = ["memex-cli", "run", "--backend", backend]
-        
-        if backend == "codex":
-            cmd.extend(["--model", model or self.DEFAULT_CODEX_MODEL])
-            cmd.extend(["--model-provider", model_provider or self.DEFAULT_CODEX_PROVIDER])
-        
+
         cmd.extend(["--prompt", prompt])
         cmd.extend(["--stream-format", stream_format])
         
