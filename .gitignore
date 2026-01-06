@@ -1,0 +1,29 @@
+# Claude Code temporary files
+.claude/sandbox/
+
+# Orchestrator output files
+orchestrator_output/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
