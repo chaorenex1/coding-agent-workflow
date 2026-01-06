@@ -164,6 +164,11 @@ Commands 是可直接通过 `/` 前缀调用的命令，提供快捷的工作流
 
 ### 可用 Commands
 
+#### Master Orchestrator Commands
+| Command | 描述 |
+|---------|------|
+| `/master-orchestrator` | 智能任务协调系统，自动分析意图并路由到最优执行路径 |
+
 #### BMAD Workflow Commands
 | Command | 描述 |
 |---------|------|
@@ -219,6 +224,9 @@ Commands 是可直接通过 `/` 前缀调用的命令，提供快捷的工作流
 ### 使用示例
 
 ```bash
+# 使用智能协调器执行任务（自动选择最优后端）
+/master-orchestrator "实现用户认证功能"
+
 # 启动 BMAD 完整工作流
 /bmad "开发一个任务管理系统"
 
