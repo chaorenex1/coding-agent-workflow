@@ -23,7 +23,7 @@ _parent = Path(__file__).parent.parent
 sys.path.insert(0, str(_parent))
 
 from executors.memex_executor_base import MemexExecutorBase
-from core.backend_orchestrator import BackendOrchestrator
+from core.backend_orchestrator import BackendOrchestrator, _get_utf8_env
 
 
 @dataclass
@@ -317,7 +317,10 @@ class CommandExecutor(MemexExecutorBase):
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout
+                timeout=self.timeout,
+                env=_get_utf8_env(),
+                encoding='utf-8',
+                errors='replace'
             )
 
             return CommandResult(

@@ -926,6 +926,7 @@ class ResourceScanner:
         elif discovered.resource_type == ResourceType.COMMAND:
             return CommandConfig(
                 name=discovered.name,
+                path=discovered.path,
                 command=discovered.config_data.get('command'),
                 enabled=discovered.enabled,
                 priority=discovered.priority,
@@ -937,6 +938,7 @@ class ResourceScanner:
         elif discovered.resource_type == ResourceType.AGENT:
             return AgentConfig(
                 name=discovered.name,
+                path=discovered.path,
                 agent_type=discovered.config_data.get('agent_type', 'general'),
                 enabled=discovered.enabled,
                 priority=discovered.priority,
@@ -950,6 +952,7 @@ class ResourceScanner:
                 name=discovered.name,
                 template=discovered.config_data.get('template', ''),
                 variables=discovered.config_data.get('variables', []),
+                path=discovered.path,
                 enabled=discovered.enabled,
                 priority=discovered.priority,
                 source=discovered.source,

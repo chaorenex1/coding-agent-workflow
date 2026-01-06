@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Cross-Backend Orchestrator - Core Library Module
 
@@ -7,7 +8,7 @@ Codex, Claude, and Gemini backends using memex-cli.
 
 Usage:
     from orchestrator import BackendOrchestrator
-    
+
     orch = BackendOrchestrator()
     result = orch.run_task("claude", "Analyze this code")
 """
@@ -22,6 +23,17 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
 from dataclasses import dataclass, field, asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+def _get_utf8_env() -> dict:
+    """获取带有 UTF-8 配置的环境变量"""
+    env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'
+    env['PYTHONUTF8'] = '1'
+    # Windows 控制台代码页
+    if sys.platform == 'win32':
+        env['PYTHONLEGACYWINDOWSSTDIO'] = '0'
+    return env
 
 # 导入事件解析器
 try:
@@ -125,7 +137,11 @@ class BackendOrchestrator:
             subprocess.run(
                 ["memex-cli", "--version"],
                 capture_output=True,
-                timeout=5
+                timeout=5,
+                shell=True,  # Windows 需要 shell=True 以继承 PATH 环境变量
+                env=_get_utf8_env(),
+                encoding='utf-8',
+                errors='replace'
             )
         except FileNotFoundError:
             raise RuntimeError(
@@ -142,7 +158,25 @@ class BackendOrchestrator:
                 f"Invalid backend: {backend}. "
                 f"Must be one of: {', '.join(self.VALID_BACKENDS)}"
             )
-    
+
+    @staticmethod
+    def _sanitize_prompt(prompt: str) -> str:
+        """
+        Sanitize prompt for command line usage on Windows.
+
+        Windows batch files cannot handle newlines in arguments.
+        This converts multi-line prompts to single-line format.
+        """
+        if not prompt:
+            return prompt
+        # 将换行符替换为空格，保持语义连贯
+        # Windows batch file 参数不支持换行符
+        sanitized = prompt.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+        # 合并连续空格
+        while '  ' in sanitized:
+            sanitized = sanitized.replace('  ', ' ')
+        return sanitized.strip()
+
     def _build_command(
         self,
         backend: str,
@@ -153,23 +187,26 @@ class BackendOrchestrator:
     ) -> List[str]:
         """Build the memex-cli command for a given backend."""
         cmd = ["memex-cli", "run", "--backend", backend]
-        
-        if backend == "codex":
-            if model:
-                cmd.extend(["--model", model])
-            if model_provider:
-                cmd.extend(["--model-provider", model_provider])
-        
-        cmd.extend(["--prompt", prompt])
+        # 预处理 prompt：Windows batch file 不支持换行符
+        sanitized_prompt = self._sanitize_prompt(prompt)
+        cmd.extend(["--prompt", sanitized_prompt])
         cmd.extend(["--stream-format", stream_format])
-        
+
         return cmd
     
-    def _execute_command(self, cmd: List[str]) -> Tuple[str, bool, Optional[str], Optional[str], Optional[EventStream]]:
+    def _execute_command(
+        self,
+        cmd: List[str],
+        input_text: Optional[str] = None
+    ) -> Tuple[str, bool, Optional[str], Optional[str], Optional[EventStream]]:
         """
         Execute a command and return (output, success, error, run_id, event_stream).
 
         Cross-platform compatible using subprocess.
+
+        Args:
+            cmd: Command and arguments list
+            input_text: Optional text to pass via stdin (for multi-line prompts)
 
         Returns:
             (stdout, success, error, run_id, event_stream)
@@ -177,9 +214,13 @@ class BackendOrchestrator:
         try:
             result = subprocess.run(
                 cmd,
+                input=input_text,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout
+                timeout=self.timeout,
+                env=_get_utf8_env(),
+                encoding='utf-8',
+                errors='replace'
             )
 
             run_id = None
@@ -195,9 +236,9 @@ class BackendOrchestrator:
         except subprocess.TimeoutExpired:
             return "", False, f"Command timed out after {self.timeout} seconds", None, None
         except FileNotFoundError:
-            return "", False, "memex-cli not found. Please ensure it is installed and in PATH."
+            return "", False, "memex-cli not found. Please ensure it is installed and in PATH.", None, None
         except Exception as e:
-            return "", False, str(e)
+            return "", False, str(e), None, None
     
     def run_task(
         self,
@@ -402,7 +443,7 @@ class BackendOrchestrator:
             return "", False
         
         cmd = ["memex-cli", "replay", "--events", events_file, "--format", output_format]
-        output, success, _ = self._execute_command(cmd)
+        output, success, _, _, _ = self._execute_command(cmd)
         return output, success
     
     def resume_run(
@@ -425,17 +466,20 @@ class BackendOrchestrator:
             TaskResult with resumed run output
         """
         self._validate_backend(backend)
-        
+
+        # 预处理 prompt：Windows batch file 不支持换行符
+        sanitized_prompt = self._sanitize_prompt(prompt)
+
         cmd = [
             "memex-cli", "resume",
             "--run-id", run_id,
             "--backend", backend,
-            "--prompt", prompt,
+            "--prompt", sanitized_prompt,
             "--stream-format", stream_format
         ]
-        
+
         start_time = time.time()
-        output, success, error = self._execute_command(cmd)
+        output, success, error, _, _ = self._execute_command(cmd)
         duration = time.time() - start_time
         
         return TaskResult(

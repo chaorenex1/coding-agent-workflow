@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 MasterOrchestrator - 总协调器
 
@@ -12,6 +13,7 @@ MasterOrchestrator - 总协调器
 
 import sys
 import os
+import io
 import re
 import logging
 from pathlib import Path
@@ -19,61 +21,137 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from enum import Enum
 
+# Windows 终端 UTF-8 支持
+if sys.platform == 'win32':
+    # 设置环境变量强制 UTF-8
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    # 重新配置 stdout/stderr 为 UTF-8
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 # 修复直接运行时的导入路径问题
-if __name__ == "__main__" and __package__ is None:
-    # 添加父目录到sys.path以支持绝对导入
-    parent_dir = str(Path(__file__).parent.parent)
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    __package__ = "orchestrator"
+_RUNNING_AS_SCRIPT = __name__ == "__main__" and __package__ is None
+
+if _RUNNING_AS_SCRIPT:
+    # 添加当前目录到sys.path以支持绝对导入
+    _current_dir = str(Path(__file__).parent)
+    if _current_dir not in sys.path:
+        sys.path.insert(0, _current_dir)
 
 # 配置logger
 logger = logging.getLogger(__name__)
 
-# 导入核心模块（现在使用orchestrator内部结构）
-from .core.event_parser import EventStream
-from .core.backend_orchestrator import BackendOrchestrator, TaskResult
+# 根据运行模式选择导入方式
+if _RUNNING_AS_SCRIPT:
+    # 直接运行脚本时使用绝对导入
+    from core.event_parser import EventStream
+    from core.backend_orchestrator import BackendOrchestrator, TaskResult
+    from core.log_manager import LogManager
+    from core.temp_file_manager import TempFileManager
 
-# V3 新增：配置和注册系统
-try:
-    from .core.config_loader import ConfigLoader, OrchestratorConfig
-    from .core.unified_registry import UnifiedRegistry, ResourceMetadata, create_registry_from_config
-    from .core.executor_factory import ExecutorFactory
-    from .core.dependency_analyzer import DependencyAnalyzer, Task, ParallelGroup
-    from .core.parallel_scheduler import ParallelScheduler, TaskResult as SchedulerTaskResult, BatchResult
-    from .core.slash_command_registry import SlashCommandRegistry, register_builtin_commands
-    from .core.slash_command import SlashCommandResult
-    V3_AVAILABLE = True
-except ImportError as e:
-    # V3组件不可用时的fallback
-    ConfigLoader = None
-    UnifiedRegistry = None
-    ExecutorFactory = None
-    DependencyAnalyzer = None
-    ParallelScheduler = None
-    SlashCommandRegistry = None
-    V3_AVAILABLE = False
+    # V3 新增：配置和注册系统
+    try:
+        from core.config_loader import ConfigLoader, OrchestratorConfig
+        from core.unified_registry import UnifiedRegistry, ResourceMetadata, create_registry_from_config, ResourceType
+        from core.executor_factory import ExecutorFactory
+        from core.dependency_analyzer import DependencyAnalyzer, Task, ParallelGroup
+        from core.parallel_scheduler import ParallelScheduler, TaskResult as SchedulerTaskResult, BatchResult
+        from core.slash_command_registry import SlashCommandRegistry, register_builtin_commands
+        from core.slash_command import SlashCommandResult, SlashCommandMetadata, SlashCommandType
+        from core.registry_persistence import RegistryPersistence
+    except ImportError as e:
+        ConfigLoader = None
+        UnifiedRegistry = None
+        ResourceType = None
+        ExecutorFactory = None
+        DependencyAnalyzer = None
+        ParallelScheduler = None
+        SlashCommandRegistry = None
+        SlashCommandResult = None
+        SlashCommandMetadata = None
+        SlashCommandType = None
+        RegistryPersistence = None
 
-# 导入执行器
-from .executors.command_executor import CommandExecutor, CommandResult
-from .executors.prompt_manager import PromptManager
-from .executors.agent_caller import AgentCaller, AgentRequest, AgentResult, AgentType
+    # 导入执行器
+    from executors.command_executor import CommandExecutor, CommandResult
+    from executors.prompt_manager import PromptManager
+    from executors.agent_caller import AgentCaller, AgentRequest, AgentResult, AgentType
 
-# 导入客户端
-try:
-    from .clients.aduib_client import AduibClient, CachedResult
-    ADUIB_AVAILABLE = True
-except ImportError:
-    AduibClient = None
-    CachedResult = None
-    ADUIB_AVAILABLE = False
+    # 导入客户端
+    try:
+        from clients.aduib_client import AduibClient, CachedResult
+        ADUIB_AVAILABLE = True
+    except ImportError:
+        AduibClient = None
+        CachedResult = None
+        ADUIB_AVAILABLE = False
 
-# Phase 1: 导入扩展的 Intent 和 ExecutionMode（包含 entity 和 candidates 字段）
-try:
-    from .analyzers.claude_intent_analyzer import Intent, ExecutionMode
-    INTENT_WITH_CANDIDATES = True
-except ImportError:
-    # Fallback：使用本地定义（向后兼容）
+    # 导入意图分析器
+    try:
+        from analyzers.claude_intent_analyzer import Intent, ExecutionMode, ClaudeIntentAnalyzer
+        INTENT_WITH_CANDIDATES = True
+        CLAUDE_ANALYZER_AVAILABLE = True
+    except ImportError:
+        INTENT_WITH_CANDIDATES = False
+        ClaudeIntentAnalyzer = None
+        CLAUDE_ANALYZER_AVAILABLE = False
+else:
+    # 作为模块导入时使用相对导入
+    from .core.event_parser import EventStream
+    from .core.backend_orchestrator import BackendOrchestrator, TaskResult
+    from .core.log_manager import LogManager
+    from .core.temp_file_manager import TempFileManager
+
+    # V3 新增：配置和注册系统
+    try:
+        from .core.config_loader import ConfigLoader, OrchestratorConfig
+        from .core.unified_registry import UnifiedRegistry, ResourceMetadata, create_registry_from_config, ResourceType
+        from .core.executor_factory import ExecutorFactory
+        from .core.dependency_analyzer import DependencyAnalyzer, Task, ParallelGroup
+        from .core.parallel_scheduler import ParallelScheduler, TaskResult as SchedulerTaskResult, BatchResult
+        from .core.slash_command_registry import SlashCommandRegistry, register_builtin_commands
+        from .core.slash_command import SlashCommandResult, SlashCommandMetadata, SlashCommandType
+        from .core.registry_persistence import RegistryPersistence
+    except ImportError as e:
+        ConfigLoader = None
+        UnifiedRegistry = None
+        ResourceType = None
+        ExecutorFactory = None
+        DependencyAnalyzer = None
+        ParallelScheduler = None
+        SlashCommandRegistry = None
+        SlashCommandResult = None
+        SlashCommandMetadata = None
+        SlashCommandType = None
+        RegistryPersistence = None
+
+    # 导入执行器
+    from .executors.command_executor import CommandExecutor, CommandResult
+    from .executors.prompt_manager import PromptManager
+    from .executors.agent_caller import AgentCaller, AgentRequest, AgentResult, AgentType
+
+    # 导入客户端
+    try:
+        from .clients.aduib_client import AduibClient, CachedResult
+        ADUIB_AVAILABLE = True
+    except ImportError:
+        AduibClient = None
+        CachedResult = None
+        ADUIB_AVAILABLE = False
+
+    # Phase 1: 导入扩展的 Intent 和 ExecutionMode
+    try:
+        from .analyzers.claude_intent_analyzer import Intent, ExecutionMode, ClaudeIntentAnalyzer
+        INTENT_WITH_CANDIDATES = True
+        CLAUDE_ANALYZER_AVAILABLE = True
+    except ImportError:
+        # Fallback：使用本地定义（向后兼容）
+        INTENT_WITH_CANDIDATES = False
+        ClaudeIntentAnalyzer = None
+        CLAUDE_ANALYZER_AVAILABLE = False
+
+# Fallback 定义（当上面的导入失败时使用）
+if not INTENT_WITH_CANDIDATES:
     class ExecutionMode(Enum):
         """执行模式枚举"""
         COMMAND = "command"
@@ -99,8 +177,6 @@ except ImportError:
         def __post_init__(self):
             if self.candidates is None:
                 self.candidates = []
-
-    INTENT_WITH_CANDIDATES = False
 
 
 class IntentAnalyzer:
@@ -619,8 +695,11 @@ class ExecutionRouter:
         if (intent.skill_hint == "multcode-dev-workflow-agent" or
             intent.complexity == "complex" and intent.task_type == "dev"):
 
-            # 使用 DevWorkflowAgent 执行5阶段工作流
-            return self.workflow_agent.run(request, verbose=False)
+            return self._execute_skill_by_namespace(
+                namespace="skill:multcode-dev-workflow-agent",
+                request=request,
+                intent=intent
+            )
 
         # 其他技能：使用增强提示词调用后端
         backend = self._select_backend_for_skill(intent)
@@ -664,19 +743,6 @@ class ExecutionRouter:
 
     def _enhance_skill_request(self, request: str, intent: Intent) -> str:
         """为技能请求添加上下文"""
-        if intent.skill_hint == "multcode-dev-workflow-agent":
-            return f"""你是一个多阶段开发流程专家。请按照以下5个阶段处理用户需求：
-
-阶段1：需求分析
-阶段2：功能设计
-阶段3：UX设计
-阶段4：开发计划
-阶段5：实现
-
-用户需求：
-{request}
-
-请开始执行。"""
 
         return request
 
@@ -755,10 +821,7 @@ class MasterOrchestrator:
 
     def __init__(
         self,
-        timeout: int = 300,
         use_remote: Optional[bool] = None,
-        aduib_url: Optional[str] = None,
-        aduib_api_key: Optional[str] = None,
         enable_cache: bool = True,
         enable_upload: bool = True,
         use_claude_intent: bool = True,
@@ -766,10 +829,9 @@ class MasterOrchestrator:
         fallback_to_rules: bool = True,
         # V3 新增参数
         config_path: Optional[Path] = None,
-        auto_discover: bool = True,
-        enable_parallel: bool = True,
-        max_parallel_workers: int = 3,
-        parallel_timeout: int = 120
+        enable_parallel: bool = False,  # 默认禁用，从配置文件读取
+        max_parallel_workers: int = 3,  # 后备值
+        parallel_timeout: int = 120  # 后备值
     ):
         """
         初始化总协调器
@@ -785,21 +847,14 @@ class MasterOrchestrator:
             intent_confidence_threshold: Claude意图识别置信度阈值
             fallback_to_rules: 低置信度或失败时是否回退到规则引擎
             config_path: V3配置文件路径（None=使用当前目录）
-            auto_discover: V3自动发现和注册资源（默认False，保持向后兼容）
-            enable_parallel: V3启用并行执行（默认False）
-            max_parallel_workers: V3最大并行工作线程数
-            parallel_timeout: V3单任务超时时间（秒）
+            enable_parallel: V3启用并行执行（后备值，配置文件优先）
+            max_parallel_workers: V3最大并行工作线程数（后备值，配置文件优先）
+            parallel_timeout: V3单任务超时时间（秒）（后备值，配置文件优先）
         """
-        # 本地组件（必需）
-        self.backend_orch = BackendOrchestrator(
-            timeout=timeout
-        )
-
         # 初始化本地缓存目录（需求1：在.memex/orchestrator下创建缓存）
         self.cache_dir = self._init_cache_directory()
 
         # 初始化日志管理器
-        from .core.log_manager import LogManager
         self.log_manager = LogManager(
             log_dir=self.cache_dir / "logs",
             console_output=False  # 避免重复输出到控制台
@@ -807,11 +862,93 @@ class MasterOrchestrator:
         self.log_manager.setup(level="INFO")
 
         # 初始化临时文件管理器
-        from .core.temp_file_manager import TempFileManager
         self.temp_file_manager = TempFileManager(
             temp_dir=self.cache_dir / "temp",
             ttl_seconds=3600  # 1小时过期
         )
+
+        # V3 配置和注册系统
+        self.config = None
+        self.registry = None
+        self.factory = None
+        self.scheduler = None
+        self.slash_registry = None  # V3.1: Slash Command Registry
+        self.enable_parallel = enable_parallel
+
+        # 初始化 aduib 配置变量（在 try 之前，确保后续可以使用）
+        import os
+        actual_aduib_url = None
+        actual_aduib_key = None
+
+        try:
+            # 1. 加载配置
+            loader = ConfigLoader(project_root=config_path)
+            self.config = loader.load()
+
+            # 2. 从配置文件读取全局设置（优先级: 环境变量 > 配置文件 > 构造函数参数）
+            actual_timeout = self.config.global_settings.get('timeout', 300) if self.config.global_settings else 300
+
+            self.backend_orch = BackendOrchestrator(timeout=actual_timeout)
+
+            # 读取 aduib 配置（优先级: 环境变量 > 配置文件）
+            config_aduib_url = self.config.global_settings.get('aduib_url') if self.config.global_settings else None
+            config_aduib_key = self.config.global_settings.get('aduib_api_key') if self.config.global_settings else None
+
+            # 环境变量 > 配置文件
+            actual_aduib_url = os.environ.get('ADUIB_URL') or config_aduib_url
+            actual_aduib_key = os.environ.get('ADUIB_API_KEY') or config_aduib_key
+
+            # 记录配置来源
+            if actual_aduib_url and actual_aduib_key:
+                url_source = "环境变量" if os.environ.get('ADUIB_URL') else "配置文件"
+                key_source = "环境变量" if os.environ.get('ADUIB_API_KEY') else "配置文件"
+                logger.info(f"使用 aduib 配置: URL来源={url_source}, API_KEY来源={key_source}")
+
+            # 3. 初始化注册表
+            self.registry = create_registry_from_config(self.config)
+
+            # 4. 初始化执行器工厂
+            self.factory = ExecutorFactory(self.backend_orch, self.registry)
+
+            # 5. 初始化并行调度器（从配置文件读取，参数作为后备）
+            # 优先级: 配置文件 > 构造函数参数
+            parallel_enabled = self.config.parallel_config.enabled if self.config.parallel_config else enable_parallel
+            parallel_max_workers = self.config.parallel_config.max_workers if self.config.parallel_config else max_parallel_workers
+            parallel_task_timeout = self.config.parallel_config.timeout_per_task if self.config.parallel_config else parallel_timeout
+
+            self.enable_parallel = parallel_enabled
+
+            if parallel_enabled:
+                self.scheduler = ParallelScheduler(
+                    factory=self.factory,
+                    max_workers=parallel_max_workers,
+                    timeout_per_task=parallel_task_timeout
+                )
+                logger.info(f"并行调度器已启用: max_workers={parallel_max_workers}, timeout={parallel_task_timeout}s")
+
+            # 6. 初始化 Slash Command Registry (V3.1)
+            self.slash_registry = SlashCommandRegistry(orchestrator=self)
+            register_builtin_commands(self.slash_registry)
+
+            # 7. 注册自定义 Slash Commands (从配置)
+            self._register_custom_slash_commands()
+
+            # 8. 创建 ExecutionRouter（传入 registry）
+            self.router = ExecutionRouter(
+                backend_orch=self.backend_orch,
+                registry=self.registry
+            )
+
+        except Exception as e:
+            print(f"[警告] V3自动发现初始化失败: {e}")
+            print("[提示] 将使用传统模式运行")
+            self.config = None
+            self.registry = None
+            self.factory = None
+            self.scheduler = None
+            self.slash_registry = None
+            # 创建不带 registry 的 ExecutionRouter（向后兼容）
+            self.router = ExecutionRouter(self.backend_orch)
 
         # 意图分析器配置
         self.use_claude_intent = use_claude_intent
@@ -822,17 +959,22 @@ class MasterOrchestrator:
 
         # 创建Claude分析器（如果启用）
         self.claude_analyzer = None
-        if use_claude_intent:
+        if use_claude_intent and CLAUDE_ANALYZER_AVAILABLE:
             try:
-                from .analyzers.claude_intent_analyzer import ClaudeIntentAnalyzer
                 self.claude_analyzer = ClaudeIntentAnalyzer(
                     backend_orch=self.backend_orch,
                     confidence_threshold=intent_confidence_threshold
                 )
+                # 传递 registry 给 ClaudeIntentAnalyzer
+                self.claude_analyzer.registry = self.registry
             except Exception as e:
                 print(f"[警告] 无法初始化Claude意图分析器: {e}")
                 print("[提示] 将使用规则引擎作为fallback")
                 self.use_claude_intent = False
+        elif use_claude_intent and not CLAUDE_ANALYZER_AVAILABLE:
+            print("[警告] ClaudeIntentAnalyzer 不可用")
+            print("[提示] 将使用规则引擎作为fallback")
+            self.use_claude_intent = False
 
         # 向后兼容：默认使用规则引擎
         self.analyzer = self.rule_analyzer
@@ -850,8 +992,8 @@ class MasterOrchestrator:
         if use_remote and ADUIB_AVAILABLE:
             try:
                 self.aduib_client = AduibClient(
-                    base_url=aduib_url,
-                    api_key=aduib_api_key,
+                    base_url=actual_aduib_url,
+                    api_key=actual_aduib_key,
                     timeout=30
                 )
             except Exception as e:
@@ -863,85 +1005,17 @@ class MasterOrchestrator:
             print("[提示] 安装: pip install requests")
             print("[提示] 将以纯本地模式运行")
 
-        # V3 配置和注册系统（可选）
-        self.config = None
-        self.registry = None
-        self.factory = None
-        self.scheduler = None
-        self.slash_registry = None  # V3.1: Slash Command Registry
-        self.auto_discover = auto_discover
-        self.enable_parallel = enable_parallel
-
-        if auto_discover and V3_AVAILABLE:
-            try:
-                # 1. 加载配置
-                loader = ConfigLoader(project_root=config_path or Path.cwd())
-                self.config = loader.load()
-
-                # 2. 初始化注册表
-                self.registry = create_registry_from_config(self.config)
-
-                # 3. 初始化执行器工厂
-                self.factory = ExecutorFactory(self.backend_orch, self.registry)
-
-                # 4. 初始化并行调度器（如果启用）
-                if enable_parallel:
-                    self.scheduler = ParallelScheduler(
-                        factory=self.factory,
-                        max_workers=max_parallel_workers,
-                        timeout_per_task=parallel_timeout
-                    )
-
-                # 5. 初始化 Slash Command Registry (V3.1)
-                self.slash_registry = SlashCommandRegistry(orchestrator=self)
-                register_builtin_commands(self.slash_registry)
-
-                # 6. 注册自定义 Slash Commands (从配置)
-                self._register_custom_slash_commands()
-
-                # 7. Phase 2: 创建 ExecutionRouter（传入 registry）
-                self.router = ExecutionRouter(
-                    backend_orch=self.backend_orch,
-                    registry=self.registry
-                )
-
-                # Phase 1: 传递 registry 给 ClaudeIntentAnalyzer
-                if self.claude_analyzer:
-                    self.claude_analyzer.registry = self.registry
-
-            except Exception as e:
-                print(f"[警告] V3自动发现初始化失败: {e}")
-                print("[提示] 将使用传统模式运行")
-                self.config = None
-                self.registry = None
-                self.factory = None
-                self.scheduler = None
-                self.slash_registry = None
-                self.auto_discover = False
-                # 创建不带 registry 的 ExecutionRouter（向后兼容）
-                self.router = ExecutionRouter(self.backend_orch)
-
-        elif auto_discover and not V3_AVAILABLE:
-            print("[警告] V3组件不可用（可能缺少依赖）")
-            print("[提示] 将使用传统模式运行")
-            self.auto_discover = False
-            # 创建不带 registry 的 ExecutionRouter（向后兼容）
-            self.router = ExecutionRouter(self.backend_orch)
-
-        # Phase 2: 如果还没有创建 router（非 V3 模式），创建一个不带 registry 的
-        if not self.router:
-            self.router = ExecutionRouter(self.backend_orch)
-
-    def process(self, request: str, verbose: bool = False) -> Any:
+    def process(self, request: str, verbose: bool = False, dry_run: bool = False) -> Any:
         """
         处理用户请求（支持 Slash Command 和自然语言）
 
         Args:
             request: 用户请求文本（可以是 /command 或自然语言）
             verbose: 是否输出详细信息
+            dry_run: 仅显示意图分析和执行计划，不实际执行
 
         Returns:
-            执行结果
+            执行结果（dry_run 时返回意图分析结果字典）
         """
         # 0. 记录任务开始
         self.log_manager.log_task_start(request, "unknown")
@@ -976,30 +1050,59 @@ class MasterOrchestrator:
                     print(f"  并行理由: {intent.parallel_reasoning}")
             print()
 
-        # 2. 任务分级（需求2：Task Tiering Expert Agent）
-        task_tier = None
-        if self.task_tiering_agent:
-            try:
-                task_tier = self.task_tiering_agent.analyze(request, intent, verbose)
+        # Dry-run 模式：仅显示执行计划，不实际执行
+        if dry_run:
+            backend = self._select_backend_for_intent(intent)
+            sanitized_prompt = self.backend_orch._sanitize_prompt(request)
 
-                if verbose:
-                    print(f"[任务分级]")
-                    print(f"  优先级: {task_tier.priority.value}")
-                    print(f"  预估时间: {task_tier.estimated_time_seconds}s")
-                    print(f"  资源需求: {task_tier.resource_requirement.value}")
-                    print(f"  可并行化: {task_tier.parallelization_potential:.2f}")
-                    print(f"  推荐后端: {task_tier.recommended_backend}")
-                    print(f"  推荐模式: {task_tier.recommended_mode}")
-                    print(f"  置信度: {task_tier.confidence:.2f}")
-                    if task_tier.reasoning:
-                        print(f"  推理: {task_tier.reasoning}")
-                    print()
-            except Exception as e:
-                if verbose:
-                    print(f"[警告] 任务分级失败: {e}")
-                    print()
+            print("[Dry-Run 模式] 执行计划预览")
+            print("=" * 60)
+            print(f"  原始请求: {request[:100]}{'...' if len(request) > 100 else ''}")
+            print(f"  处理后请求: {sanitized_prompt[:100]}{'...' if len(sanitized_prompt) > 100 else ''}")
+            print(f"  选择后端: {backend}")
+            print(f"  执行模式: {intent.mode.value}")
+            print(f"  任务类型: {intent.task_type}")
+            print(f"  复杂度: {intent.complexity}")
+            print(f"  置信度: {intent.confidence:.2f}")
+            if intent.backend_hint:
+                print(f"  后端提示: {intent.backend_hint}")
+            if intent.skill_hint:
+                print(f"  技能提示: {intent.skill_hint}")
+            if hasattr(intent, 'enable_parallel') and intent.enable_parallel:
+                print(f"  并行执行: 是")
+            print(f"  超时时间: {self.backend_orch.timeout}s")
+            print(f"  远程缓存: {'启用' if self.enable_cache else '禁用'}")
+            print(f"  结果上传: {'启用' if self.enable_upload else '禁用'}")
+            if self.config:
+                # 显示通过 git 检测到的项目根目录
+                from core.config_loader import find_git_root
+                git_root = find_git_root()
+                if git_root:
+                    print(f"  项目根目录: {git_root} (via git)")
+            print("=" * 60)
+            print("\n[Dry-Run] 未执行任何实际操作")
 
-        # 3. 查询远程缓存（如果启用）
+            # 返回干运行结果字典
+            return {
+                "dry_run": True,
+                "request": request,
+                "sanitized_prompt": sanitized_prompt,
+                "intent": {
+                    "mode": intent.mode.value,
+                    "task_type": intent.task_type,
+                    "complexity": intent.complexity,
+                    "confidence": intent.confidence,
+                    "backend_hint": intent.backend_hint,
+                    "skill_hint": intent.skill_hint,
+                    "enable_parallel": getattr(intent, 'enable_parallel', False)
+                },
+                "backend": backend,
+                "timeout": self.backend_orch.timeout,
+                "cache_enabled": self.enable_cache,
+                "upload_enabled": self.enable_upload
+            }
+
+        # 2. 查询远程缓存（如果启用）
         if self.aduib_client and self.enable_cache:
             backend = self._select_backend_for_intent(intent)
             cached = self.aduib_client.query_cache(
@@ -1053,7 +1156,7 @@ class MasterOrchestrator:
                     return self._batch_result_to_task_result(batch_result, request, intent)
                 elif verbose:
                     print(f"[警告] 并行调度器未启用，将串行执行")
-                    print(f"  提示: 初始化时设置 enable_parallel=True, auto_discover=True")
+                    print(f"  提示: 初始化时设置 enable_parallel=True")
                     print()
 
         # 4. 本地执行（串行）
@@ -1180,8 +1283,6 @@ class MasterOrchestrator:
         # 只上传成功的 TaskResult 和 WorkflowResult
         if isinstance(result, TaskResult):
             return result.success
-        elif isinstance(result, WorkflowResult):
-            return result.success
         else:
             return False
 
@@ -1205,23 +1306,6 @@ class MasterOrchestrator:
                     error=result.error,
                     run_id=result.run_id if hasattr(result, 'run_id') else None,
                     duration_seconds=result.duration_seconds if hasattr(result, 'duration_seconds') else None
-                )
-            elif isinstance(result, WorkflowResult):
-                # 工作流结果：保存最终输出
-                final_output = "\n\n".join([
-                    f"=== 阶段 {i+1}: {stage.stage.value} ===\n{stage.output}"
-                    for i, stage in enumerate(result.stages)
-                ])
-
-                success = self.aduib_client.save_task_result(
-                    request=request,
-                    mode=intent.mode.value,
-                    backend=backend,
-                    success=result.success,
-                    output=final_output,
-                    error=None,
-                    run_id=None,
-                    duration_seconds=result.total_duration_seconds
                 )
             else:
                 # 其他类型结果
@@ -1269,8 +1353,6 @@ class MasterOrchestrator:
         Returns:
             BatchResult批处理结果
         """
-        if not V3_AVAILABLE or not self.factory:
-            raise RuntimeError("V3批处理功能未启用（需要 auto_discover=True）")
 
         if enable_parallel is None:
             enable_parallel = self.enable_parallel
@@ -1401,12 +1483,8 @@ class MasterOrchestrator:
         Returns:
             ResourceMetadata列表
         """
-        if not V3_AVAILABLE or not self.registry:
-            raise RuntimeError("V3资源注册功能未启用（需要 auto_discover=True）")
 
         # 转换type_filter字符串为ResourceType
-        from .core.unified_registry import ResourceType
-
         rt_filter = None
         if type_filter:
             try:
@@ -1427,12 +1505,10 @@ class MasterOrchestrator:
         Args:
             verbose: 详细输出
         """
-        if not V3_AVAILABLE or not self.auto_discover:
-            raise RuntimeError("V3配置重载功能未启用（需要 auto_discover=True）")
 
         try:
             # 重新加载配置
-            loader = ConfigLoader(project_root=Path.cwd())
+            loader = ConfigLoader(project_root=None)
             self.config = loader.load()
 
             # 清空并重新填充注册表
@@ -1470,7 +1546,7 @@ class MasterOrchestrator:
             return SlashCommandResult(
                 command=request,
                 success=False,
-                error="Slash Command system not available (enable with auto_discover=True)"
+                error="Slash Command system not available"
             )
 
         # 解析命令和参数
@@ -1506,8 +1582,6 @@ class MasterOrchestrator:
         """
         if not self.config or not self.config.slash_commands:
             return
-
-        from .core.slash_command import SlashCommandMetadata, SlashCommandType
 
         # 类型映射
         type_map = {
@@ -1728,8 +1802,6 @@ class MasterOrchestrator:
         Returns:
             发现统计信息
         """
-        if not V3_AVAILABLE or not self.registry:
-            raise RuntimeError("Auto-discovery requires V3 (auto_discover=True)")
 
         # 重新加载配置并注册资源
         self.reload_config(verbose=verbose)
@@ -1752,10 +1824,7 @@ class MasterOrchestrator:
         Returns:
             Skill列表
         """
-        if not V3_AVAILABLE or not self.registry:
-            raise RuntimeError("list-skills requires V3 (auto_discover=True)")
 
-        from .core.unified_registry import ResourceType
         skills = self.registry.list_resources(type_filter=ResourceType.SKILL)
 
         if verbose:
@@ -1773,7 +1842,7 @@ class MasterOrchestrator:
             Slash Command列表
         """
         if not self.slash_registry:
-            raise RuntimeError("Slash commands not available (auto_discover=True required)")
+            raise RuntimeError("Slash commands not available")
 
         commands = self.slash_registry.list_commands()
 
@@ -1821,7 +1890,7 @@ class MasterOrchestrator:
             统计信息字典
         """
         stats = {
-            "v3_enabled": V3_AVAILABLE and self.auto_discover,
+            "v3_enabled": self.auto_discover,
             "parallel_enabled": self.enable_parallel,
         }
 
@@ -1867,19 +1936,9 @@ class MasterOrchestrator:
         }
 
         try:
-            # 检查 V3 和 auto_discover 是否启用
-            if not V3_AVAILABLE or not self.auto_discover:
-                result["message"] = "Registry cache not available (requires auto_discover=True)"
-                if verbose:
-                    print(f"\n[清除缓存失败]")
-                    print(f"  {result['message']}")
-                return result
 
             # 获取 ConfigLoader 中的 persistence 实例
             # 注意：ConfigLoader 在初始化时创建，我们需要访问它
-            from .core.registry_persistence import RegistryPersistence
-            from pathlib import Path
-
             registry_dir = Path.home() / ".memex" / "orchestrator" / "registry"
             persistence = RegistryPersistence(registry_dir=registry_dir)
 
@@ -1933,57 +1992,30 @@ def main():
 
     parser = argparse.ArgumentParser(description="MasterOrchestrator - 智能AI任务协调器")
     parser.add_argument("request", help="用户请求")
-    parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
+    parser.add_argument("--verbose", "-v", action="store_true", help="启用详细输出")
+    parser.add_argument("--dry-run", "-n", action="store_true", help="仅显示意图分析和执行计划，不实际执行")
 
     args = parser.parse_args()
 
-    # 环境变量
-    use_remote = False
-    enable_cache = False
-    enable_upload = False
-    aduib_url = os.environ.get("ADUIB_URL")
-    aduib_api_key = os.environ.get("ADUIB_API_KEY")
-    if aduib_url.strip() and aduib_api_key.strip():
-        use_remote = True
-        enable_cache = True
-        enable_upload = True
-    timeout = int(os.environ.get("ORCHESTRATOR_TIMEOUT", "300"))
-
     # 创建协调器
     orch = MasterOrchestrator(
-        timeout=timeout,
-        use_remote=use_remote,
-        aduib_url=aduib_url,
-        aduib_api_key=aduib_api_key,
-        enable_cache=enable_cache,
-        enable_upload=enable_upload
+        use_remote=True,
+        enable_cache=True,
+        enable_upload=True
     )
 
     # 处理请求
     print(f"[MasterOrchestrator] 处理请求: {args.request}\n")
 
     try:
-        result = orch.process(args.request, verbose=args.verbose)
+        result = orch.process(args.request, verbose=args.verbose, dry_run=args.dry_run)
+
+        # Dry-run 模式直接返回
+        if args.dry_run:
+            return
 
         # 输出结果
-        if isinstance(result, WorkflowResult):
-            # 工作流结果
-            print(f"\n[工作流执行完成]")
-            print(f"成功: {result.success}")
-            print(f"完成阶段: {result.completed_stages}/5")
-            print(f"总耗时: {result.total_duration_seconds:.2f}s")
-
-            if not result.success:
-                print(f"失败阶段: {result.failed_stage.value if result.failed_stage else 'N/A'}")
-
-            print(f"\n阶段详情:")
-            for i, stage_result in enumerate(result.stages, 1):
-                status = "[OK]" if stage_result.success else "[FAIL]"
-                print(f"  {status} 阶段 {i}: {stage_result.stage.value} ({stage_result.duration_seconds:.2f}s)")
-                if not stage_result.success and stage_result.error:
-                    print(f"       错误: {stage_result.error}")
-
-        elif isinstance(result, TaskResult):
+        if isinstance(result, TaskResult):
             # 单次任务结果
             print(f"\n[执行完成]")
             print(f"后端: {result.backend}")

@@ -1,5 +1,43 @@
 # Orchestrator V3 配置文件模板
-# 版本: 3.1 (支持 Slash Commands)
+# 版本: 3.1 (支持 Slash Commands + 自动发现 + 注册表缓存)
+#
+# ============================================================================
+# V3.1 新特性
+# ============================================================================
+# 1. 自动资源发现 (Auto-Discovery)
+#    - 自动扫描 skills/、agents/、commands/、prompts/ 目录
+#    - 支持 SKILL.md、AGENT.md、COMMAND.md、PROMPT.md 标记文件
+#    - 三层配置优先级: project > user > builtin
+#
+# 2. 注册表持久化 (Registry Persistence) - 自动启用
+#    - 缓存扫描结果到 ~/.memex/orchestrator/registry/
+#    - 文件哈希校验，自动检测变更
+#    - TTL 过期机制，默认 1 小时
+#    - 显著提升启动速度
+#    - 注意: 当前硬编码，暂不支持配置文件自定义
+#
+# 3. 扫描统计合并
+#    - 合并 user 和 project 两次扫描的统计信息
+#    - 提供详细的资源来源追踪
+#
+# 4. Git 项目根目录检测
+#    - 自动检测 git 仓库根目录作为项目根
+#    - 支持手动指定 project_root
+#
+# 5. 增强的配置对象
+#    - CommandConfig、AgentConfig、PromptConfig 新增 path 字段
+#    - 支持更精确的资源定位和管理
+#
+# 6. 配置模板清理
+#    - 移除未实现的配置节（logging, cache, security）
+#    - 移除未使用的 auto_discovery 子配置（scan_user, scan_project）
+#    - 模板仅包含实际支持的配置项
+#
+# 7. 并行配置支持 (V3.1)
+#    - parallel 配置现在从配置文件读取
+#    - 优先级: 配置文件 > 构造函数参数
+#    - 支持 enabled, max_workers, timeout_per_task
+# ============================================================================
 
 version: "3.1"
 
@@ -7,17 +45,21 @@ version: "3.1"
 # 全局配置
 # ============================================================================
 global:
-  # 默认后端 (claude/gemini/codex)
-  default_backend: claude
-
   # 默认超时 (秒)
   timeout: 300
 
-  # 是否启用详细日志
-  verbose: false
+  # 是否启用资源自动发现（推荐开启）
+  enable_auto_discovery: true
 
-  # 是否启用 V3 自动发现
-  enable_v3: true
+  # 项目根目录（空值则自动检测 git 仓库根目录）
+  project_root: null
+
+  # 注册表缓存有效期（秒），默认 3600 秒（1小时）
+  cache_ttl: 3600
+
+  # aduib-ai 服务配置（优先级: 环境变量 > 配置文件 > 构造函数参数）
+  aduib_url: null  # aduib-ai 服务地址，空值则使用环境变量 ADUIB_URL
+  aduib_api_key: null  # aduib-ai API 密钥，空值则使用环境变量 ADUIB_API_KEY
 
 # ============================================================================
 # Slash Command 配置 (V3.1 新增)
@@ -131,18 +173,32 @@ slash_commands:
 # Skills 配置
 # ============================================================================
 skills:
-  # Skills 扫描路径
+  # 自动发现配置 (V3.1)
+  # 当 global.enable_auto_discovery=true 时，自动扫描以下目录：
+  # - ~/.claude/skills/       (User level)
+  # - .claude/skills/          (Project level)
+  # - skills/                  (Builtin level)
+  #
+  # 支持的 Skill 结构：
+  # 1. SKILL.md 标记文件 (推荐)
+  # 2. skill.yaml 配置文件
+  # 3. Python 入口 (*.py)
+  #
+  # 扫描优先级: project > user > builtin
+  # 注意: 自动发现通过 global.enable_auto_discovery 控制，无需额外配置
+
+  # Skills 扫描路径 (仅用于 enable_auto_discovery=false 时)
   scan_paths:
     - ./skills/*.yaml
     - ./skills/*/*.yaml
     - ~/.claude/skills/*.yaml
 
-  # 手动注册 Skills
+  # 手动注册 Skills（覆盖自动发现的同名资源）
   manual:
     - name: code-review
       path: ./skills/code-review/skill.yaml
       enabled: true
-      priority: 100
+      priority: 100  # 高优先级覆盖自动发现
 
     - name: api-document-generator
       path: ./skills/api-document-generator/skill.yaml
@@ -192,6 +248,12 @@ commands:
 # Agents 配置
 # ============================================================================
 agents:
+  # 自动发现配置 (V3.1)
+  # 当 global.enable_auto_discovery=true 时，自动扫描包含 AGENT.md 标记的目录：
+  # - agents/*/AGENT.md
+  # - .claude/agents/*/AGENT.md
+  # 注意: 自动发现通过 global.enable_auto_discovery 控制，无需额外配置
+
   # 默认 Agent 配置
   default:
     model: claude-3-5-sonnet-20241022
@@ -211,6 +273,12 @@ agents:
 # Prompts 配置
 # ============================================================================
 prompts:
+  # 自动发现配置 (V3.1)
+  # 当 global.enable_auto_discovery=true 时，自动扫描包含 PROMPT.md 标记的目录：
+  # - prompts/*/PROMPT.md
+  # - .claude/prompts/*/PROMPT.md
+  # 注意: 自动发现通过 global.enable_auto_discovery 控制，无需额外配置
+
   # 自定义 Prompt 模板
   templates:
     - name: custom-review
@@ -227,7 +295,7 @@ prompts:
       description: "自定义代码审查模板"
 
 # ============================================================================
-# 并行执行配置 (Phase 7 - 未来支持)
+# 并行执行配置 (V3.1 已支持)
 # ============================================================================
 parallel:
   # 是否启用并行执行
@@ -239,53 +307,62 @@ parallel:
   # 每个任务的超时时间 (秒)
   timeout_per_task: 120
 
-  # 允许并行的模式
-  allowed_modes:
-    - command
-    - backend
-
-  # 必须串行的模式
-  sequential_modes:
-    - skill
+# ============================================================================
+# 注册表持久化 (V3.1)
+# ============================================================================
+# 注意: Registry 配置当前硬编码在代码中，暂不支持通过配置文件修改
+# 默认配置:
+#   - 目录: ~/.memex/orchestrator/registry
+#   - TTL: 3600 秒 (1 小时)
+#   - 自动启用
+#   - 文件修改后自动失效
+#
+# 清理缓存:
+#   删除 ~/.memex/orchestrator/registry/ 目录下的文件
 
 # ============================================================================
-# 日志配置
+# 使用指南
 # ============================================================================
-logging:
-  # 日志级别 (DEBUG/INFO/WARNING/ERROR)
-  level: INFO
-
-  # 日志输出路径
-  file: ./logs/orchestrator.log
-
-  # 是否输出到控制台
-  console: true
-
-  # 日志格式
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
+#
+# 1. 启用自动发现 (推荐)
+#    设置 global.enable_auto_discovery: true
+#    自动扫描目录，无需手动配置每个资源
+#
+# 2. 目录结构推荐
+#    项目级别:
+#      .claude/
+#        ├── skills/           # 项目专属 skills
+#        ├── agents/           # 项目专属 agents
+#        ├── commands/         # 项目专属 slash commands
+#        └── prompts/          # 项目专属 prompts
+#
+#    用户级别:
+#      ~/.claude/
+#        ├── skills/           # 用户全局 skills
+#        ├── agents/           # 用户全局 agents
+#        └── prompts/          # 用户全局 prompts
+#
+# 3. 资源标记文件
+#    在资源目录中创建标记文件:
+#    - SKILL.md    (标识 Skill)
+#    - AGENT.md    (标识 Agent)
+#    - COMMAND.md  (标识 Command)
+#    - PROMPT.md   (标识 Prompt)
+#
+# 4. 优先级规则
+#    - project (100) > user (50) > builtin (10)
+#    - 手动配置的资源优先级可自定义
+#    - 高优先级资源覆盖低优先级同名资源
+#
+# 5. 注册表缓存 (自动启用)
+#    - 首次扫描后自动缓存到 ~/.memex/orchestrator/registry/
+#    - 文件修改自动失效重新扫描
+#    - TTL: 3600 秒 (1 小时)
+#    - 清理缓存: 删除 last_scan.json 和 resources_snapshot.json
+#
+# 6. 调试技巧
+#    - 使用 --verbose 或 -v 查看详细日志
+#    - 使用 --dry-run 或 -n 预览执行计划
+#    - 检查扫描统计: Auto-discovered: X skills, Y commands...
+#
 # ============================================================================
-# 缓存配置
-# ============================================================================
-cache:
-  # 是否启用缓存
-  enabled: false
-
-  # 缓存目录
-  directory: ./.cache/orchestrator
-
-  # 缓存过期时间 (秒)
-  ttl: 3600
-
-# ============================================================================
-# 安全配置
-# ============================================================================
-security:
-  # 是否启用安全模式 (阻止危险命令)
-  safe_mode: true
-
-  # 是否需要确认危险操作
-  require_confirmation: true
-
-  # 允许的最大文件大小 (MB)
-  max_file_size: 10

@@ -66,7 +66,8 @@ class RegistryPersistence:
         self,
         resources: Dict[str, List[Any]],
         file_paths: List[str],
-        scan_duration_ms: int
+        scan_duration_ms: int,
+        total_discovered: Dict[str, int]={}
     ):
         """
         保存扫描结果
@@ -87,10 +88,10 @@ class RegistryPersistence:
             # 2. 保存扫描元数据
             last_scan = {
                 "timestamp": datetime.now().isoformat(),
-                "skills_count": len(resources.get("skills", [])),
-                "commands_count": len(resources.get("commands", [])),
-                "agents_count": len(resources.get("agents", [])),
-                "prompts_count": len(resources.get("prompts", [])),
+                "skills_count": total_discovered.get("skills", len(resources.get("skill", []))),
+                "commands_count": total_discovered.get("commands", len(resources.get("commands", []))),
+                "agents_count": total_discovered.get("agents", len(resources.get("agents", []))),
+                "prompts_count": total_discovered.get("prompts", len(resources.get("prompts", []))),
                 "scan_duration_ms": scan_duration_ms,
                 "file_hashes": file_hashes,
                 "ttl_seconds": self.ttl_seconds
@@ -115,7 +116,7 @@ class RegistryPersistence:
             )
 
         except Exception as e:
-            logger.warning(f"保存注册表快照失败: {e}")
+            logger.info(f"保存注册表快照失败: {e}")
 
     def load_cached_resources(
         self,

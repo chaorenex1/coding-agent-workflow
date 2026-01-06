@@ -12,6 +12,7 @@ Priority: Project > User > Builtin
 import os
 import yaml
 import json
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
@@ -55,6 +56,7 @@ class CommandConfig:
     """Configuration for a command resource."""
     name: str
     command: Optional[str] = None  # For aliases
+    path: Optional[Path] = None
     enabled: bool = True
     priority: int = 50
     source: str = "builtin"
@@ -67,6 +69,7 @@ class AgentConfig:
     """Configuration for an agent resource."""
     name: str
     agent_type: str  # "explore", "plan", "general"
+    path: Optional[Path] = None
     enabled: bool = True
     priority: int = 50
     source: str = "builtin"
@@ -79,6 +82,7 @@ class PromptConfig:
     """Configuration for a prompt template resource."""
     name: str
     template: str
+    path: Optional[Path] = None
     variables: List[str] = field(default_factory=list)
     enabled: bool = True
     priority: int = 50
@@ -133,6 +137,39 @@ class OrchestratorConfig:
     slash_commands: Dict[str, SlashCommandConfig] = field(default_factory=dict)  # V3.1
 
 
+def find_git_root(start_path: Optional[Path] = None) -> Optional[Path]:
+    """
+    Find the git repository root directory.
+
+    Uses 'git rev-parse --show-toplevel' to find the root.
+    Falls back to current directory if not in a git repository.
+
+    Args:
+        start_path: Starting directory for search. Defaults to current directory.
+
+    Returns:
+        Path to git root, or None if not in a git repository.
+    """
+    cwd = Path(start_path) if start_path else Path.cwd()
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            cwd=str(cwd),
+            timeout=5
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            return Path(result.stdout.strip())
+
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        logger.debug(f"Git root detection failed: {e}")
+
+    return None
+
+
 class ConfigLoader:
     """
     Configuration loader with three-tier priority system.
@@ -148,11 +185,19 @@ class ConfigLoader:
         Initialize ConfigLoader.
 
         Args:
-            project_root: Root directory of the project. Defaults to current directory.
+            project_root: Root directory of the project. If None, attempts to detect
+                          git repository root, falling back to current directory.
             enable_auto_discovery: Enable automatic resource discovery via directory scanning
         """
-        self.project_root = Path(project_root) if project_root else Path.cwd()
+        if project_root:
+            self.project_root = Path(project_root)
+        else:
+            # 优先使用 git 仓库根目录
+            git_root = find_git_root()
+            self.project_root = git_root if git_root else Path.cwd()
+        self.project_config_dir = self.project_root / ".claude"
         self.user_config_dir = Path.home() / ".claude"
+        self.use_orchestrator_dir = Path.home() / ".memex" / "orchestrator"
         self.enable_auto_discovery = enable_auto_discovery
 
         # Lazy import ResourceScanner to avoid circular dependency
@@ -172,20 +217,67 @@ class ConfigLoader:
             try:
                 from .registry_persistence import RegistryPersistence
                 registry_dir = Path.home() / ".memex" / "orchestrator" / "registry"
-                self.persistence = RegistryPersistence(registry_dir=registry_dir, ttl_seconds=3600)
-                logger.debug("RegistryPersistence initialized for resource caching")
+
+                # Read cache_ttl from config files (project > user > default)
+                cache_ttl = self._read_cache_ttl_from_configs()
+
+                self.persistence = RegistryPersistence(registry_dir=registry_dir, ttl_seconds=cache_ttl)
+                if cache_ttl != 3600:
+                    logger.info(f"使用配置文件的 cache_ttl: {cache_ttl}s (默认: 3600s)")
+                logger.debug(f"RegistryPersistence initialized with TTL={cache_ttl}s")
             except ImportError as e:
                 logger.warning(f"RegistryPersistence not available: {e}")
 
         # Determine builtin skills directory
-        # From orchestrator/core/config_loader.py → orchestrator/core → orchestrator → project_root
-        self.builtin_skills_dir = Path(__file__).parent.parent.parent / "skills" / "memex-cli" / "skills"
+        self.builtin_skills_dir = Path(__file__).parent.parent
 
         logger.debug(f"ConfigLoader initialized:")
         logger.debug(f"  Project root: {self.project_root}")
         logger.debug(f"  User config dir: {self.user_config_dir}")
         logger.debug(f"  Builtin skills dir: {self.builtin_skills_dir}")
         logger.debug(f"  Auto-discovery: {self.enable_auto_discovery}")
+
+    def _read_cache_ttl_from_configs(self) -> int:
+        """
+        Read cache_ttl from project or user config files.
+
+        Returns:
+            cache_ttl value from config file, or 3600 (default) if not found.
+            Priority: project > user > default
+        """
+        import yaml
+
+        # Try project config first
+        project_config_file = self.project_config_dir / "orchestrator.yaml"
+        if project_config_file.exists():
+            try:
+                with open(project_config_file, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                    if data and 'global' in data and 'cache_ttl' in data['global']:
+                        ttl = data['global']['cache_ttl']
+                        if isinstance(ttl, int) and ttl > 0:
+                            logger.debug(f"Using cache_ttl from project config: {ttl}s")
+                            return ttl
+            except Exception as e:
+                logger.debug(f"Failed to read cache_ttl from project config: {e}")
+
+        # Try user config
+        user_config_file = self.user_config_dir / "orchestrator.yaml"
+        if user_config_file.exists():
+            try:
+                with open(user_config_file, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                    if data and 'global' in data and 'cache_ttl' in data['global']:
+                        ttl = data['global']['cache_ttl']
+                        if isinstance(ttl, int) and ttl > 0:
+                            logger.debug(f"Using cache_ttl from user config: {ttl}s")
+                            return ttl
+            except Exception as e:
+                logger.debug(f"Failed to read cache_ttl from user config: {e}")
+
+        # Default
+        logger.debug("Using default cache_ttl: 3600s")
+        return 3600
 
     def load(self) -> OrchestratorConfig:
         """
@@ -194,6 +286,9 @@ class ConfigLoader:
         Returns:
             Merged OrchestratorConfig with project-level taking highest priority.
         """
+        import time
+        start_time = time.time()
+
         logger.info("Loading orchestrator configurations...")
 
         # 1. Load builtin configuration
@@ -202,12 +297,12 @@ class ConfigLoader:
                     f"{len(builtin_config.commands)} commands")
 
         # 2. Load user-level configuration
-        user_config = self._load_user_config()
+        user_config, user_stats, user_files = self._load_user_config()
         logger.debug(f"Loaded user config: {len(user_config.skills)} skills, "
                     f"{len(user_config.commands)} commands")
 
         # 3. Load project-level configuration
-        project_config = self._load_project_config()
+        project_config, project_stats, project_files = self._load_project_config()
         logger.debug(f"Loaded project config: {len(project_config.skills)} skills, "
                     f"{len(project_config.commands)} commands")
 
@@ -221,10 +316,42 @@ class ConfigLoader:
             for error in errors:
                 logger.warning(f"  - {error}")
 
+        # 6. Log combined discovery statistics
+        total_discovered = {
+            "skills": user_stats["skills"] + project_stats["skills"],
+            "commands": user_stats["commands"] + project_stats["commands"],
+            "agents": user_stats["agents"] + project_stats["agents"],
+            "prompts": user_stats["prompts"] + project_stats["prompts"]
+        }
+        if any(v > 0 for v in total_discovered.values()):
+            logger.info(
+                f"Auto-discovered: {total_discovered['skills']} skills, "
+                f"{total_discovered['commands']} commands, "
+                f"{total_discovered['agents']} agents, "
+                f"{total_discovered['prompts']} prompts "
+                f"(user: {user_stats['skills']}/{user_stats['commands']}/{user_stats['agents']}/{user_stats['prompts']}, "
+                f"project: {project_stats['skills']}/{project_stats['commands']}/{project_stats['agents']}/{project_stats['prompts']})"
+            )
+
         logger.info(f"Configuration loaded successfully: {len(merged_config.skills)} skills, "
                    f"{len(merged_config.commands)} commands, "
                    f"{len(merged_config.agents)} agents, "
                    f"{len(merged_config.prompts)} prompts")
+
+        # 7. Save combined scan results to cache (if persistence is available)
+        if self.persistence and any(v > 0 for v in total_discovered.values()):
+            scan_duration_ms = int((time.time() - start_time) * 1000)
+            all_files = user_files + project_files
+
+            # Convert merged config to serializable format for caching
+            combined_resources = {
+                "skill": [vars(skill) for skill in merged_config.skills.values()],
+                "command": [vars(cmd) for cmd in merged_config.commands.values()],
+                "agent": [vars(agent) for agent in merged_config.agents.values()],
+                "prompt": [vars(prompt) for prompt in merged_config.prompts.values()]
+            }
+
+            self.persistence.save_scan_result(combined_resources, all_files, scan_duration_ms,total_discovered)
 
         return merged_config
 
@@ -256,14 +383,36 @@ class ConfigLoader:
                 name=cmd,
                 enabled=True,
                 priority=10,  # Low priority, can be overridden
-                source="builtin"
+                source="builtin",
+                path=None
             )
+
+        # === LEGACY: Load user orchestrator.yaml (overrides auto-discovery) ===
+        user_config_file = self.builtin_skills_dir / "orchestrator.yaml"
+        if user_config_file.exists():
+            try:
+                with open(user_config_file, 'r', encoding='utf-8') as f:
+                    user_data = yaml.safe_load(f)
+                    if user_data:
+                        self._populate_config_from_dict(config, user_data, source="builtin")
+                        logger.info(f"Loaded builtin config from {user_config_file}")
+            except Exception as e:
+                logger.error(f"Failed to load builtin config from {user_config_file}: {e}")
 
         return config
 
-    def _load_user_config(self) -> OrchestratorConfig:
-        """Load user-level configuration from ~/.claude/ and auto-discover resources."""
+    def _load_user_config(self) -> tuple[OrchestratorConfig, Dict[str, int], List[str]]:
+        """
+        Load user-level configuration from ~/.claude/ and auto-discover resources.
+
+        Returns:
+            Tuple of (config, discovery_stats, scanned_files) where:
+            - discovery_stats contains counts per resource type
+            - scanned_files contains list of scanned file paths
+        """
         config = OrchestratorConfig()
+        discovery_stats = {"skills": 0, "commands": 0, "agents": 0, "prompts": 0}
+        scanned_files: List[str] = []
 
         # === NEW: Auto-discovery (if enabled) ===
         if self.enable_auto_discovery and self.scanner and self.user_config_dir.exists():
@@ -272,6 +421,7 @@ class ConfigLoader:
 
             # Collect all potential resource files for cache validation
             scan_file_paths = self._collect_resource_files(self.user_config_dir)
+            scanned_files = scan_file_paths
 
             # Try loading from cache first
             discovered = None
@@ -288,139 +438,151 @@ class ConfigLoader:
                 logger.info("Running auto-discovery for user resources...")
                 discovered = self.scanner.scan_all(self.user_config_dir, source="user")
 
-                # Save scan results to cache
-                if self.persistence and discovered:
-                    scan_duration_ms = int((time.time() - start_time) * 1000)
-                    # Convert to serializable format
-                    serializable_resources = self._prepare_resources_for_cache(discovered)
-                    self.persistence.save_scan_result(serializable_resources, scan_file_paths, scan_duration_ms)
+                # Convert discovered resources to config objects
+                for resource_type, resources in discovered.items():
+                    for discovered_item in resources:
+                        # Handle both DiscoveredResource objects and dicts (from cache)
+                        # if isinstance(discovered_item, dict):
+                        #     # Reconstruct DiscoveredResource from cached dict
+                        #     from .resource_scanner_v2 import DiscoveredResource, ResourceLayout
+                        #     from pathlib import Path
 
-            # Convert discovered resources to config objects
-            for resource_type, resources in discovered.items():
-                for discovered_item in resources:
-                    # Handle both DiscoveredResource objects and dicts (from cache)
-                    if isinstance(discovered_item, dict):
-                        # Reconstruct DiscoveredResource from cached dict
-                        from .resource_scanner_v2 import DiscoveredResource, ResourceLayout
-                        from pathlib import Path
+                        #     # Convert string values back to proper types
+                        #     if 'resource_type' in discovered_item and isinstance(discovered_item['resource_type'], str):
+                        #         discovered_item['resource_type'] = ResourceType[discovered_item['resource_type'].upper()]
 
-                        # Convert string values back to proper types
-                        if 'resource_type' in discovered_item and isinstance(discovered_item['resource_type'], str):
-                            discovered_item['resource_type'] = ResourceType[discovered_item['resource_type'].upper()]
+                        #     if 'path' in discovered_item and isinstance(discovered_item['path'], str):
+                        #         discovered_item['path'] = Path(discovered_item['path'])
 
-                        if 'path' in discovered_item and isinstance(discovered_item['path'], str):
-                            discovered_item['path'] = Path(discovered_item['path'])
+                        #     if 'marker_file' in discovered_item and discovered_item['marker_file'] and isinstance(discovered_item['marker_file'], str):
+                        #         discovered_item['marker_file'] = Path(discovered_item['marker_file'])
 
-                        if 'marker_file' in discovered_item and discovered_item['marker_file'] and isinstance(discovered_item['marker_file'], str):
-                            discovered_item['marker_file'] = Path(discovered_item['marker_file'])
+                        #     if 'entry_point' in discovered_item and discovered_item['entry_point'] and isinstance(discovered_item['entry_point'], str):
+                        #         discovered_item['entry_point'] = Path(discovered_item['entry_point'])
 
-                        if 'entry_point' in discovered_item and discovered_item['entry_point'] and isinstance(discovered_item['entry_point'], str):
-                            discovered_item['entry_point'] = Path(discovered_item['entry_point'])
+                        #     if 'relative_path' in discovered_item and discovered_item['relative_path'] and isinstance(discovered_item['relative_path'], str):
+                        #         discovered_item['relative_path'] = Path(discovered_item['relative_path'])
 
-                        if 'relative_path' in discovered_item and discovered_item['relative_path'] and isinstance(discovered_item['relative_path'], str):
-                            discovered_item['relative_path'] = Path(discovered_item['relative_path'])
+                        #     if 'layout' in discovered_item and isinstance(discovered_item['layout'], str):
+                        #         discovered_item['layout'] = ResourceLayout(discovered_item['layout'])
+                                
+                        #     # Convert resource_type string to enum if needed
+                        #     if 'resource_type' in discovered_item and isinstance(discovered_item['resource_type'], str):
+                        #         discovered_item['resource_type'] = ResourceType(discovered_item['resource_type'])
 
-                        if 'layout' in discovered_item and isinstance(discovered_item['layout'], str):
-                            discovered_item['layout'] = ResourceLayout(discovered_item['layout'])
+                        #     discovered_item = DiscoveredResource(**discovered_item)
 
-                        discovered_item = DiscoveredResource(**discovered_item)
+                        converted = self.scanner.convert_to_config(discovered_item)
 
-                    converted = self.scanner.convert_to_config(discovered_item)
+                        if resource_type == ResourceType.SKILL:
+                            config.skills[converted.name] = converted  # Always add
+                        elif resource_type == ResourceType.COMMAND:
+                            config.commands[converted.name] = converted
+                        elif resource_type == ResourceType.AGENT:
+                            config.agents[converted.name] = converted
+                        elif resource_type == ResourceType.PROMPT:
+                            config.prompts[converted.name] = converted
 
-                    if resource_type == ResourceType.SKILL:
-                        config.skills[converted.name] = converted  # Always add
-                    elif resource_type == ResourceType.COMMAND:
-                        config.commands[converted.name] = converted
-                    elif resource_type == ResourceType.AGENT:
-                        config.agents[converted.name] = converted
-                    elif resource_type == ResourceType.PROMPT:
-                        config.prompts[converted.name] = converted
+            # Track discovery statistics
+            discovery_stats["skills"] = len(discovered[ResourceType.SKILL])
+            discovery_stats["commands"] = len(discovered[ResourceType.COMMAND])
+            discovery_stats["agents"] = len(discovered[ResourceType.AGENT])
+            discovery_stats["prompts"] = len(discovered[ResourceType.PROMPT])
 
             logger.info(
-                f"User auto-discovered: {len(discovered[ResourceType.SKILL])} skills, "
-                f"{len(discovered[ResourceType.COMMAND])} commands, "
-                f"{len(discovered[ResourceType.AGENT])} agents, "
-                f"{len(discovered[ResourceType.PROMPT])} prompts"
+                f"User auto-discovered: {discovery_stats['skills']} skills, "
+                f"{discovery_stats['commands']} commands, "
+                f"{discovery_stats['agents']} agents, "
+                f"{discovery_stats['prompts']} prompts"
             )
 
         # === LEGACY: Load user orchestrator.yaml (overrides auto-discovery) ===
-        user_config_file = self.user_config_dir / "orchestrator.yaml"
+        user_config_file = self.use_orchestrator_dir / "orchestrator.yaml"
         if user_config_file.exists():
             try:
                 with open(user_config_file, 'r', encoding='utf-8') as f:
                     user_data = yaml.safe_load(f)
                     if user_data:
                         self._populate_config_from_dict(config, user_data, source="user")
-                        logger.debug(f"Loaded user config from {user_config_file}")
+                        logger.info(f"Loaded user config from {user_config_file}")
             except Exception as e:
                 logger.error(f"Failed to load user config from {user_config_file}: {e}")
 
-        # === LEGACY: Load user skills from ~/.claude/skills/ (YAML-only) ===
-        if not self.enable_auto_discovery:
-            user_skills_dir = self.user_config_dir / "skills"
-            if user_skills_dir.exists():
-                user_skills = self._scan_skill_directory(user_skills_dir, source="user")
-                for name, skill_config in user_skills.items():
-                    if name not in config.skills:
-                        config.skills[name] = skill_config
-                logger.debug(f"Loaded {len(user_skills)} user skills from {user_skills_dir}")
+        return config, discovery_stats, scanned_files
 
-        return config
+    def _load_project_config(self) -> tuple[OrchestratorConfig, Dict[str, int], List[str]]:
+        """
+        Load project-level configuration from ./orchestrator.yaml and auto-discover resources.
 
-    def _load_project_config(self) -> OrchestratorConfig:
-        """Load project-level configuration from ./orchestrator.yaml and auto-discover resources."""
+        Returns:
+            Tuple of (config, discovery_stats, scanned_files) where:
+            - discovery_stats contains counts per resource type
+            - scanned_files contains list of scanned file paths
+        """
         config = OrchestratorConfig()
+        discovery_stats = {"skills": 0, "commands": 0, "agents": 0, "prompts": 0}
+        scanned_files: List[str] = []
 
         # === NEW: Auto-discovery (if enabled) ===
         if self.enable_auto_discovery and self.scanner:
             logger.info("Running auto-discovery for project resources...")
-            discovered = self.scanner.scan_all(self.project_root, source="project")
+            scanned_files = self._collect_resource_files(self.project_config_dir)
 
-            # Convert discovered resources to config objects
-            for resource_type, resources in discovered.items():
-                for discovered_item in resources:
-                    converted = self.scanner.convert_to_config(discovered_item)
+            # Try loading from cache first
+            discovered = None
+            if self.persistence and scanned_files:
+                cached_data = self.persistence.load_cached_resources(scanned_files)
+                if cached_data:
+                    # Convert string keys back to ResourceType keys
+                    discovered = self._reconstruct_resources_from_cache(cached_data)
 
-                    if resource_type == ResourceType.SKILL:
-                        config.skills[converted.name] = converted  # Always add, override later if needed
-                    elif resource_type == ResourceType.COMMAND:
-                        config.commands[converted.name] = converted
-                    elif resource_type == ResourceType.AGENT:
-                        config.agents[converted.name] = converted
-                    elif resource_type == ResourceType.PROMPT:
-                        config.prompts[converted.name] = converted
+            if discovered:
+                logger.info("Loaded project resources from cache")
+            else:
+                # Cache miss or invalid - perform actual scan
+                logger.info("Running auto-discovery for project resources...")
+                discovered = self.scanner.scan_all(self.project_config_dir, source="project")
+
+                # Convert discovered resources to config objects
+                for resource_type, resources in discovered.items():
+                    for discovered_item in resources:
+                        converted = self.scanner.convert_to_config(discovered_item)
+
+                        if resource_type == ResourceType.SKILL:
+                            config.skills[converted.name] = converted  # Always add, override later if needed
+                        elif resource_type == ResourceType.COMMAND:
+                            config.commands[converted.name] = converted
+                        elif resource_type == ResourceType.AGENT:
+                            config.agents[converted.name] = converted
+                        elif resource_type == ResourceType.PROMPT:
+                            config.prompts[converted.name] = converted
+
+            # Track discovery statistics
+            discovery_stats["skills"] = len(discovered[ResourceType.SKILL])
+            discovery_stats["commands"] = len(discovered[ResourceType.COMMAND])
+            discovery_stats["agents"] = len(discovered[ResourceType.AGENT])
+            discovery_stats["prompts"] = len(discovered[ResourceType.PROMPT])
 
             logger.info(
-                f"Auto-discovered: {len(discovered[ResourceType.SKILL])} skills, "
-                f"{len(discovered[ResourceType.COMMAND])} commands, "
-                f"{len(discovered[ResourceType.AGENT])} agents, "
-                f"{len(discovered[ResourceType.PROMPT])} prompts"
+                f"Project auto-discovered: {discovery_stats['skills']} skills, "
+                f"{discovery_stats['commands']} commands, "
+                f"{discovery_stats['agents']} agents, "
+                f"{discovery_stats['prompts']} prompts"
             )
 
         # === LEGACY: Load project orchestrator.yaml (overrides auto-discovery) ===
-        project_config_file = self.project_root / "orchestrator.yaml"
+        project_config_file = self.project_config_dir / "orchestrator.yaml"
         if project_config_file.exists():
             try:
                 with open(project_config_file, 'r', encoding='utf-8') as f:
                     project_data = yaml.safe_load(f)
                     if project_data:
                         self._populate_config_from_dict(config, project_data, source="project")
-                        logger.debug(f"Loaded project config from {project_config_file}")
+                        logger.info(f"Loaded project config from {project_config_file}")
             except Exception as e:
                 logger.error(f"Failed to load project config from {project_config_file}: {e}")
 
-        # === LEGACY: Load skills from ./skills/ (YAML-only, kept for backward compatibility) ===
-        if not self.enable_auto_discovery:
-            project_skills_dir = self.project_root / "skills"
-            if project_skills_dir.exists():
-                project_skills = self._scan_skill_directory(project_skills_dir, source="project")
-                # Merge with existing (don't override auto-discovered)
-                for name, skill_config in project_skills.items():
-                    if name not in config.skills:
-                        config.skills[name] = skill_config
-                logger.debug(f"Loaded {len(project_skills)} project skills from {project_skills_dir}")
-
-        return config
+        return config, discovery_stats, scanned_files
 
     def _scan_skill_directory(self, path: Path, source: str) -> Dict[str, SkillConfig]:
         """
@@ -844,7 +1006,7 @@ class ConfigLoader:
                     file_paths.extend(str(p) for p in resource_dir.glob(pattern))
 
                 # Collect marker files
-                for marker in ['SKILL.md', 'COMMAND.md', 'AGENT.md', 'PROMPT.md', 'README.md']:
+                for marker in ['SKILL.md', '*.md', '*.md', '*.md', '*.md']:
                     file_paths.extend(str(p) for p in resource_dir.glob(f'**/{marker}'))
 
         return file_paths
