@@ -23,7 +23,7 @@ Intelligent task orchestration system with intent analysis and multi-backend coo
 **ALL operations MUST be executed through this orchestrator:**
 
 ```bash
-python -m master-orchestrator "your request" [-v] [--dry-run]
+python master_orchestrator.py "your request" [-v] [--dry-run]
 ```
 
 **PROHIBITED behaviors:**
@@ -50,27 +50,27 @@ The orchestrator automatically selects the optimal execution mode:
 
 ```bash
 # Simple command
-python -m master-orchestrator "run npm test"
+python master_orchestrator.py "run npm test"
 
 # Code review
-python -m master-orchestrator "review code in src/auth.py"
+python master_orchestrator.py "review code in src/auth.py"
 
 # Complex development
-python -m master-orchestrator "develop a user management system" -v
+python master_orchestrator.py "develop a user management system" -v
 
 # Dry-run (analyze only, no execution)
-python -m master-orchestrator "refactor the database layer" --dry-run
+python master_orchestrator.py "refactor the database layer" --dry-run
 ```
 
 ### Slash Commands
 
 ```bash
-python -m master-orchestrator "/discover"       # Re-discover all resources
-python -m master-orchestrator "/list-skills"    # List registered skills
-python -m master-orchestrator "/list-commands"  # List slash commands
-python -m master-orchestrator "/stats"          # Show system statistics
-python -m master-orchestrator "/reload"         # Reload configuration
-python -m master-orchestrator "/clear-cache"    # Clear registry cache
+python master_orchestrator.py "/discover"       # Re-discover all resources
+python master_orchestrator.py "/list-skills"    # List registered skills
+python master_orchestrator.py "/list-commands"  # List slash commands
+python master_orchestrator.py "/stats"          # Show system statistics
+python master_orchestrator.py "/reload"         # Reload configuration
+python master_orchestrator.py "/clear-cache"    # Clear registry cache
 ```
 
 ## Task Routing

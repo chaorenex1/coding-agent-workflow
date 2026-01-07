@@ -72,7 +72,7 @@ WHITELISTED_PATHS = [
 
 # Commands that are allowed to run directly (orchestrator's own commands)
 ALLOWED_COMMAND_PATTERNS = [
-    "python -m master-orchestrator",
+    "python master_orchestrator.py",
     "python -m master_orchestrator",
     "python3 -m master-orchestrator",
     "python3 -m master_orchestrator",
@@ -258,9 +258,9 @@ def handle_bash(tool_input: str) -> tuple[bool, str]:
     log_event("blocked", "Bash", {"command": command[:200]})
     
     # Provide helpful suggestion
-    suggestion = f'python -m master-orchestrator "{command}" -v'
+    suggestion = f'python master_orchestrator.py "{command}" -v'
     if len(suggestion) > 200:
-        suggestion = f'python -m master-orchestrator "<your command>" -v'
+        suggestion = f'python master_orchestrator.py "<your command>" -v'
     
     return False, f"""
 ❌ BLOCKED: Direct Bash execution is not allowed.
@@ -312,7 +312,7 @@ def handle_file_operation(tool_name: str, tool_input: str) -> tuple[bool, str]:
 File: {file_path or 'unknown'}
 
 ✅ Use the master orchestrator instead:
-   python -m master-orchestrator "{action_verb} {file_path or '<file>'}" -v
+   python master_orchestrator.py "{action_verb} {file_path or '<file>'}" -v
 
 All file operations must go through the orchestrator for:
 - Centralized logging and audit trail

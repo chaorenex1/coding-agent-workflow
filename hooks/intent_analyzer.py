@@ -204,7 +204,7 @@ def analyze_intent(prompt: str) -> IntentAnalysis:
     if requires_orchestrator:
         # Clean up the prompt for the suggestion
         clean_prompt = prompt.replace('"', '\\"')[:100]
-        suggested_command = f'python -m master-orchestrator "{clean_prompt}" -v'
+        suggested_command = f'python master_orchestrator.py "{clean_prompt}" -v'
     
     return IntentAnalysis(
         intent_type=best_intent,
