@@ -205,11 +205,13 @@ class AgentCaller(MemexExecutorBase):
             prompt = request.prompt
 
         # 直接调用后端（不使用memex-cli）
+        # 注意：Agent调用通常不需要流式输出，显式禁用以避免阻塞
         try:
             result = self.backend_orch.run_task(
                 backend="claude",
                 prompt=prompt,
-                stream_format="jsonl"
+                stream_format="jsonl",
+                stream_output=False  # 禁用流式输出
             )
 
             return AgentResult(

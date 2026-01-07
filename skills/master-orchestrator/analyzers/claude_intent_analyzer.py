@@ -179,11 +179,13 @@ class ClaudeIntentAnalyzer:
         prompt = self.INTENT_PROMPT_TEMPLATE.format(request=request)
 
         # 2. 调用memex-cli (使用Claude backend)
+        # 注意：意图分析不需要流式输出，显式禁用以避免阻塞
         try:
             result = self.backend_orch.run_task(
                 backend="claude",
                 prompt=prompt,
-                stream_format="jsonl"
+                stream_format="jsonl",
+                stream_output=False  # 禁用流式输出
             )
 
             if not result.success:

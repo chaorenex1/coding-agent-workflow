@@ -238,7 +238,7 @@ class AduibClient:
                 error=error,
                 run_id=run_id,
                 duration_seconds=duration_seconds,
-                created_at=datetime.utcnow().isoformat()
+                created_at=datetime.datetime.now().isoformat()
             )
 
             url = f"{self.base_url}/api/tasks/save"
@@ -250,7 +250,7 @@ class AduibClient:
                         return True
                     else:
                         text = await response.text()
-                        print(f"[警告] 结果保存失败: {response.status} - {text}")
+                        print(f"[警告] 结果保存失败: {response.status} - {text} - {url}")
                         return False
 
         except asyncio.TimeoutError:

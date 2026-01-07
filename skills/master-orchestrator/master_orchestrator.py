@@ -77,15 +77,6 @@ if _RUNNING_AS_SCRIPT:
     from executors.prompt_manager import PromptManager
     from executors.agent_caller import AgentCaller, AgentRequest, AgentResult, AgentType
 
-    # 导入客户端
-    try:
-        from clients.aduib_client import AduibClient, CachedResult
-        ADUIB_AVAILABLE = True
-    except ImportError:
-        AduibClient = None
-        CachedResult = None
-        ADUIB_AVAILABLE = False
-
     # 导入意图分析器
     try:
         from analyzers.claude_intent_analyzer import Intent, ExecutionMode, ClaudeIntentAnalyzer
@@ -129,15 +120,6 @@ else:
     from .executors.command_executor import CommandExecutor, CommandResult
     from .executors.prompt_manager import PromptManager
     from .executors.agent_caller import AgentCaller, AgentRequest, AgentResult, AgentType
-
-    # 导入客户端
-    try:
-        from .clients.aduib_client import AduibClient, CachedResult
-        ADUIB_AVAILABLE = True
-    except ImportError:
-        AduibClient = None
-        CachedResult = None
-        ADUIB_AVAILABLE = False
 
     # Phase 1: 导入扩展的 Intent 和 ExecutionMode
     try:
@@ -639,17 +621,34 @@ class ExecutionRouter:
         # 尝试从请求中提取模板名称和变量
         template_name, variables = self._parse_prompt_request(request, intent)
 
+        # 判断是否使用流式输出
+        stream_output = hasattr(self, 'stream_handler') and self.stream_handler is not None
+        output_callback = self.stream_handler.process_line if stream_output else None
+        stream_format = getattr(self, 'stream_format', 'text')
+
         # 渲染模板
         if template_name:
             result = self.prompt_manager.render(template_name, **variables)
             if result.success:
                 # 使用渲染后的提示词调用后端
                 backend = self._select_backend(intent)
-                return self.backend_orch.run_task(backend, result.rendered_prompt, "jsonl")
+                return self.backend_orch.run_task(
+                    backend=backend,
+                    prompt=result.rendered_prompt,
+                    stream_format=stream_format,
+                    stream_output=stream_output,
+                    output_callback=output_callback
+                )
 
         # 如果无法识别模板，回退到直接调用
         backend = self._select_backend(intent)
-        return self.backend_orch.run_task(backend, request, "jsonl")
+        return self.backend_orch.run_task(
+            backend=backend,
+            prompt=request,
+            stream_format=stream_format,
+            stream_output=stream_output,
+            output_callback=output_callback
+        )
 
     def _parse_prompt_request(self, request: str, intent: Intent) -> Tuple[Optional[str], Dict]:
         """
@@ -705,20 +704,36 @@ class ExecutionRouter:
         backend = self._select_backend_for_skill(intent)
         enhanced_request = self._enhance_skill_request(request, intent)
 
+        # 判断是否使用流式输出
+        stream_output = hasattr(self, 'stream_handler') and self.stream_handler is not None
+        output_callback = self.stream_handler.process_line if stream_output else None
+        stream_format = getattr(self, 'stream_format', 'text')
+
         return self.backend_orch.run_task(
             backend=backend,
             prompt=enhanced_request,
-            stream_format="jsonl"
+            stream_format=stream_format,
+            stream_output=stream_output,
+            output_callback=output_callback
         )
 
     def _call_backend(self, request: str, intent: Intent) -> TaskResult:
         """直接调用后端"""
         backend = intent.backend_hint or self._select_backend(intent)
 
+        # 判断是否使用流式输出
+        stream_output = hasattr(self, 'stream_handler') and self.stream_handler is not None
+        output_callback = self.stream_handler.process_line if stream_output else None
+
+        # 使用实例变量的 stream_format，默认为 "text"
+        stream_format = getattr(self, 'stream_format', 'text')
+
         return self.backend_orch.run_task(
             backend=backend,
             prompt=request,
-            stream_format="jsonl"
+            stream_format=stream_format,
+            stream_output=stream_output,
+            output_callback=output_callback
         )
 
     def _select_backend(self, intent: Intent) -> str:
@@ -821,9 +836,6 @@ class MasterOrchestrator:
 
     def __init__(
         self,
-        use_remote: Optional[bool] = None,
-        enable_cache: bool = True,
-        enable_upload: bool = True,
         use_claude_intent: bool = True,
         intent_confidence_threshold: float = 0.7,
         fallback_to_rules: bool = True,
@@ -837,12 +849,6 @@ class MasterOrchestrator:
         初始化总协调器
 
         Args:
-            timeout: 超时时间（秒）
-            use_remote: 是否使用远程服务（None=自动检测）
-            aduib_url: aduib-ai 服务地址
-            aduib_api_key: aduib-ai API 密钥
-            enable_cache: 是否启用缓存查询
-            enable_upload: 是否启用结果上传
             use_claude_intent: 是否使用Claude进行意图识别（默认True）
             intent_confidence_threshold: Claude意图识别置信度阈值
             fallback_to_rules: 低置信度或失败时是否回退到规则引擎
@@ -875,34 +881,15 @@ class MasterOrchestrator:
         self.slash_registry = None  # V3.1: Slash Command Registry
         self.enable_parallel = enable_parallel
 
-        # 初始化 aduib 配置变量（在 try 之前，确保后续可以使用）
-        import os
-        actual_aduib_url = None
-        actual_aduib_key = None
-
         try:
             # 1. 加载配置
             loader = ConfigLoader(project_root=config_path)
             self.config = loader.load()
 
-            # 2. 从配置文件读取全局设置（优先级: 环境变量 > 配置文件 > 构造函数参数）
+            # 2. 从配置文件读取全局设置
             actual_timeout = self.config.global_settings.get('timeout', 300) if self.config.global_settings else 300
 
             self.backend_orch = BackendOrchestrator(timeout=actual_timeout)
-
-            # 读取 aduib 配置（优先级: 环境变量 > 配置文件）
-            config_aduib_url = self.config.global_settings.get('aduib_url') if self.config.global_settings else None
-            config_aduib_key = self.config.global_settings.get('aduib_api_key') if self.config.global_settings else None
-
-            # 环境变量 > 配置文件
-            actual_aduib_url = os.environ.get('ADUIB_URL') or config_aduib_url
-            actual_aduib_key = os.environ.get('ADUIB_API_KEY') or config_aduib_key
-
-            # 记录配置来源
-            if actual_aduib_url and actual_aduib_key:
-                url_source = "环境变量" if os.environ.get('ADUIB_URL') else "配置文件"
-                key_source = "环境变量" if os.environ.get('ADUIB_API_KEY') else "配置文件"
-                logger.info(f"使用 aduib 配置: URL来源={url_source}, API_KEY来源={key_source}")
 
             # 3. 初始化注册表
             self.registry = create_registry_from_config(self.config)
@@ -979,33 +966,17 @@ class MasterOrchestrator:
         # 向后兼容：默认使用规则引擎
         self.analyzer = self.rule_analyzer
 
-        # Phase 2: ExecutionRouter 暂时不传 registry（等 V3 初始化后再设置）
-        self.router = None
+        # 注意：self.router 已在上面的 try-except 块中初始化完成
+        # 不应在此处重置为 None，否则会导致 AttributeError
 
-        # 远程组件（可选）
-        self.aduib_client = None
-        self.enable_cache = enable_cache
-        self.enable_upload = enable_upload
-
-        # 自动检测或手动配置 aduib-ai
-
-        if use_remote and ADUIB_AVAILABLE:
-            try:
-                self.aduib_client = AduibClient(
-                    base_url=actual_aduib_url,
-                    api_key=actual_aduib_key,
-                    timeout=30
-                )
-            except Exception as e:
-                print(f"[警告] 无法初始化 aduib-ai 客户端: {e}")
-                print("[提示] 将以纯本地模式运行")
-                self.aduib_client = None
-        elif use_remote and not ADUIB_AVAILABLE:
-            print("[警告] aduib-ai 客户端不可用（可能缺少 requests 库）")
-            print("[提示] 安装: pip install requests")
-            print("[提示] 将以纯本地模式运行")
-
-    def process(self, request: str, verbose: bool = False, dry_run: bool = False) -> Any:
+    def process(
+        self,
+        request: str,
+        verbose: bool = False,
+        dry_run: bool = False,
+        stream_output: bool = True,
+        stream_format: str = "text"
+    ) -> Any:
         """
         处理用户请求（支持 Slash Command 和自然语言）
 
@@ -1013,19 +984,28 @@ class MasterOrchestrator:
             request: 用户请求文本（可以是 /command 或自然语言）
             verbose: 是否输出详细信息
             dry_run: 仅显示意图分析和执行计划，不实际执行
+            stream_output: 启用实时流式输出（默认：True）
+            stream_format: 流式输出格式 - "text" 或 "jsonl"（默认："text"）
 
         Returns:
             执行结果（dry_run 时返回意图分析结果字典）
         """
+        import sys
+        print(f"[DEBUG] process() 开始: request={request[:50]}, dry_run={dry_run}", file=sys.stderr)
+
         # 0. 记录任务开始
+        print(f"[DEBUG] 记录任务开始", file=sys.stderr)
         self.log_manager.log_task_start(request, "unknown")
 
         # 1. 检查是否为 Slash Command（V3.1）
+        print(f"[DEBUG] 检查 Slash Command", file=sys.stderr)
         if request.strip().startswith('/'):
             return self._process_slash_command(request.strip(), verbose)
 
         # 2. 意图分析（优先使用Claude，失败则fallback到规则引擎）
+        print(f"[DEBUG] 开始意图分析", file=sys.stderr)
         intent = self._analyze_intent(request, verbose)
+        print(f"[DEBUG] 意图分析完成: mode={intent.mode.value}", file=sys.stderr)
 
         # 记录意图分析结果
         self.log_manager.log_intent_analysis(
@@ -1071,8 +1051,6 @@ class MasterOrchestrator:
             if hasattr(intent, 'enable_parallel') and intent.enable_parallel:
                 print(f"  并行执行: 是")
             print(f"  超时时间: {self.backend_orch.timeout}s")
-            print(f"  远程缓存: {'启用' if self.enable_cache else '禁用'}")
-            print(f"  结果上传: {'启用' if self.enable_upload else '禁用'}")
             if self.config:
                 # 显示通过 git 检测到的项目根目录
                 from core.config_loader import find_git_root
@@ -1097,41 +1075,10 @@ class MasterOrchestrator:
                     "enable_parallel": getattr(intent, 'enable_parallel', False)
                 },
                 "backend": backend,
-                "timeout": self.backend_orch.timeout,
-                "cache_enabled": self.enable_cache,
-                "upload_enabled": self.enable_upload
+                "timeout": self.backend_orch.timeout
             }
 
-        # 2. 查询远程缓存（如果启用）
-        if self.aduib_client and self.enable_cache:
-            backend = self._select_backend_for_intent(intent)
-            cached = self.aduib_client.query_cache(
-                request=request,
-                mode=intent.mode.value,
-                backend=backend
-            )
-
-            if cached:
-                if verbose:
-                    print(f"[缓存命中] 从远程缓存返回结果")
-                    print(f"  任务 ID: {cached.task_id}")
-                    print(f"  创建时间: {cached.created_at}")
-                    print(f"  命中次数: {cached.hit_count}")
-                    print()
-
-                # 构造 TaskResult 返回（添加 prompt 参数）
-                return TaskResult(
-                    backend=backend,
-                    prompt=request,
-                    output=cached.output,
-                    success=cached.success,
-                    error=None,
-                    run_id=None,
-                    event_stream=None,
-                    duration_seconds=0.0
-                )
-
-        # 3. 并行执行判断（如果推断为并行且启用了并行调度器）
+        # 2. 并行执行判断（如果推断为并行且启用了并行调度器）
         if hasattr(intent, 'enable_parallel') and intent.enable_parallel:
             # 尝试拆分任务
             subtasks = self._split_parallel_tasks(request, intent, verbose)
@@ -1159,11 +1106,25 @@ class MasterOrchestrator:
                     print(f"  提示: 初始化时设置 enable_parallel=True")
                     print()
 
-        # 4. 本地执行（串行）
-        if verbose and self.aduib_client and self.enable_cache:
-            print(f"[缓存未命中] 本地执行任务")
-            print()
+        # 3.5 设置流式输出（如果启用）
+        self.stream_format = stream_format  # 保存格式设置供路由器使用
+        if stream_output:
+            # 导入 StreamHandler
+            try:
+                from core.stream_handler import StreamHandler
+            except ImportError:
+                from .core.stream_handler import StreamHandler
 
+            # text 格式：原始输出，不格式化；jsonl 格式：格式化输出
+            format_output = (stream_format == "jsonl")
+            self.stream_handler = StreamHandler(
+                format_output=format_output,
+                show_progress=True
+            )
+        else:
+            self.stream_handler = None
+
+        # 3. 本地执行（串行）
         result = self.router.route(intent, request)
 
         # 4. 记录任务完成
@@ -1174,16 +1135,6 @@ class MasterOrchestrator:
             duration=getattr(result, 'duration_seconds', 0.0),
             success=getattr(result, 'success', True)
         )
-
-        # 5. 上传结果到远程（如果启用且成功）
-        if self.aduib_client and self.enable_upload and self._should_upload(result):
-            self._upload_result(
-                request=request,
-                intent=intent,
-                backend=backend,
-                result=result,
-                verbose=verbose
-            )
 
         return result
 
@@ -1277,62 +1228,6 @@ class MasterOrchestrator:
         logger.info(f"本地缓存目录已初始化: {cache_root}")
 
         return cache_root
-
-    def _should_upload(self, result: Any) -> bool:
-        """判断是否应该上传结果"""
-        # 只上传成功的 TaskResult 和 WorkflowResult
-        if isinstance(result, TaskResult):
-            return result.success
-        else:
-            return False
-
-    def _upload_result(
-        self,
-        request: str,
-        intent: Intent,
-        backend: str,
-        result: Any,
-        verbose: bool = False
-    ):
-        """上传结果到远程服务"""
-        try:
-            if isinstance(result, TaskResult):
-                success = self.aduib_client.save_task_result(
-                    request=request,
-                    mode=intent.mode.value,
-                    backend=backend,
-                    success=result.success,
-                    output=result.get_final_output() if hasattr(result, 'get_final_output') else result.output,
-                    error=result.error,
-                    run_id=result.run_id if hasattr(result, 'run_id') else None,
-                    duration_seconds=result.duration_seconds if hasattr(result, 'duration_seconds') else None
-                )
-            else:
-                # 其他类型结果
-                output_str = str(result)
-                success = self.aduib_client.save_task_result(
-                    request=request,
-                    mode=intent.mode.value,
-                    backend=backend,
-                    success=True,
-                    output=output_str,
-                    error=None,
-                    run_id=None,
-                    duration_seconds=None
-                )
-
-            if verbose:
-                if success:
-                    print(f"[已保存] 结果已上传到远程服务")
-                    print()
-                else:
-                    print(f"[警告] 结果上传失败")
-                    print()
-
-        except Exception as e:
-            if verbose:
-                print(f"[警告] 上传结果时发生异常: {e}")
-                print()
 
     # ========== V3 新增方法 ==========
 
@@ -1749,35 +1644,20 @@ class MasterOrchestrator:
         Returns:
             TaskResult 对象
         """
-        # 汇总所有子任务的输出
-        outputs = []
-        for i, task_result in enumerate(batch_result.task_results, 1):
-            if task_result.success:
-                outputs.append(f"=== 子任务 {i}/{batch_result.total_tasks} ===")
-                outputs.append(f"资源: {task_result.namespace}")
-                outputs.append(f"输出:\n{task_result.output}")
-                outputs.append("")
-            else:
-                outputs.append(f"=== 子任务 {i}/{batch_result.total_tasks} [失败] ===")
-                outputs.append(f"资源: {task_result.namespace}")
-                outputs.append(f"错误: {task_result.error}")
-                outputs.append("")
+        # 纯流式架构：不汇总子任务输出，仅生成统计摘要
+        # 所有子任务输出已通过流式实时显示
 
-        combined_output = "\n".join(outputs)
-
-        # 添加总结
+        # 生成简短统计摘要（不包含详细输出）
         summary = f"""
 {'='*70}
-批处理总结
+[批处理完成]
 {'='*70}
-总任务数: {batch_result.total_tasks}
-成功: {batch_result.successful}
-失败: {batch_result.failed}
+总任务: {batch_result.total_tasks} | 成功: {batch_result.successful} | 失败: {batch_result.failed}
 总耗时: {batch_result.total_duration_seconds:.2f}s
 {'='*70}
 """
 
-        final_output = combined_output + summary
+        final_output = summary  # 纯流式：无子任务输出缓冲
 
         # 构造 TaskResult
         backend = self._select_backend_for_intent(intent)
@@ -1989,62 +1869,65 @@ def main():
     """CLI 入口"""
     import argparse
     import json
+    import sys
+
+    print("[DEBUG] main() 开始", file=sys.stderr)
 
     parser = argparse.ArgumentParser(description="MasterOrchestrator - 智能AI任务协调器")
     parser.add_argument("request", help="用户请求")
     parser.add_argument("--verbose", "-v", action="store_true", help="启用详细输出")
     parser.add_argument("--dry-run", "-n", action="store_true", help="仅显示意图分析和执行计划，不实际执行")
+    parser.add_argument("--no-stream", action="store_true", help="禁用实时流式输出（默认启用）")
+    parser.add_argument("--stream-format", choices=["text", "jsonl"], default="text",
+                        help="流式输出格式：text=原始输出，jsonl=格式化输出（默认：text）")
 
     args = parser.parse_args()
+    print("[DEBUG] 参数解析完成", file=sys.stderr)
 
     # 创建协调器
-    orch = MasterOrchestrator(
-        use_remote=True,
-        enable_cache=True,
-        enable_upload=True
-    )
+    print("[DEBUG] 开始创建 MasterOrchestrator", file=sys.stderr)
+    orch = MasterOrchestrator()
+    print("[DEBUG] MasterOrchestrator 创建完成", file=sys.stderr)
 
     # 处理请求
-    print(f"[MasterOrchestrator] 处理请求: {args.request}\n")
+    stream_enabled = not args.no_stream
+    if args.no_stream:
+        print(f"[MasterOrchestrator] 处理请求: {args.request}\n")
 
     try:
-        result = orch.process(args.request, verbose=args.verbose, dry_run=args.dry_run)
+        result = orch.process(
+            args.request,
+            verbose=args.verbose,
+            dry_run=args.dry_run,
+            stream_output=stream_enabled,
+            stream_format=args.stream_format
+        )
 
         # Dry-run 模式直接返回
         if args.dry_run:
             return
 
-        # 输出结果
+        # 纯流式架构：输出已实时显示，仅显示简短状态行
+        print(f"\n{'='*70}")
+
         if isinstance(result, TaskResult):
-            # 单次任务结果
-            print(f"\n[执行完成]")
-            print(f"后端: {result.backend}")
-            print(f"成功: {result.success}")
-            print(f"耗时: {result.duration_seconds}s")
-
-            if result.run_id:
-                print(f"Run ID: {result.run_id}")
-
-            if result.success:
-                output = result.get_final_output()
-                print(f"\n输出预览:")
-                print(output[:500] + "..." if len(output) > 500 else output)
-
-                if result.event_stream:
-                    tool_chain = result.get_tool_chain()
-                    print(f"\n工具调用链: {tool_chain[:5]}")
-            else:
-                print(f"错误: {result.error}")
+            # 使用 TaskResult 的 get_summary_line() 方法
+            print(result.get_summary_line())
         else:
-            # 其他类型结果（CommandResult, AgentResult等）
-            print(f"\n[执行完成]")
+            # 其他类型结果的简短摘要
             if hasattr(result, 'success'):
-                print(f"成功: {result.success}")
-            if hasattr(result, 'output'):
-                print(f"\n输出:")
-                print(result.output[:500] + "..." if len(result.output) > 500 else result.output)
-            if hasattr(result, 'error') and result.error:
-                print(f"错误: {result.error}")
+                status = "完成" if result.success else "失败"
+                print(f"[{status}]", end="")
+                if hasattr(result, 'duration_seconds'):
+                    print(f" | 耗时: {result.duration_seconds:.2f}s", end="")
+                if hasattr(result, 'error') and result.error:
+                    print(f" | 错误: {result.error[:100]}")
+                else:
+                    print()
+            else:
+                print("[执行完成]")
+
+        print('='*70)
 
         return 0
 

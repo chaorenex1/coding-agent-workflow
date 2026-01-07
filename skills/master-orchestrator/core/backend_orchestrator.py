@@ -12,7 +12,7 @@ Usage:
     orch = BackendOrchestrator()
     result = orch.run_task("claude", "Analyze this code")
 """
-
+import logging
 import subprocess
 import json
 import os
@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
 from dataclasses import dataclass, field, asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+logger = logging.getLogger(__name__)
 
 
 def _get_utf8_env() -> dict:
@@ -44,7 +45,14 @@ except ImportError:
 
 @dataclass
 class TaskResult:
-    """Result of a single task execution."""
+    """
+    Result of a single task execution.
+
+    纯流式架构：
+    - output 字段在流式模式下为空字符串（不缓冲）
+    - 使用 metadata 字段保存执行元数据
+    - 兼容旧代码：保留 output 字段用于非流式模式
+    """
     backend: str
     prompt: str
     output: str
@@ -54,16 +62,30 @@ class TaskResult:
     error: Optional[str] = None
     run_id: Optional[str] = None
     event_stream: Optional[EventStream] = None
+    metadata: Optional['ExecutionMetadata'] = None  # 新增：轻量级元数据
 
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
         # 移除不可序列化的对象
         if 'event_stream' in result:
             del result['event_stream']
+        if 'metadata' in result and result['metadata']:
+            # 序列化 metadata
+            result['metadata'] = {
+                'run_id': result['metadata'].run_id,
+                'success': result['metadata'].success,
+                'error': result['metadata'].error,
+                'line_count': result['metadata'].line_count,
+                'duration_seconds': result['metadata'].duration_seconds
+            } if hasattr(result['metadata'], 'run_id') else None
         return result
 
     def get_final_output(self) -> str:
-        """获取最终输出（优先从 event_stream）"""
+        """
+        获取最终输出（优先从 event_stream）
+
+        注意：纯流式模式下返回空字符串，因为输出已实时显示
+        """
         if self.event_stream:
             return self.event_stream.get_final_output()
         return self.output
@@ -73,6 +95,29 @@ class TaskResult:
         if self.event_stream:
             return self.event_stream.get_tool_chain()
         return []
+
+    def get_summary_line(self) -> str:
+        """
+        获取简短状态行（纯流式架构）
+
+        Returns:
+            格式: [完成] 后端 | 耗时 45.2s | 1234 行 | 成功
+        """
+        if self.metadata:
+            return self.metadata.get_summary_line()
+
+        # Fallback: 旧格式
+        status = "完成" if self.success else "失败"
+        parts = [
+            f"[{status}]",
+            f"后端: {self.backend}",
+            f"耗时: {self.duration_seconds:.2f}s"
+        ]
+        if self.run_id:
+            parts.append(f"run_id: {self.run_id[:8]}...")
+        if not self.success and self.error:
+            parts.append(f"错误: {self.error[:50]}")
+        return " | ".join(parts)
 
 
 @dataclass
@@ -202,6 +247,9 @@ class BackendOrchestrator:
         """
         Execute a command and return (output, success, error, run_id, event_stream).
 
+        ⚠️ DEPRECATED: 此方法已弃用，推荐使用 _execute_command_stream() 纯流式执行。
+        仅为向后兼容保留，将在未来版本中移除。
+
         Cross-platform compatible using subprocess.
 
         Args:
@@ -211,6 +259,12 @@ class BackendOrchestrator:
         Returns:
             (stdout, success, error, run_id, event_stream)
         """
+        import warnings
+        warnings.warn(
+            "_execute_command() is deprecated, use _execute_command_stream() instead",
+            DeprecationWarning,
+            stacklevel=2
+        )
         try:
             result = subprocess.run(
                 cmd,
@@ -239,25 +293,156 @@ class BackendOrchestrator:
             return "", False, "memex-cli not found. Please ensure it is installed and in PATH.", None, None
         except Exception as e:
             return "", False, str(e), None, None
-    
+
+    def _execute_command_stream(
+        self,
+        cmd: List[str],
+        input_text: Optional[str] = None,
+        callback: Optional[Any] = None
+    ) -> 'ExecutionMetadata':
+        """
+        Execute command with pure streaming output (zero buffering).
+
+        纯流式架构实现：
+        - 不缓冲任何输出内容，所有输出直接流向 callback
+        - 仅提取轻量级元数据（run_id, 成功/失败, 错误信息）
+        - 内存占用最小化，适合大输出场景
+
+        Uses subprocess.Popen to read stdout line-by-line and invoke callback
+        for each line in real-time without buffering.
+
+        Args:
+            cmd: Command and arguments list
+            input_text: Optional text to pass via stdin
+            callback: Callable[[str], None] - called for each output line
+
+        Returns:
+            ExecutionMetadata: 轻量级元数据（不包含输出内容）
+        """
+        # Import metadata tracker
+        try:
+            from .metadata_tracker import ExecutionMetadata
+        except ImportError:
+            from metadata_tracker import ExecutionMetadata
+
+        import time
+
+        metadata = ExecutionMetadata()
+        start_time = time.time()
+
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE if input_text else None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                bufsize=1,  # Line buffering
+                env=_get_utf8_env()
+            )
+
+            # Send input if provided
+            if input_text and process.stdin:
+                process.stdin.write(input_text)
+                process.stdin.close()
+
+            # Read stdout line by line in real-time (ZERO BUFFERING)
+            try:
+                for line in iter(process.stdout.readline, ''):
+                    if not line:
+                        break
+
+                    line_start = time.time()
+
+                    # 提取元数据（不缓冲输出内容）
+                    metadata.extract_from_line(line)
+
+                    # 流式输出：直接调用 callback，不保存
+                    if callback:
+                        try:
+                            callback(line)
+                        except Exception as e:
+                            logger.error(f"Callback error: {e}")
+                            metadata.callback_errors += 1
+                            # 回调失败不中断流式输出
+                            continue
+
+                    # 记录处理时间
+                    line_time_ms = (time.time() - line_start) * 1000
+
+            except KeyboardInterrupt:
+                # User interrupted, terminate process
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+
+                metadata.duration_seconds = time.time() - start_time
+                metadata.error = "Interrupted by user"
+                metadata.success = False
+                raise
+
+            # Wait for process to complete
+            try:
+                returncode = process.wait(timeout=self.timeout)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                metadata.duration_seconds = time.time() - start_time
+                metadata.finalize(
+                    returncode=-1,
+                    stderr=f"Command timed out after {self.timeout} seconds"
+                )
+                return metadata
+
+            # Read stderr (small buffer acceptable for error messages)
+            stderr_output = process.stderr.read() if process.stderr else ""
+
+            # Finalize metadata
+            metadata.duration_seconds = time.time() - start_time
+            metadata.finalize(returncode, stderr_output)
+
+            return metadata
+
+        except FileNotFoundError:
+            metadata.duration_seconds = time.time() - start_time
+            metadata.error = "memex-cli not found. Please ensure it is installed and in PATH."
+            metadata.success = False
+            return metadata
+        except KeyboardInterrupt:
+            # Re-raise to let caller handle
+            raise
+        except Exception as e:
+            logger.error(f"Stream execution error: {e}")
+            metadata.duration_seconds = time.time() - start_time
+            metadata.error = str(e)
+            metadata.success = False
+            return metadata
+
     def run_task(
         self,
         backend: str,
         prompt: str,
-        stream_format: str = "jsonl",
+        stream_format: str = "text",
         model: Optional[str] = None,
-        model_provider: Optional[str] = None
+        model_provider: Optional[str] = None,
+        stream_output: bool = True,
+        output_callback: Optional[Any] = None
     ) -> TaskResult:
         """
         Execute a single task on a specified backend.
-        
+
         Args:
             backend: AI backend (codex, claude, or gemini)
             prompt: Task prompt
-            stream_format: Output format (jsonl or text)
+            stream_format: Output format - "text" or "jsonl" (default: "text")
             model: Model name (optional, for codex)
             model_provider: Model provider (optional, for codex)
-            
+            stream_output: Enable real-time streaming output (default: True)
+            output_callback: Callback function for streaming (default: None)
+
         Returns:
             TaskResult with output and metadata
         """
@@ -265,20 +450,56 @@ class BackendOrchestrator:
 
         cmd = self._build_command(backend, prompt, stream_format, model, model_provider)
 
+        # 记录开始时间
         start_time = time.time()
-        output, success, error, run_id, event_stream = self._execute_command(cmd)
-        duration = time.time() - start_time
 
-        return TaskResult(
-            backend=backend,
-            prompt=prompt,
-            output=output,
-            success=success,
-            duration_seconds=round(duration, 3),
-            error=error,
-            run_id=run_id,
-            event_stream=event_stream
-        )
+        # 纯流式模式：使用 ExecutionMetadata
+        if stream_output:
+            metadata = self._execute_command_stream(cmd, callback=output_callback)
+
+            return TaskResult(
+                backend=backend,
+                prompt=prompt,
+                output="",  # 纯流式：不缓冲输出
+                success=metadata.success,
+                duration_seconds=metadata.duration_seconds,
+                error=metadata.error,
+                run_id=metadata.run_id,
+                event_stream=None,
+                metadata=metadata  # 新增：保存元数据
+            )
+        else:
+            # 非流式模式（兼容旧代码）
+            output, success, error, run_id, event_stream = self._execute_command(cmd)
+
+            # 计算耗时
+            duration = time.time() - start_time
+
+            # 从旧输出创建元数据（兼容性）
+            try:
+                from .metadata_tracker import ExecutionMetadata
+            except ImportError:
+                from metadata_tracker import ExecutionMetadata
+
+            metadata = ExecutionMetadata.from_legacy_output(
+                output=output,
+                success=success,
+                error=error,
+                run_id=run_id
+            )
+            metadata.duration_seconds = duration
+
+            return TaskResult(
+                backend=backend,
+                prompt=prompt,
+                output=output,  # 非流式：保留完整输出
+                success=success,
+                duration_seconds=round(duration, 3),
+                error=error,
+                run_id=run_id,
+                event_stream=event_stream,
+                metadata=metadata
+            )
     
     def compare_backends(
         self,

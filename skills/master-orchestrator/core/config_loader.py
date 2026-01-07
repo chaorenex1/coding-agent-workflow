@@ -657,6 +657,11 @@ class ConfigLoader:
             data: Parsed configuration data
             source: Source level
         """
+        # Validate data type
+        if not isinstance(data, dict):
+            logger.error(f"Expected dict but got {type(data)}: {data}")
+            return
+
         # Set version
         if 'version' in data:
             config.version = data['version']
@@ -668,6 +673,9 @@ class ConfigLoader:
         # Load skills (manual declarations)
         if 'skills' in data and 'manual' in data['skills']:
             for skill_data in data['skills']['manual']:
+                if not isinstance(skill_data, dict):
+                    logger.warning(f"Skipping invalid skill data (expected dict): {skill_data}")
+                    continue
                 name = skill_data.get('name')
                 if not name:
                     continue
@@ -692,6 +700,9 @@ class ConfigLoader:
             # Whitelist
             if 'whitelist' in data['commands']:
                 for cmd in data['commands']['whitelist']:
+                    if not isinstance(cmd, str):
+                        logger.warning(f"Skipping invalid whitelist command (expected string): {cmd}")
+                        continue
                     config.commands[cmd] = CommandConfig(
                         name=cmd,
                         enabled=True,
@@ -702,6 +713,9 @@ class ConfigLoader:
             # Aliases
             if 'aliases' in data['commands']:
                 for alias_data in data['commands']['aliases']:
+                    if not isinstance(alias_data, dict):
+                        logger.warning(f"Skipping invalid alias data (expected dict): {alias_data}")
+                        continue
                     name = alias_data.get('name')
                     command = alias_data.get('command')
                     if name and command:
@@ -715,39 +729,88 @@ class ConfigLoader:
 
         # Load agents
         if 'agents' in data:
-            for agent_data in data['agents']:
-                name = agent_data.get('name')
-                if not name:
-                    continue
+            agents_data = data['agents']
 
-                config.agents[name] = AgentConfig(
-                    name=name,
-                    agent_type=agent_data.get('type', 'general'),
-                    enabled=agent_data.get('enabled', True),
-                    priority=agent_data.get('priority', 50),
-                    source=source,
-                    dependencies=agent_data.get('dependencies', []),
-                    config=agent_data
-                )
+            # Support both list and dict formats
+            if isinstance(agents_data, list):
+                # List format: [{name: "foo", type: "general", ...}, ...]
+                for agent_data in enumerate(agents_data):
+                    if not isinstance(agent_data, dict):
+                        logger.warning(f"Skipping invalid agent data (expected dict): {agent_data}")
+                        continue
+                    name = agent_data.get('name')
+                    if not name:
+                        continue
+
+                    config.agents[name] = AgentConfig(
+                        name=name,
+                        agent_type=agent_data.get('type', 'general'),
+                        enabled=agent_data.get('enabled', True),
+                        priority=agent_data.get('priority', 50),
+                        source=source,
+                        dependencies=agent_data.get('dependencies', []),
+                        config=agent_data
+                    )
+            elif isinstance(agents_data, dict):
+                # Dict format: {default: {model: ..., temperature: ...}, explore: {...}}
+                # This is configuration for agent behavior, not agent registration
+                # Store it in global_settings['agent_configs']
+                config.global_settings['agent_configs'] = agents_data
+                logger.debug(f"Loaded {len(agents_data)} agent configurations from {source}")
+            else:
+                logger.error(f"Invalid agents format: expected list or dict, got {type(agents_data)}")
 
         # Load prompts
         if 'prompts' in data:
-            for prompt_data in data['prompts']:
-                name = prompt_data.get('name')
-                template = prompt_data.get('template')
-                if not name or not template:
-                    continue
+            prompts_data = data['prompts']
 
-                config.prompts[name] = PromptConfig(
-                    name=name,
-                    template=template,
-                    variables=prompt_data.get('variables', []),
-                    enabled=prompt_data.get('enabled', True),
-                    priority=prompt_data.get('priority', 50),
-                    source=source,
-                    dependencies=prompt_data.get('dependencies', []),
-                    config=prompt_data
-                )
+            # Support both list and dict formats
+            if isinstance(prompts_data, list):
+                # List format: [{name: "foo", template: "...", ...}, ...]
+                for prompt_data in prompts_data:
+                    if not isinstance(prompt_data, dict):
+                        logger.warning(f"Skipping invalid prompt data (expected dict): {prompt_data}")
+                        continue
+                    name = prompt_data.get('name')
+                    template = prompt_data.get('template')
+                    if not name or not template:
+                        continue
+
+                    config.prompts[name] = PromptConfig(
+                        name=name,
+                        template=template,
+                        variables=prompt_data.get('variables', []),
+                        enabled=prompt_data.get('enabled', True),
+                        priority=prompt_data.get('priority', 50),
+                        source=source,
+                        dependencies=prompt_data.get('dependencies', []),
+                        config=prompt_data
+                    )
+            elif isinstance(prompts_data, dict):
+                # Dict format: {templates: [...], categories: {...}}
+                # Extract templates list if present
+                if 'templates' in prompts_data and isinstance(prompts_data['templates'], list):
+                    for prompt_data in prompts_data['templates']:
+                        if not isinstance(prompt_data, dict):
+                            continue
+                        name = prompt_data.get('name')
+                        template = prompt_data.get('template')
+                        if not name or not template:
+                            continue
+
+                        config.prompts[name] = PromptConfig(
+                            name=name,
+                            template=template,
+                            variables=prompt_data.get('variables', []),
+                            enabled=prompt_data.get('enabled', True),
+                            priority=prompt_data.get('priority', 50),
+                            source=source,
+                            dependencies=prompt_data.get('dependencies', []),
+                            config=prompt_data
+                        )
+                    logger.debug(f"Loaded {len(prompts_data['templates'])} prompt templates from {source}")
+            else:
+                logger.error(f"Invalid prompts format: expected list or dict, got {type(prompts_data)}")
 
         # Load parallel config
         if 'parallel' in data:
