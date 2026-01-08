@@ -24,7 +24,7 @@ memex-cli run --backend "gemini" --prompt "为登录注册页面创建线框图�
 ### Design Component System
 
 ```bash
-memex-cli run --backend "gemini" --prompt "设计一套移动端UI组件规范，包含按钮、输入框、卡片、导航栏的样式定义" --stream-format "jsonl"
+memex-cli run --backend "gemini" --prompt "设计一套移动端UI组件规范，包含按钮、输入框、卡片、导航栏的样式定义" --stream-format "text"
 ```
 
 ## Common UX Tasks
@@ -58,16 +58,10 @@ memex-cli run --backend "gemini" --prompt "设计一个产品详情页的响应�
 ### 1. 初始设计
 
 ```bash
-memex-cli run --backend "gemini" --prompt "<设计需求>" --stream-format "jsonl"
+memex-cli run --backend "gemini" --prompt "<设计需求>" --stream-format "text"
 ```
 
-### 2. 查看事件日志
-
-```bash
-memex-cli replay --events ./run.events.jsonl --format text
-```
-
-### 3. 迭代优化
+### 2. 迭代优化
 
 ```bash
 memex-cli resume --run-id <RUN_ID> --backend "gemini" --prompt "基于上一轮设计，优化<具体方面>" --stream-format "text"
