@@ -1,86 +1,142 @@
 ---
 name: master-orchestrator
 description: |
-  [GLOBAL MASTER SKILL] Mandatory entry point for ALL Claude Code operations.
-  Triggers: ANY user request including but not limited to:
-  (1) Code development, modification, review, refactoring
-  (2) Running commands: git, npm, docker, pytest, build, test
-  (3) Project development, system design, feature implementation
-  (4) UX/UI design workflows
-  (5) Code analysis, optimization, debugging
-  (6) File operations, script execution
-  (7) Agent-based complex tasks
-  (8) Any development-related request
-  MANDATORY: All operations MUST go through this orchestrator. Direct command execution is PROHIBITED.
+  [SPECIALIZED ROUTING SKILL] Simplified task router for specialized AI backend tasks.
+  Routes ONLY two types of tasks:
+  (1) Code Development Tasks → delegates to code-with-codex skill
+      - Feature implementation, system development, code refactoring, bug fixes
+  (2) UX Design Tasks → delegates to ux-design-gemini skill
+      - Interface design, prototypes, user experience design
+  All other tasks (file operations, commands, analysis, testing) are handled directly by Claude Code native tools.
 ---
 
 # Master Orchestrator
 
-Intelligent task orchestration system with intent analysis and multi-backend coordination.
+Simplified routing system for specialized AI backend tasks.
 
-## ⚠️ Mandatory Rules
+## 🎯 Simplified Routing Model
 
-**ALL operations MUST be executed through this orchestrator:**
+**Master-orchestrator routes ONLY specialized tasks requiring external AI backends.**
 
-```bash
-python master_orchestrator.py "your request" [-v] [--dry-run]
+### What Gets Routed to Master-Orchestrator
+
+**1. Code Development Tasks** → Delegates to `code-with-codex`
+- Feature implementation (实现功能)
+- System development (开发系统)
+- Code refactoring (重构代码)
+- Bug fixes (修复 bug)
+- Adding new functionality (添加功能)
+
+**2. UX Design Tasks** → Delegates to `ux-design-gemini`
+- Interface design (设计界面)
+- Prototype creation (原型设计)
+- User experience design (用户体验设计)
+- Interaction design (交互设计)
+
+### What Executes Directly (No Routing)
+
+Claude Code handles these directly with native tools:
+
+- **File Operations**: Create, modify, delete, read files → `Write`, `Edit`, `Read`
+- **Command Execution**: git, npm, docker, pytest → `Bash`
+- **Code Analysis**: Understanding, searching code → `Read`, `Grep`, `Glob`, `LSP`
+- **Testing**: Running tests, debugging → `Bash` + native tools
+- **Documentation**: Writing, updating docs → `Write`, `Edit`
+
+## Delegation Model
+
 ```
+User Request
+    ↓
+Claude Code (analyzes task type)
+    ↓
+┌─────────────────────────────┐
+│ Is it Code Development?     │
+│ (实现/开发/重构/修复)         │
+└─────────────────────────────┘
+    ↓ YES
+    Route to master-orchestrator
+        ↓
+        Delegate to code-with-codex
+            ↓
+            Returns result
 
-**PROHIBITED behaviors:**
-- ❌ Direct bash/shell command execution
-- ❌ Direct file creation/modification without orchestrator
-- ❌ Bypassing this skill for any development task
-- ❌ Running git/npm/docker commands directly
+┌─────────────────────────────┐
+│ Is it UX Design?            │
+│ (设计界面/原型/交互)         │
+└─────────────────────────────┘
+    ↓ YES
+    Route to master-orchestrator
+        ↓
+        Delegate to ux-design-gemini
+            ↓
+            Returns result
 
-## Execution Modes
-
-The orchestrator automatically selects the optimal execution mode:
-
-| Mode | Use Case | Examples |
-|------|----------|----------|
-| `command` | Simple CLI operations | `git status`, `npm test`, `docker ps` |
-| `agent` | Complex multi-step tasks | System development, feature implementation |
-| `prompt` | Template-based generation | Code generation with specific patterns |
-| `skill` | Workflow-based tasks | UX design, full-stack development |
-| `backend` | Direct AI backend calls | Code analysis, quick queries |
+┌─────────────────────────────┐
+│ Everything else?            │
+└─────────────────────────────┘
+    ↓ YES
+    Claude Code handles directly
+        ↓
+        Native tools execution
+```
 
 ## Usage
 
-### Basic Execution
+### Invocation from Claude Code
 
-```bash
-# Simple command
-python master_orchestrator.py "run npm test"
-
-# Code review
-python master_orchestrator.py "review code in src/auth.py"
-
-# Complex development
-python master_orchestrator.py "develop a user management system" -v
-
-# Dry-run (analyze only, no execution)
-python master_orchestrator.py "refactor the database layer" --dry-run
+**For Code Development Tasks:**
+```python
+Skill(skill="master-orchestrator", args="实现用户登录功能")
+# → master-orchestrator → code-with-codex → implementation
 ```
 
-### Slash Commands
-
-```bash
-python master_orchestrator.py "/discover"       # Re-discover all resources
-python master_orchestrator.py "/list-skills"    # List registered skills
-python master_orchestrator.py "/list-commands"  # List slash commands
-python master_orchestrator.py "/stats"          # Show system statistics
-python master_orchestrator.py "/reload"         # Reload configuration
-python master_orchestrator.py "/clear-cache"    # Clear registry cache
+**For UX Design Tasks:**
+```python
+Skill(skill="master-orchestrator", args="设计用户登录界面")
+# → master-orchestrator → ux-design-gemini → design
 ```
 
-## Task Routing
+**For All Other Tasks (Direct Execution):**
+```python
+# File operations - no routing needed
+Write(file_path="test.py", content="...")
+Edit(file_path="config.json", ...)
+
+# Command execution - no routing needed
+Bash(command="npm test")
+Bash(command="git status")
+
+# Code analysis - no routing needed
+Read(file_path="auth.py")
+Grep(pattern="function", path="src/")
+```
+
+### Direct Python Execution (Advanced)
+
+```bash
+# Code development task
+python -u master_orchestrator.py "实现一个用户认证系统" -v
+
+# UX design task
+python -u master_orchestrator.py "设计一个仪表盘界面" -v
+
+# Dry-run (analyze routing decision)
+python -u master_orchestrator.py "实现登录功能" --dry-run
+```
+
+## Simplified Task Routing
 
 When receiving a request, the orchestrator:
 
-1. **Analyzes intent** - Determines mode, task type, complexity
-2. **Selects backend** - Routes to optimal AI backend (codex/claude/gemini)
-3. **Executes task** - Runs through appropriate executor
-4. **Returns result** - Provides structured output with metrics
+1. **Classifies task type** - Code development or UX design?
+2. **Delegates to specialist** - Routes to code-with-codex or ux-design-gemini
+3. **Returns result** - Passes through the specialist's output
+
+**Routing Logic:**
+- Code development keywords (实现/开发/重构/修复) → code-with-codex
+- UX design keywords (设计界面/原型/交互) → ux-design-gemini
+- Everything else → Not routed (handled by Claude Code directly)
 
 ## Output Format
 
@@ -105,3 +161,101 @@ Tool Chain: [<tools_used>]
 |------|-------------|
 | `-v`, `--verbose` | Enable detailed output with step-by-step logging |
 | `-n`, `--dry-run` | Show intent analysis and execution plan without running |
+
+---
+
+## 🎯 Simplified Routing Model (V3.0)
+
+### Configuration
+
+This skill operates in **specialized routing mode**:
+
+- **Scope**: ONLY code development and UX design tasks
+- **Delegation**: Routes to code-with-codex or ux-design-gemini
+- **Performance**: All other operations execute directly (no routing overhead)
+
+### Usage Pattern
+
+**From Claude Code:**
+```python
+# Code development tasks
+Skill(skill="master-orchestrator", args="实现用户登录功能")
+
+# UX design tasks
+Skill(skill="master-orchestrator", args="设计登录界面")
+```
+
+### Routing Rules
+
+**Route to master-orchestrator (delegates to specialists):**
+- ✅ Code development: Feature implementation, refactoring, bug fixes → code-with-codex
+- ✅ UX design: Interface design, prototypes, user experience → ux-design-gemini
+
+**Execute directly (no routing):**
+- ✅ File operations: Create, modify, delete, read files → Native Write/Edit/Read tools
+- ✅ Command execution: git, npm, docker, pytest → Native Bash tool
+- ✅ Code analysis: Understanding, searching → Native Read/Grep/Glob/LSP tools
+- ✅ Testing: Running tests, debugging → Native Bash + tools
+- ✅ Documentation: Writing, updating docs → Native Write/Edit tools
+
+### Delegation Flow
+
+```
+Code Development Task
+    ↓
+master-orchestrator
+    ↓
+code-with-codex skill
+    ↓
+Codex backend (via memex-cli)
+    ↓
+Implementation result
+```
+
+```
+UX Design Task
+    ↓
+master-orchestrator
+    ↓
+ux-design-gemini skill
+    ↓
+Gemini backend (via memex-cli)
+    ↓
+Design result
+```
+
+### Performance Benefits
+
+**Before (V2.0)**: All operations routed through orchestrator (10% overhead)
+**After (V3.0)**: Only specialized tasks routed (0% overhead for common operations)
+
+- File operations: 0ms routing overhead (direct execution)
+- Commands: 0ms routing overhead (direct execution)
+- Code development: ~500ms routing overhead (acceptable for complex tasks)
+- UX design: ~500ms routing overhead (acceptable for complex tasks)
+
+### Monitoring
+
+Check routing statistics:
+
+```bash
+# View routing stats (code vs UX vs direct)
+python -u master_orchestrator.py "/stats" -v
+
+# Dry-run to see routing decision
+python -u master_orchestrator.py "实现登录功能" --dry-run
+```
+
+### Troubleshooting
+
+**Issue**: Task not being routed to orchestrator
+- **Check**: Is it a code development or UX design task?
+- **Fix**: If yes, verify CLAUDE.md routing rules; if no, direct execution is correct
+
+**Issue**: Simple file operations going through orchestrator
+- **Check**: Are you using Skill() instead of Write/Edit?
+- **Fix**: Use native tools directly for file operations
+
+**Issue**: Want to force routing for debugging
+- **Check**: Use --dry-run flag to see routing decision
+- **Fix**: Adjust task description to include code/UX keywords if needed
