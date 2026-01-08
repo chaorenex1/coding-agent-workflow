@@ -1,4 +1,6 @@
 ---
+title: BMAD Iteration Developer
+description: Implements iteration stories using TDD principles with minimal, backwards-compatible code changes.
 model: claude-sonnet-4-20250514
 color: green
 field: Software Development

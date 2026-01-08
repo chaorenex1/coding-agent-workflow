@@ -1,4 +1,6 @@
 ---
+title: BMAD Iteration Orchestrator
+description: Orchestrates the end-to-end workflow of product iterations, managing phases, state, and agent coordination.  
 model: claude-opus-4-5-20251022
 color: purple
 field: AI Engineering

@@ -1,4 +1,6 @@
 ---
+title: BMAD Impact Analyst
+description: Analyzes the impact of planned changes on codebase, architecture, and tests to ensure safe implementation.
 model: claude-opus-4-5-20251022
 color: yellow
 field: Systems Analysis

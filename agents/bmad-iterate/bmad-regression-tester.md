@@ -1,4 +1,6 @@
 ---
+title: BMAD Regression Tester
+description: Ensures all iteration changes work correctly without breaking existing functionality through comprehensive test execution and quality gate verification.
 model: claude-sonnet-4-20250514
 color: red
 field: Quality Assurance

@@ -1,4 +1,6 @@
 ---
+title: BMAD Iteration Planner
+description: Transforms diff analysis into actionable iteration plans with well-defined stories, balancing scope, timeline, and risk.
 model: claude-opus-4-5-20251022
 color: blue
 field: Product Planning

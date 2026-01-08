@@ -1,4 +1,6 @@
 ---
+title: BMAD Diff Analyst
+description: Analyzes changes between baseline PRD and new requirements, categorizing and documenting all changes for implementation.
 model: claude-opus-4-5-20251022
 color: cyan
 field: Requirements Analysis
