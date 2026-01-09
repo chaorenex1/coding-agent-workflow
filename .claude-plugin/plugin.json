@@ -1,7 +1,7 @@
 {
   "name": "coding-workflow",
   "version": "3.0.0",
-  "description": "AI 智能工作流系统 - 包含 21 个 Skills、36 个 Agents 和 47 个 Commands，提供从需求分析到代码实现的全自动化解决方案",
+  "description": "AI 智能工作流系统 - 包含 18 个 Skills、36 个 Agents 和 48 个 Commands，提供从需求分析到代码实现的全自动化解决方案",
   "author": {
     "name": "chaorenex1",
     "url": "https://github.com/chaorenex1"

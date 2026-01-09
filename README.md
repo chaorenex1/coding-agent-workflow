@@ -8,12 +8,12 @@
 
 ## 📖 项目概述
 
-Coding Workflow 是一个面向开发者的 AI 智能工作流系统，旨在通过集成多种 AI 后端（Claude、Gemini、Codex）和丰富的技能集（21 个 Skills）及代理（36 个 Agents），实现从需求分析、架构设计、代码实现到测试发布的端到端自动化开发流程。
+Coding Workflow 是一个面向开发者的 AI 智能工作流系统，旨在通过集成多种 AI 后端（Claude、Gemini、Codex）和丰富的技能集（18 个 Skills）及代理（36 个 Agents），实现从需求分析、架构设计、代码实现到测试发布的端到端自动化开发流程。
 
 **核心价值**：
 - 🤖 **多后端协调** - 选择最适合的 AI 后端执行任务
 - 🔄 **端到端自动化** - 从一句话需求到完整代码实现
-- 🛠️ **21 项技能集成** - 代码分析、重构、文档生成等专业技能
+- 🛠️ **18 项技能集成** - 代码分析、重构、文档生成等专业技能
 - 🏃 **零开销执行** - 90% 任务直接执行，无路由开销
 
 ## 🚀 快速开始
@@ -29,7 +29,7 @@ Coding Workflow 是一个面向开发者的 AI 智能工作流系统，旨在通
 /plugin coding-workflow
 ```
 
-插件会自动安装所有 21 个 Skills、36 个 Agents 和 47 个 Commands。
+插件会自动安装所有 18 个 Skills、36 个 Agents 和 48 个 Commands。
 
 **依赖安装**：
 
@@ -77,7 +77,7 @@ coding-workflow/
 ├── AGENTS.md                           # 代理系统文档
 ├── .claude/                            # Claude Code 配置
 │
-├── skills/                             # 技能系统 (23 个)
+├── skills/                             # 技能系统 (18 个)
 │   ├── code-with-codex/                # Codex 代码开发
 │   ├── ux-design-gemini/               # Gemini UX 设计
 │   ├── codex-cli-bridge/               # Codex CLI 桥接
@@ -94,10 +94,8 @@ coding-workflow/
 │   ├── github-stars-analyzer/          # GitHub Stars 分析
 │   ├── skill-validator/                # Skill 验证器
 │   ├── memex-cli/                      # Memex CLI 工具
-│   ├── ux-design-gemini/               # UX 设计 (Gemini)
 │   ├── cross-platform-command-generator/# 跨平台命令生成
-│   ├── priority-optimization-assistant/# 优先级优化助手
-│   └── multcode-dev-workflow-agent/    # 多代码开发工作流
+│   └── priority-optimization-assistant/# 优先级优化助手
 │
 ├── agents/                             # 代理系统 (36 个)
 │   ├── bmad-workflow/                  # ⭐ BMAD 完整工作流 (8 个)
@@ -148,7 +146,8 @@ coding-workflow/
 │   │
 │   ├── quick-code/                     # 快速代码命令
 │   ├── project-analyzer/               # 项目分析命令
-│   └── scaffold/                       # 脚手架命令
+│   ├── scaffold/                       # 脚手架命令
+│   └── workflow-suite/                 # 工作流套件 (包含 /multcode 等)
 │
 ├── prompts/                            # 提示词模板库
 │
