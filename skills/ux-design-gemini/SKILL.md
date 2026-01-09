@@ -7,6 +7,36 @@ description: "Create UX designs using memex-cli with Gemini backend. Use when (1
 
 Use memex-cli to leverage Gemini for UX design tasks with memory and replay support.
 
+## RUN_ID Instructions
+
+When using `memex-cli resume`, replace `<RUN_ID>` with the actual run ID obtained from the initial `memex-cli run` command. This allows you to continue or build upon previous code generation tasks.
+
+## Memex cli Output Format
+
+Outputs are streamed in the specified format (`jsonl` or `text`), allowing real-time monitoring of task progress.
+
+### Example JSONL output(multiple jsonl lines)
+
+```jsonl
+{"v":1,"type":"assistant.output","ts":"2026-01-08T08:22:20.664800300+00:00","run_id":"a9ba0e5d-9dd5-43a1-8b0f-b1dd11346a2b","action":"\"{}\"","args":null,"output":"{\n  \"mode\": \"command\",\n  \"task_type\": \"general\",\n  \"complexity\": \"simple\",\n  \"backend_hint\": null,\n  \"skill_hint\": null,\n  \"confidence\": 0.92,\n  \"reasoning\": \"简单的文件写入任务，生成10道算术题并写入文件，可用echo或Python命令直接完成\",\n  \"enable_parallel\": false,\n  \"parallel_reasoning\": \"单一文件写入操作，顺序 执行即可\"\n}"}
+```
+
+### Example Text output(multiple text lines, any format)
+
+```txt
+{
+  "mode": "backend",
+  "task_type": "general",
+  "complexity": "simple",
+  "backend_hint": "claude",
+  "skill_hint": null,
+  "confidence": 0.92,
+  "reasoning": "生成10道算术题目并写入文件，简单内容生成任务，适合直接LLM处理",
+  "enable_parallel": false,
+  "parallel_reasoning": "单一文件写入任务，无法分解并行"
+}
+```
+
 ## Quick Start
 
 ### Generate User Flow
@@ -74,6 +104,6 @@ memex-cli resume --run-id <RUN_ID> --backend "gemini" --prompt "基于上一轮�
 
 ## Tips
 
-1. 复杂设计任务拆分为多个步骤，利用resume连续迭代
+1. 复杂设计任务拆分为多个步骤并行执行，利用resume连续迭代
 2. 使用jsonl格式保存完整设计过程，便于回溯
 3. 在prompt中明确指定输出格式要求（如Markdown表格、列表等）
