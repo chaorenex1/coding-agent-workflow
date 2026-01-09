@@ -26,14 +26,84 @@
 
 ### 安装步骤
 
-#### 1. 安装 Python 依赖
+#### 方式 1: 通过 Claude Code Plugin Marketplace（推荐）
+
+**一键安装**：
+
+在 Claude Code 中运行以下命令：
+
+```
+/plugin coding-workflow
+```
+
+插件会自动安装所有 21 个 Skills、36 个 Agents 和 47 个 Commands。
+
+**依赖安装**：
+
+插件启动时会自动检查依赖。如有缺失，会显示安装提示：
+
+```bash
+# 安装 memex-cli (必需)
+npm install -g memex-cli
+
+# 安装 Python 依赖
+pip install chardet pyyaml
+```
+
+**依赖检查机制**：
+
+- **自动检查**: 每次会话启动时自动执行（24 小时内只检查一次）
+- **缓存优化**: 检查结果缓存到 `~/.claude/coding-workflow-deps-check.txt`
+- **友好提示**: 依赖缺失时显示清晰的安装指令，但允许继续使用插件
+
+**配置（可选）**：
+
+如需自定义配置（如指定 memex-cli 路径），复制配置模板：
+
+```bash
+cp docs/coding-workflow.local.example.md ~/.claude/coding-workflow.local.md
+```
+
+然后编辑 `~/.claude/coding-workflow.local.md` 修改配置项。
+
+**配置示例**：
+
+```yaml
+---
+memexCliPath: "memex-cli"  # 默认从 PATH 查找
+---
+
+# 自定义路径示例
+# macOS/Linux:
+# memexCliPath: "/usr/local/bin/memex-cli"
+#
+# Windows:
+# memexCliPath: "C:\\Program Files\\nodejs\\memex-cli.cmd"
+```
+
+**验证安装**：
+
+安装完成后，重启 Claude Code 会话，插件会自动执行依赖检查并显示状态消息。
+
+---
+
+#### 方式 2: 手动安装（开发者模式）
+
+**1. 克隆项目**
+
+```bash
+git clone https://github.com/chaorenex1/coding-workflow.git
+cd coding-workflow
+```
+
+**2. 安装 Python 依赖**
 
 ```bash
 # 可选依赖（用于编码检测和配置解析）
 pip install chardet pyyaml
 ```
 
-#### 2. 安装 memex-cli（必需）
+**3. 安装 memex-cli（必需）**
 
 ```bash
 # 全局安装
@@ -43,7 +113,7 @@ npm install -g memex-cli
 memex-cli --version
 ```
 
-#### 3. 配置后端
+**4. 配置后端
 
 MasterOrchestrator 支持三个 AI 后端：
 
@@ -61,7 +131,7 @@ memex-cli backends list
 memex-cli backends add claude --api-key YOUR_API_KEY
 ```
 
-#### 4. 验证安装
+**5. 验证安装**
 
 ```bash
 cd /path/to/coding_base
@@ -69,6 +139,63 @@ python master_orchestrator.py "运行 git status"
 ```
 
 如果看到 git status 的输出，说明安装成功。
+
+---
+
+### 插件配置说明
+
+#### 配置文件
+
+**位置**: `~/.claude/coding-workflow.local.md`
+
+**作用**: 自定义插件行为（可选，默认配置开箱即用）
+
+**创建配置文件**:
+
+```bash
+cp docs/coding-workflow.local.example.md ~/.claude/coding-workflow.local.md
+```
+
+#### 支持的配置项
+
+##### memexCliPath
+
+**说明**: memex-cli 可执行文件的路径
+
+**默认值**: `"memex-cli"` (从系统 PATH 中查找)
+
+**何时需要修改**:
+- memex-cli 不在系统 PATH 中
+- 使用了自定义安装路径
+- 需要指定特定版本的 memex-cli
+
+**示例**:
+
+```yaml
+---
+# macOS/Linux
+memexCliPath: "/usr/local/bin/memex-cli"
+
+# Windows
+memexCliPath: "C:\\Program Files\\nodejs\\memex-cli.cmd"
+---
+```
+
+#### 未来配置项（规划中）
+
+以下配置项将在未来版本中支持：
+
+```yaml
+---
+memexCliPath: "memex-cli"
+enabledBackends:
+  - claude
+  - gemini
+  - codex
+defaultModel: "claude-sonnet-4-5"
+logLevel: "info"  # debug | info | warn | error
+---
+```
 
 ---
 
@@ -1063,7 +1190,136 @@ with ThreadPoolExecutor(max_workers=3) as executor:
 
 ## 故障排查
 
-### 问题 1: memex-cli not found
+### 插件相关问题
+
+#### 问题 1: 插件依赖检查失败
+
+**症状**：
+```
+[错误] memex-cli not found. 请运行: npm install -g memex-cli
+```
+
+**解决方案**：
+
+1. 安装 memex-cli:
+   ```bash
+   npm install -g memex-cli
+   ```
+
+2. 验证安装:
+   ```bash
+   memex-cli --version
+   ```
+
+3. 如已安装但仍报错，配置自定义路径:
+   ```bash
+   cp docs/coding-workflow.local.example.md ~/.claude/coding-workflow.local.md
+   # 编辑 memexCliPath 字段为实际路径
+   ```
+
+4. 查找 memex-cli 实际路径:
+   ```bash
+   # macOS/Linux
+   which memex-cli
+
+   # Windows
+   where memex-cli
+   ```
+
+#### 问题 2: Python 依赖缺失
+
+**症状**：
+```
+[错误] Python 依赖缺失: chardet, pyyaml
+```
+
+**解决方案**：
+```bash
+pip install chardet pyyaml
+
+# 或使用 pip3
+pip3 install chardet pyyaml
+```
+
+#### 问题 3: 插件配置不生效
+
+**症状**: 修改了 `~/.claude/coding-workflow.local.md` 但配置未生效
+
+**解决方案**:
+
+1. 确认配置文件位置正确:
+   ```bash
+   # 查看文件是否存在
+   cat ~/.claude/coding-workflow.local.md
+   ```
+
+2. 检查 YAML frontmatter 格式:
+   ```yaml
+   ---
+   memexCliPath: "/path/to/memex-cli"
+   ---
+   ```
+   注意：必须有三个连字符包裹，冒号后有空格
+
+3. 重启 Claude Code 会话（配置在会话启动时加载）
+
+#### 问题 4: 依赖检查频繁执行
+
+**症状**: 每次启动 Claude Code 都执行依赖检查
+
+**原因**: 缓存文件不存在或权限错误
+
+**解决方案**:
+
+1. 检查缓存文件:
+   ```bash
+   ls -la ~/.claude/coding-workflow-deps-check.txt
+   ```
+
+2. 如缓存文件不存在，手动创建:
+   ```bash
+   # macOS/Linux
+   echo "$(date +%s)" > ~/.claude/coding-workflow-deps-check.txt
+
+   # Windows (PowerShell)
+   [int][double]::Parse((Get-Date -UFormat %s)) | Out-File -Encoding utf8 ~/.claude/coding-workflow-deps-check.txt
+   ```
+
+3. 检查文件权限:
+   ```bash
+   # macOS/Linux - 确保可读写
+   chmod 644 ~/.claude/coding-workflow-deps-check.txt
+   ```
+
+#### 问题 5: 插件未正确安装
+
+**症状**: 无法使用 `/plugin coding-workflow` 命令或插件功能不可用
+
+**解决方案**:
+
+1. 检查插件是否已安装:
+   ```bash
+   ls -la ~/.claude/plugins/coding-workflow/
+   ```
+
+2. 检查 `plugin.json` 是否存在:
+   ```bash
+   cat ~/.claude/plugins/coding-workflow/.claude-plugin/plugin.json
+   ```
+
+3. 重新安装插件:
+   ```
+   /plugin uninstall coding-workflow
+   /plugin install coding-workflow
+   ```
+
+4. 如果仍有问题，尝试手动安装（方式 2）
+
+---
+
+### 系统运行问题
+
+#### 问题 6: memex-cli not found (系统运行时)
 
 **症状**：
 ```
@@ -1084,7 +1340,7 @@ sudo npm install -g memex-cli
 
 ---
 
-### 问题 2: 编码错误（Windows）
+#### 问题 7: 编码错误（Windows）
 
 **症状**：
 ```
@@ -1102,7 +1358,7 @@ parser = EventParser(encoding='utf-16-le')
 
 ---
 
-### 问题 3: 超时错误
+#### 问题 8: 超时错误
 
 **症状**：
 ```
@@ -1123,7 +1379,7 @@ python master_orchestrator.py "复杂任务" --timeout 1200
 
 ---
 
-### 问题 4: 阶段验证失败
+#### 问题 9: 阶段验证失败
 
 **症状**：
 ```
@@ -1147,7 +1403,7 @@ def validate_ux_design(output: str):
 
 ---
 
-### 问题 5: 后端调用失败
+#### 问题 10: 后端调用失败
 
 **症状**：
 ```

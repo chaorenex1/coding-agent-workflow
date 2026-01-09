@@ -6,6 +6,7 @@
 
 - [系统概览](#系统概览)
 - [核心架构](#核心架构)
+- [插件系统集成](#插件系统集成)
 - [模块详解](#模块详解)
 - [数据流](#数据流)
 - [设计决策](#设计决策)
@@ -101,6 +102,294 @@ MasterOrchestrator 采用**分层协调架构**，将复杂的任务自动化分
 │  - dev-workflow.yaml (开发工作流)                               │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 插件系统集成
+
+### 概览
+
+MasterOrchestrator 通过 **Claude Code Plugin System** 实现一键安装和自动化配置。插件系统负责：
+
+1. **自动发现和注册** - Skills、Agents、Commands 的自动注册
+2. **依赖验证** - 启动时检查必需依赖（memex-cli、Python 包）
+3. **配置管理** - 通过 `coding-workflow.local.md` 自定义配置
+4. **生命周期管理** - SessionStart 钩子执行依赖检查
+
+### 插件清单 (plugin.json)
+
+**文件**: `.claude-plugin/plugin.json`
+
+```json
+{
+  "name": "coding-workflow",
+  "version": "3.0.0",
+  "description": "AI 智能工作流系统",
+  "author": {
+    "name": "chaorenex1",
+    "url": "https://github.com/chaorenex1"
+  },
+  "homepage": "https://github.com/chaorenex1/coding-workflow#readme",
+  "repository": "https://github.com/chaorenex1/coding-workflow",
+  "license": "MIT",
+  "keywords": [
+    "workflow", "ai", "automation", "bmad",
+    "orchestrator", "code-generation"
+  ],
+  "skills": "./skills",
+  "agents": [
+    "./agents/automation",
+    "./agents/bmad-iterate",
+    "./agents/bmad-workflow",
+    "./agents/feature-workflow",
+    "./agents/quick-code"
+  ],
+  "commands": [
+    "./commands/bmad-iterate",
+    "./commands/bmad-workflow",
+    "./commands/project-analyzer",
+    "./commands/quick-code",
+    "./commands/scaffold",
+    "./commands/workflow-suite"
+  ]
+}
+```
+
+**字段说明**：
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| `name` | 插件标识符（唯一） | `"coding-workflow"` |
+| `version` | 语义化版本号 | `"3.0.0"` |
+| `description` | 插件描述 | `"AI 智能工作流系统"` |
+| `author` | 作者信息 | `{"name": "...", "url": "..."}` |
+| `skills` | Skills 目录路径 | `"./skills"` |
+| `agents` | Agents 目录路径数组 | `["./agents/bmad-workflow"]` |
+| `commands` | Commands 目录路径数组 | `["./commands/bmad-workflow"]` |
+
+### 依赖验证钩子 (hooks.json)
+
+**文件**: `hooks/hooks.json`
+
+```json
+{
+  "SessionStart": [
+    {
+      "type": "prompt",
+      "prompt": "检查 Coding Workflow 插件的依赖项（仅在首次检查或距上次检查超过24小时时执行）：\n\n1. **memex-cli**: 运行 `which memex-cli` (macOS/Linux) 或 `where memex-cli` (Windows) 检查是否安装。\n   - 如未找到，提示用户安装：`npm install -g memex-cli`\n   - 如已安装，验证版本：`memex-cli --version`（需要 >= 1.0.0）\n\n2. **Python 依赖**: 运行 `python -c \"import chardet, yaml\"` 检查。\n   - 如导入失败，提示：`pip install chardet pyyaml`\n\n3. **缓存检查结果**: 将检查时间戳保存到 ~/.claude/coding-workflow-deps-check.txt，避免频繁检查。\n\n如果所有依赖都已满足，显示简短的成功消息。如果有缺失，显示清晰的安装指令但允许继续使用插件（某些功能可能受限）。"
+    }
+  ]
+}
+```
+
+**SessionStart 钩子**：
+
+- **触发时机**: 每次 Claude Code 会话启动时
+- **执行频率**: 24 小时内只执行一次（通过时间戳缓存）
+- **检查项**:
+  1. `memex-cli` 可执行文件
+  2. Python 依赖包（chardet、pyyaml）
+- **缓存机制**: 检查结果保存到 `~/.claude/coding-workflow-deps-check.txt`
+- **用户体验**: 依赖缺失时提示安装，但允许继续使用插件
+
+### 配置管理
+
+#### 配置文件位置
+
+**用户配置**: `~/.claude/coding-workflow.local.md`
+
+- 用户可自定义配置项
+- 不提交到 Git（`.gitignore` 已排除）
+- 通过 YAML frontmatter 定义配置
+
+**配置模板**: `docs/coding-workflow.local.example.md`
+
+- 提供配置示例和说明
+- 用户可复制此文件并修改
+
+#### 当前支持的配置项
+
+```yaml
+---
+memexCliPath: "memex-cli"
+---
+```
+
+**memexCliPath** - memex-cli 可执行文件路径
+
+- **默认值**: `"memex-cli"` (从 PATH 中查找)
+- **自定义场景**:
+  - memex-cli 不在系统 PATH 中
+  - 使用自定义安装路径
+  - 需要指定特定版本
+- **示例**:
+  ```yaml
+  # macOS/Linux
+  memexCliPath: "/usr/local/bin/memex-cli"
+
+  # Windows
+  memexCliPath: "C:\\Program Files\\nodejs\\memex-cli.cmd"
+  ```
+
+#### 未来配置项（规划中）
+
+```yaml
+---
+memexCliPath: "memex-cli"
+enabledBackends:
+  - claude
+  - gemini
+  - codex
+defaultModel: "claude-sonnet-4-5"
+logLevel: "info"  # debug | info | warn | error
+---
+```
+
+### 插件安装流程
+
+```
+用户执行: /plugin coding-workflow
+    ↓
+Claude Code Plugin Manager
+    ├─ 下载插件到 ~/.claude/plugins/coding-workflow/
+    ├─ 解析 .claude-plugin/plugin.json
+    ├─ 注册 Skills (21 个)
+    │   └─ skills/master-orchestrator/SKILL.md
+    │   └─ skills/code-with-codex/SKILL.md
+    │   └─ ...
+    ├─ 注册 Agents (36 个)
+    │   └─ agents/bmad-workflow/*.md
+    │   └─ agents/bmad-iterate/*.md
+    │   └─ ...
+    ├─ 注册 Commands (47 个)
+    │   └─ commands/bmad-workflow/*.md
+    │   └─ commands/quick-code/*.md
+    │   └─ ...
+    ├─ 注册 SessionStart 钩子
+    │   └─ hooks/hooks.json
+    └─ 完成安装
+    ↓
+会话启动时
+    ├─ 执行 SessionStart 钩子
+    ├─ 检查依赖（memex-cli、Python 包）
+    ├─ 读取配置 (~/.claude/coding-workflow.local.md)
+    └─ 显示状态消息
+```
+
+### 架构整合
+
+```
+┌─────────────────────────────────────────────────────────┐
+│               Claude Code Plugin Layer                  │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  Plugin Manager                                   │  │
+│  │  - 发现和注册 (Skills/Agents/Commands)             │  │
+│  │  - 生命周期管理 (SessionStart 钩子)               │  │
+│  │  - 配置加载 (coding-workflow.local.md)            │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                 MasterOrchestrator                       │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │    ClaudeIntentAnalyzer (Claude LLM 意图分析)     │   │
+│  └──────────────────┬───────────────────────────────┘   │
+│                     │                                    │
+│  ┌──────────────────▼───────────────────────────────┐   │
+│  │         ExecutionRouter (执行路由层)              │   │
+│  └──────────────────┬───────────────────────────────┘   │
+└─────────────────────┼────────────────────────────────────┘
+         ┌────────────┼────────────┐
+         │            │            │
+┌────────▼────┐  ┌───▼────┐  ┌───▼─────┐
+│  Command    │  │ Agent  │  │ Skill   │
+│ Executor V2 │  │Caller  │  │Executor │
+└─────────────┘  └────────┘  └─────────┘
+```
+
+**插件层职责**：
+
+1. **资源发现**: 扫描并注册所有 Skills、Agents、Commands
+2. **依赖管理**: SessionStart 钩子验证必需依赖
+3. **配置注入**: 加载用户配置并传递给 MasterOrchestrator
+4. **生命周期**: 管理插件的启动、运行、更新
+
+**MasterOrchestrator 与插件层交互**：
+
+- MasterOrchestrator 无需感知插件系统
+- 插件层负责提供所有必需的资源和配置
+- 配置通过环境变量或配置文件传递
+- 依赖验证在 MasterOrchestrator 启动前完成
+
+### 设计亮点
+
+1. **零侵入**: MasterOrchestrator 代码无需修改即可支持插件
+2. **自动化**: 依赖检查和配置加载全自动化
+3. **用户友好**: 清晰的错误提示和安装指引
+4. **可选配置**: 默认配置开箱即用，高级配置按需定制
+5. **缓存优化**: 24 小时内避免重复依赖检查
+
+### 故障排查
+
+#### 问题 1: 依赖检查失败
+
+**症状**:
+```
+[错误] memex-cli not found. 请运行: npm install -g memex-cli
+```
+
+**解决方案**:
+1. 安装 memex-cli:
+   ```bash
+   npm install -g memex-cli
+   ```
+2. 验证安装:
+   ```bash
+   memex-cli --version
+   ```
+3. 如已安装但仍报错，配置自定义路径:
+   ```bash
+   cp docs/coding-workflow.local.example.md ~/.claude/coding-workflow.local.md
+   # 编辑 memexCliPath 字段
+   ```
+
+#### 问题 2: Python 依赖缺失
+
+**症状**:
+```
+[错误] Python 依赖缺失: chardet, pyyaml
+```
+
+**解决方案**:
+```bash
+pip install chardet pyyaml
+```
+
+#### 问题 3: 配置不生效
+
+**症状**: 修改了配置文件但未生效
+
+**解决方案**:
+1. 确认配置文件位置正确: `~/.claude/coding-workflow.local.md`
+2. 检查 YAML frontmatter 格式:
+   ```yaml
+   ---
+   memexCliPath: "/path/to/memex-cli"
+   ---
+   ```
+3. 重启 Claude Code 会话
+
+#### 问题 4: 依赖检查频繁执行
+
+**症状**: 每次启动都执行依赖检查
+
+**解决方案**:
+- 检查缓存文件: `~/.claude/coding-workflow-deps-check.txt`
+- 如缓存文件不存在或权限错误，系统会每次检查
+- 手动创建缓存文件:
+  ```bash
+  echo "$(date +%s)" > ~/.claude/coding-workflow-deps-check.txt
+  ```
 
 ---
 

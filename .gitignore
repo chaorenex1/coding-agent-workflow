@@ -1,5 +1,7 @@
 # Claude Code temporary files
 .claude/sandbox/
+.claude/*.local.md
+.claude/coding-workflow-deps-check.txt
 
 # Orchestrator output files
 orchestrator_output/

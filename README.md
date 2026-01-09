@@ -14,7 +14,7 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 - 🤖 **多后端协调** - 自动选择最适合的 AI 后端执行任务
 - 🎯 **专业任务路由** - 代码开发和 UX 设计任务委托给专业后端（V3.0 简化版）
 - 🔄 **端到端自动化** - 从一句话需求到完整代码实现
-- 🛠️ **20+ 技能集成** - 代码分析、重构、文档生成等专业技能
+- 🛠️ **21 项技能集成** - 代码分析、重构、文档生成等专业技能
 - 🏃 **零开销执行** - 90% 任务直接执行，无路由开销
 
 > **V3.0 架构升级（2026-01-08）**：master-orchestrator 重大简化，从 12,760 行精简到 392 行（↓96.9%），采用 KISS 原则实现极简路由。详见 [CHANGELOG](skills/master-orchestrator/CHANGELOG.md)。
@@ -52,7 +52,7 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 │  └─────────────┘  └─────────────┘  └─────────────┘            │
 │                                                                   │
 ├─────────────────────────────────────────────────────────────────┤
-│                       技能系统 (20+ Skills)                       │
+│                       技能系统 (21 个 Skills)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │  • master-orchestrator        - 专业任务路由器（V3.0 简化版）   │
 │  • code-with-codex            - Codex 代码开发                   │
@@ -66,7 +66,7 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 │  • ...更多技能                                                   │
 │                                                                   │
 ├─────────────────────────────────────────────────────────────────┤
-│                      代理系统 (30+ Agents)                        │
+│                      代理系统 (36 个 Agents)                       │
 ├─────────────────────────────────────────────────────────────────┤
 │  BMAD 完整工作流代理 (8):                                         │
 │  • bmad-orchestrator          - 工作流总协调器                   │
@@ -88,6 +88,42 @@ Coding Workflow 是一个AI 智能工作流系统，通过统一协调多个 AI 
 ## 🚀 快速开始
 
 ### 安装
+
+#### 方式 1: 通过 Claude Code Plugin Marketplace（推荐）
+
+**一键安装**：
+
+在 Claude Code 中运行：
+```
+/plugin coding-workflow
+```
+
+插件会自动安装所有 21 个 Skills、36 个 Agents 和 47 个 Commands。
+
+**依赖安装**：
+
+插件启动时会自动检查依赖，如有缺失会提示安装：
+
+```bash
+# 安装 memex-cli (必需)
+npm install -g memex-cli
+
+# 安装 Python 依赖
+pip install chardet pyyaml
+```
+
+**配置（可选）**：
+
+如需自定义配置，复制配置模板：
+```bash
+cp docs/coding-workflow.local.example.md ~/.claude/coding-workflow.local.md
+```
+
+然后编辑 `~/.claude/coding-workflow.local.md` 修改配置项。
+
+---
+
+#### 方式 2: 手动安装（开发者模式）
 
 ```bash
 # 克隆项目
@@ -175,7 +211,7 @@ coding-workflow/
 │   ├── priority-optimization-assistant/# 优先级优化助手
 │   └── multcode-dev-workflow-agent/    # 多代码开发工作流
 │
-├── agents/                             # 代理系统 (30+ 个)
+├── agents/                             # 代理系统 (36 个)
 │   ├── bmad-workflow/                  # ⭐ BMAD 完整工作流 (8 个)
 │   │   ├── bmad-orchestrator.md        # 工作流总协调器
 │   │   ├── bmad-analyst.md             # 需求分析师
