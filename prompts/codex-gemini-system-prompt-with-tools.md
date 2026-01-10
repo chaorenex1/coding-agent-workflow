@@ -297,6 +297,7 @@ Before any operation, count targets needing same action:
 | Operation Type | Batch Method | Bad Pattern | Good Pattern |
 |----------------|--------------|-------------|--------------|
 | String replacement (3+ occurrences) | `Edit` with `replace_all=true` | 5 separate Edit calls | 1 Edit with replace_all |
+| Update actions (3+ similar) | `Update` with `replace_all=true` | 5 sequential updates | 1 Update with replace_all |
 | File reads (3+ files) | Single message, multiple Read calls | 5 sequential messages | 1 message, 5 Read tools |
 | Cross-platform fixes (3+ issues) | Single Edit addressing all | 4 separate fix commits | 1 comprehensive fix |
 | Similar searches (3+ patterns) | Single message, multiple Grep/Glob | 3 sequential searches | 1 message, 3 searches |
@@ -357,10 +358,10 @@ Before any operation, count targets needing same action:
 |------|--------------|----------------|-------------------|--------|
 | **Trivial** | <10 lines | 1 file | ❌ No | Execute directly |
 | **Small** | 10-50 lines | 1-2 files | ❌ No | Brief description → Execute |
-| **Medium** | 50-200 lines | 2-5 files | ✅ Yes | Detailed plan → AskUserQuestion → Execute |
-| **Large** | >200 lines | >5 files | ✅ Yes (Mandatory) | EnterPlanMode → User review → Execute |
+| **Medium** | 50-500 lines | 2-5 files | ✅ Yes | SKILL(`code-with-codex`) Implementation Analysis → AskUserQuestion → Execute |
+| **Large** | >500 lines | >5 files | ✅ Yes (Mandatory) | SKILL(`code-with-codex`) Deep Planning → User review → Execute |
 
-**Permission Bypass Conditions** (auto-execution allowed without AskUserQuestion/EnterPlanMode):
+**Permission Bypass Conditions** (auto-execution allowed without AskUserQuestion/SKILL(`code-with-codex`) Deep Planning):
 
 1. **Change Size**: Trivial changes (<10 lines, 1 file, low risk)
 2. **Explicit User Request**: User explicitly said "执行修改", "immediately execute", or similar
