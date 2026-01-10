@@ -1,85 +1,385 @@
 ---
 name: memex-cli
-description: "Execute AI-powered command-line tasks with memory, and resume capabilities using memex-cli. Use when (1) Running AI backend tasks (codex, claude, gemini), (2) Resuming interrupted runs by run_id, (3) Executing prompts with streaming output in jsonl or text format."
+description: "Execute AI tasks (codex/claude/gemini) with memory and resume support via memex-cli stdin protocol."
 ---
 
 # Memex CLI
 
-A CLI wrapper for AI backends with built-in memory, and resume support.
+A CLI wrapper for AI backends (Codex, Claude, Gemini) with built-in memory and resume capabilities.
 
-## Core Commands
+## Core Concepts
 
-### Run a Task
+memex-cli uses **stdin protocol** to define tasks, allowing:
+- Multi-backend AI execution (codex, claude, gemini)
+- Parallel and sequential task orchestration
+- Resume from previous runs with full context
+- File loading for context-aware tasks
+- Structured output (text or JSONL)
 
-```bash
-memex-cli run \
-  --backend <backend> \
-  --prompt "<prompt>" \
-  --stream-format <format>
-```
-
-**Parameters:**
-- `--backend`: AI backend (`codex`, `claude`, `gemini`)
-- `--prompt`: Task prompt
-- `--stream-format`: Output format (`jsonl` or `text`)
-- `--model`: Model name (optional, for codex backend)
-- `--model-provider`: Model provider (optional, for codex backend)
-
-### Resume a Run
+## Basic Task Syntax
 
 ```bash
-memex-cli resume \
-  --run-id <RUN_ID> \
-  --backend <backend> \
-  --prompt "<prompt>" \
-  --stream-format <format>
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: <task_id>
+backend: <backend>
+workdir: <working_directory>
+---CONTENT---
+<prompt>
+---END---
+EOF
 ```
 
-Continues a previous run using its `run_id`.
+### Required Parameters
 
-## Backend Examples
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `id` | Unique task identifier | `implement-auth-20260110` |
+| `backend` | AI backend | `codex`, `claude`, `gemini` |
+| `workdir` | Working directory path | `./project` or `/home/user/app` |
+| `<prompt>` | Task prompt content | Describe what to implement |
 
-### Codex
+### Optional Parameters
+
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|---------|
+| `model` | Specific model name | Backend default | `gpt-5.2`, `gpt-5.1-codex-max` |
+| `model-provider` | Model provider | `openai` | For codex backend |
+| `dependencies` | Task dependencies | None | `task-a` or `task-a,task-b` |
+| `timeout` | Timeout in seconds | 300 | `600` (10 minutes) |
+| `retry` | Retry count on failure | 0 | `2` (retry twice) |
+| `files` | File paths to load | None | `src/**/*.py` (glob supported) |
+| `files-mode` | File handling mode | `embed` | `ref`, `auto` |
+| `files-encoding` | File encoding | `utf-8` | `base64`, `auto` |
+| `stream-format` | Output format | `text` | `jsonl` |
+
+## Backend Selection
+
+### Codex - Code Generation
+
+Optimized for code implementation and refactoring.
 
 ```bash
-memex-cli run --backend "codex" --prompt "编码" --stream-format "text"
+---TASK---
+id: code-gen
+backend: codex
+workdir: ./project
+model: gpt-5.2
+---CONTENT---
+实现用户认证模块
+---END---
 ```
 
-### Claude
+**Best for:** Code generation, refactoring, test writing
+
+### Claude - Design & Architecture
+
+Optimized for system design and architecture planning.
 
 ```bash
-memex-cli run --backend "claude" --prompt "设计" --stream-format "text"
+---TASK---
+id: design
+backend: claude
+workdir: ./project
+---CONTENT---
+设计 REST API 架构
+---END---
 ```
 
-### Gemini
+**Best for:** System design, architecture, documentation
+
+### Gemini - Multimodal Tasks
+
+Supports image and document analysis.
 
 ```bash
-memex-cli run --backend "gemini" --prompt "UX" --stream-format "text"
+---TASK---
+id: ux-review
+backend: gemini
+workdir: ./project
+files: ./mockups/*.png
+files-mode: embed
+---CONTENT---
+审查 UX 设计稿
+---END---
 ```
 
-## Output
+**Best for:** UI/UX review, image analysis, multimodal tasks
 
-Outputs are streamed in the specified format (`jsonl` or `text`), allowing real-time monitoring of task progress.
+## Task ID Patterns
 
-### Example JSONL output(multiple jsonl lines)
+**Recommended patterns:**
 
+```
+# Timestamp format (unique)
+task-20260110143052
+implement-auth-20260110143052
+
+# Semantic format (readable)
+design-api
+implement-backend
+test-integration
+
+# Hierarchical format (organized)
+auth.design
+auth.implement
+auth.test
+```
+
+Avoid generic IDs like `task1`, `task2`.
+
+## Multi-Task Execution
+
+Define multiple tasks in one stdin input:
+
+```bash
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: task-1
+backend: codex
+workdir: ./project
+---CONTENT---
+First task
+---END---
+
+---TASK---
+id: task-2
+backend: codex
+workdir: ./project
+---CONTENT---
+Second task
+---END---
+EOF
+```
+
+**Execution modes:**
+- **Parallel** (default) - Tasks without dependencies run simultaneously
+- **DAG** (sequential) - Tasks with `dependencies:` run in order
+
+See `references/advanced-usage.md` for detailed multi-task documentation.
+
+## Resume Functionality
+
+Continue from a previous run using `--run-id`:
+
+```bash
+# Initial run outputs Run ID
+memex-cli run --stdin < task.md
+# Output: Run ID: abc123-def456
+
+# Resume from that run
+memex-cli resume --run-id abc123-def456 --stdin <<'EOF'
+---TASK---
+id: continue
+backend: codex
+workdir: ./project
+---CONTENT---
+基于之前的实现添加功能
+---END---
+EOF
+```
+
+**Context preservation:**
+- Previous task outputs available
+- Conversation history maintained
+- File changes visible
+
+See `references/advanced-usage.md` for resume strategies.
+
+## Output Formats
+
+### Text Format (Default)
+
+Human-readable with status markers:
+
+```
+▶ task-id (backend/model)
+[AI output content]
+» 写入 file.py
+✓ task-id 3.5s
+```
+
+**Status markers:** `▶` (start), `✓` (success), `✗` (failed), `⟳` (retry), `»` (action)
+
+### JSONL Format
+
+Machine-readable JSON Lines for programmatic parsing:
+
+```bash
+memex-cli run --stdin --stream-format jsonl < tasks.md
+```
+
+Output:
 ```jsonl
-{"v":1,"type":"assistant.output","ts":"2026-01-08T08:22:20.664800300+00:00","run_id":"a9ba0e5d-9dd5-43a1-8b0f-b1dd11346a2b","action":"\"{}\"","args":null,"output":"{\n  \"mode\": \"command\",\n  \"task_type\": \"general\",\n  \"complexity\": \"simple\",\n  \"backend_hint\": null,\n  \"skill_hint\": null,\n  \"confidence\": 0.92,\n  \"reasoning\": \"简单的文件写入任务，生成10道算术题并写入文件，可用echo或Python命令直接完成\",\n  \"enable_parallel\": false,\n  \"parallel_reasoning\": \"单一文件写入操作，顺序 执行即可\"\n}"}
+{"v":1,"type":"task.start","ts":"2026-01-10T10:00:00Z","run_id":"abc","task_id":"code-gen"}
+{"v":1,"type":"assistant.output","ts":"2026-01-10T10:00:01Z",...}
+{"v":1,"type":"task.end","ts":"2026-01-10T10:00:03Z",...}
 ```
 
-### Example Text output(multiple text lines, any format)
+See `references/output-formats.md` for complete format specifications.
 
-```txt
-{
-  "mode": "backend",
-  "task_type": "general",
-  "complexity": "simple",
-  "backend_hint": "claude",
-  "skill_hint": null,
-  "confidence": 0.92,
-  "reasoning": "生成10道算术题目并写入文件，简单内容生成任务，适合直接LLM处理",
-  "enable_parallel": false,
-  "parallel_reasoning": "单一文件写入任务，无法分解并行"
-}
+## Quick Start Examples
+
+**Single task:**
+```bash
+memex-cli run --stdin < examples/basic-task.md
 ```
 
+**Parallel tasks:**
+```bash
+memex-cli run --stdin < examples/parallel-tasks.md
+```
+
+**DAG workflow:**
+```bash
+memex-cli run --stdin < examples/dag-workflow.md
+```
+
+All examples are in `examples/` directory with full task definitions.
+
+## Additional Resources
+
+### Reference Documentation
+
+For detailed information on advanced features:
+
+- **`references/output-formats.md`** - Complete output format specifications
+  - Text format status markers
+  - JSONL event types
+  - Parsing examples
+
+- **`references/advanced-usage.md`** - Advanced usage patterns
+  - Multi-task parallel execution
+  - DAG dependency configuration
+  - Resume strategies
+  - File loading modes
+  - Timeout and retry configuration
+
+- **`references/troubleshooting.md`** - Comprehensive troubleshooting guide
+  - Installation and authentication issues
+  - Task execution failures
+  - File loading problems
+  - Dependency and resume errors
+  - Performance optimization
+  - Advanced debugging techniques
+
+### Working Examples
+
+Ready-to-use task files in `examples/`:
+
+- **`examples/basic-task.md`** - Single task implementation
+- **`examples/parallel-tasks.md`** - Independent parallel tasks
+- **`examples/dag-workflow.md`** - Complete workflow with dependencies
+- **`examples/resume-workflow.md`** - Iterative development with resume
+
+Copy and customize these examples for your projects.
+
+## Common Workflows
+
+### Code Implementation
+
+```bash
+# Generate code with Codex
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: implement-feature
+backend: codex
+workdir: ./project
+model: gpt-5.2
+---CONTENT---
+实现用户认证模块
+---END---
+EOF
+```
+
+### Design Phase
+
+```bash
+# Design with Claude
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: design-system
+backend: claude
+workdir: ./project
+---CONTENT---
+设计系统架构
+---END---
+EOF
+```
+
+### UX Review
+
+```bash
+# Review mockups with Gemini
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: review-ui
+backend: gemini
+workdir: ./project
+files: mockups/*.png
+files-mode: embed
+---CONTENT---
+审查 UI 设计稿
+---END---
+EOF
+```
+
+### Iterative Development
+
+```bash
+# 1. Initial implementation
+RUN_ID=$(memex-cli run --stdin < task.md | grep "Run ID:" | awk '{print $3}')
+
+# 2. Add features
+memex-cli resume --run-id $RUN_ID --stdin < add-features.md
+
+# 3. Fix bugs
+memex-cli resume --run-id $RUN_ID --stdin < bugfixes.md
+```
+
+## Best Practices
+
+**Task ID naming:**
+- Use descriptive, semantic names
+- Include timestamps for uniqueness
+- Hierarchical naming for organization
+
+**Backend selection:**
+- Codex → Code generation
+- Claude → Design, architecture
+- Gemini → Multimodal, UI/UX
+
+**Dependency management:**
+- Keep DAG shallow (2-3 levels)
+- Parallelize independent tasks
+- Use resume for long workflows
+
+**File loading:**
+- Small files (<50 KB) → `files-mode: embed`
+- Large files (>50 KB) → `files-mode: ref`
+- Mixed sizes → `files-mode: auto`
+
+**Output format:**
+- Interactive use → `text` (default)
+- Automation → `jsonl` for parsing
+
+## Troubleshooting
+
+**Common issues:**
+
+- **"memex-cli command not found"** → Install: `npm install -g memex-cli`
+- **"Backend authentication failed"** → Check API keys configuration
+- **"File not found"** → Verify file paths relative to `workdir:`
+- **"Circular dependency"** → Restructure task dependencies (no cycles)
+- **"Context size exceeded"** → Use `files-mode: ref` or load fewer files
+
+## Summary
+
+memex-cli enables AI-powered development workflows with:
+- Multi-backend support (codex, claude, gemini)
+- Parallel and sequential task execution
+- Resume capability for iterative development
+- Flexible file loading with glob patterns
+- Structured output (text, JSONL)
+
+Start with `examples/basic-task.md`, then explore advanced patterns in `references/`.
