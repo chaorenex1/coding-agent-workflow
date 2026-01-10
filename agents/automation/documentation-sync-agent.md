@@ -2,7 +2,7 @@
 name: documentation-sync-agent
 description: Documentation synchronization specialist. Automatically invoked when code changes require documentation updates. Analyzes git diffs, identifies affected design/architecture/API docs, and updates documentation in docs/ or user-specified directories to maintain code-documentation consistency.
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: sonnet
+model: opus
 color: green
 field: documentation
 expertise: expert

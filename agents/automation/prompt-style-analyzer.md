@@ -2,7 +2,7 @@
 name: prompt-style-analyzer
 description: 提示词风格学习和生成专家。分析现有提示词的风格、逻辑和叙述规则，学习其写作模式后，为用户生成相同风格的新提示词。适用于提示词工程、模板复制、风格迁移等场景。
 tools: Read, Write, Grep
-model: sonnet
+model: opus
 color: blue
 field: prompt-engineering
 expertise: expert
