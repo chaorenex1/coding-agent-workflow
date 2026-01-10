@@ -5,105 +5,372 @@ description: "Create UX designs using memex-cli with Gemini backend. Use when (1
 
 # UX Design with Gemini
 
-Use memex-cli to leverage Gemini for UX design tasks with memory and replay support.
+Use memex-cli to leverage Gemini for UX design tasks with multimodal analysis and structured output generation.
 
-## RUN_ID Instructions
+---
 
-When using `memex-cli resume`, replace `<RUN_ID>` with the actual run ID obtained from the initial `memex-cli run` command. This allows you to continue or build upon previous code generation tasks.
+## When to Use This Skill
 
-## Memex cli Output Format
+**Choose ux-design-gemini when:**
+- Creating design documentation (personas, journey maps, wireframes)
+- Building design systems and component libraries
+- Analyzing design screenshots for critique
+- Generating structured design specifications
 
-Outputs are streamed in the specified format (`jsonl` or `text`), allowing real-time monitoring of task progress.
+**Choose other skills when:**
+- **Code implementation** → Use [code-with-codex](../code-with-codex/SKILL.md)
+- **Complex architecture decisions** → Use Claude via memex-cli
+- **Multi-backend workflows** → Combine Gemini (design) + Codex (code)
 
-### Example JSONL output(multiple jsonl lines)
+---
 
-```jsonl
-{"v":1,"type":"assistant.output","ts":"2026-01-08T08:22:20.664800300+00:00","run_id":"a9ba0e5d-9dd5-43a1-8b0f-b1dd11346a2b","action":"\"{}\"","args":null,"output":"{\n  \"mode\": \"command\",\n  \"task_type\": \"general\",\n  \"complexity\": \"simple\",\n  \"backend_hint\": null,\n  \"skill_hint\": null,\n  \"confidence\": 0.92,\n  \"reasoning\": \"简单的文件写入任务，生成10道算术题并写入文件，可用echo或Python命令直接完成\",\n  \"enable_parallel\": false,\n  \"parallel_reasoning\": \"单一文件写入操作，顺序 执行即可\"\n}"}
-```
+## Design Stages Overview
 
-### Example Text output(multiple text lines, any format)
+| Stage | Design Tasks | Output Examples | Gemini Strengths |
+|-------|--------------|-----------------|------------------|
+| **Research** | User personas, journey maps | [User Research](examples/user-research.md) | Text analysis, structured output |
+| **Define** | Information architecture, site maps | [IA Examples](examples/information-architecture.md) | Hierarchical structure generation |
+| **Ideate** | User flows, concept descriptions | See Quick Start below | Rapid iteration on concepts |
+| **Prototype** | Wireframe specs, mockups, design systems | [Wireframes](examples/wireframes-mockups.md), [Components](examples/component-systems.md) | Detailed specifications |
+| **Test** | Design reviews, accessibility audits | [Design Review](examples/design-review.md) | **Image analysis** for visual critique |
 
-```txt
-{
-  "mode": "backend",
-  "task_type": "general",
-  "complexity": "simple",
-  "backend_hint": "claude",
-  "skill_hint": null,
-  "confidence": 0.92,
-  "reasoning": "生成10道算术题目并写入文件，简单内容生成任务，适合直接LLM处理",
-  "enable_parallel": false,
-  "parallel_reasoning": "单一文件写入任务，无法分解并行"
-}
-```
+➜ **Complete workflow guide:** [references/design-workflow.md](references/design-workflow.md)
+
+---
 
 ## Quick Start
 
 ### Generate User Flow
 
 ```bash
-memex-cli run --backend "gemini" --prompt "设计一个电商App的用户购物流程，包含浏览、加购、结算、支付的完整流程图" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: user-flow
+backend: gemini
+workdir: /path/to/project
+---CONTENT---
+设计一个电商App的用户购物流程，包含浏览、加购、结算、支付的完整流程图
+---END---
+EOF
 ```
 
 ### Create Wireframe Spec
 
 ```bash
-memex-cli run --backend "gemini" --prompt "为登录注册页面创建线框图规格说明，包含布局、组件位置、交互状态" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: wireframe
+backend: gemini
+workdir: /path/to/project
+---CONTENT---
+为登录注册页面创建线框图规格说明，包含布局、组件位置、交互状态
+---END---
+EOF
 ```
 
 ### Design Component System
 
 ```bash
-memex-cli run --backend "gemini" --prompt "设计一套移动端UI组件规范，包含按钮、输入框、卡片、导航栏的样式定义" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: component-system
+backend: gemini
+workdir: /path/to/project
+---CONTENT---
+设计一套移动端UI组件规范，包含按钮、输入框、卡片、导航栏的样式定义
+---END---
+EOF
 ```
+
+---
 
 ## Common UX Tasks
 
-### 用户研究
+### User Research
 
 ```bash
-memex-cli run --backend "gemini" --prompt "为健身App设计用户画像和使用场景分析" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: personas
+backend: gemini
+---CONTENT---
+为健身App创建3个用户画像，包含目标、痛点、使用场景
+---END---
+EOF
 ```
 
-### 信息架构
+➜ **More examples:** [examples/user-research.md](examples/user-research.md)
+
+---
+
+### Information Architecture
 
 ```bash
-memex-cli run --backend "gemini" --prompt "设计一个SaaS后台管理系统的信息架构和导航结构" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: sitemap
+backend: gemini
+---CONTENT---
+为SaaS项目管理工具设计站点地图和导航结构
+---END---
+EOF
 ```
 
-### 交互设计
+➜ **More examples:** [examples/information-architecture.md](examples/information-architecture.md)
+
+---
+
+### Wireframes & Mockups
 
 ```bash
-memex-cli run --backend "gemini" --prompt "设计表单提交的交互反馈方案，包含加载、成功、错误状态" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: wireframe-specs
+backend: gemini
+---CONTENT---
+创建移动端外卖App关键页面的低保真线框图规格（首页、商家详情、购物车）
+---END---
+EOF
 ```
 
-### 响应式布局
+➜ **More examples:** [examples/wireframes-mockups.md](examples/wireframes-mockups.md)
+
+---
+
+### Component Systems
 
 ```bash
-memex-cli run --backend "gemini" --prompt "设计一个产品详情页的响应式布局方案，适配手机、平板、桌面端" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: design-system
+backend: gemini
+---CONTENT---
+创建设计系统文档：色彩系统、字体规范、间距体系、组件库
+---END---
+EOF
 ```
 
-## Workflow Pattern
+➜ **More examples:** [examples/component-systems.md](examples/component-systems.md)
 
-### 1. 初始设计
+---
+
+### Design Review
 
 ```bash
-memex-cli run --backend "gemini" --prompt "<设计需求>" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: heuristic-eval
+backend: gemini
+files: ./dashboard.png
+files-mode: embed
+---CONTENT---
+使用Nielsen's 10 Heuristics评估这个仪表板设计
+---END---
+EOF
 ```
 
-### 2. 迭代优化
+➜ **More examples:** [examples/design-review.md](examples/design-review.md)
+
+---
+
+## Multimodal Capabilities
+
+**Gemini's unique strength:** Analyze design screenshots for visual critique.
+
+### Upload Design for Review
 
 ```bash
-memex-cli resume --run-id <RUN_ID> --backend "gemini" --prompt "基于上一轮设计，优化<具体方面>" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: design-critique
+backend: gemini
+files: ./mockup.png
+files-mode: embed        # Required for image analysis
+---CONTENT---
+审查这个设计稿：
+1. 视觉层次是否清晰
+2. 色彩对比度是否符合WCAG AA标准
+3. 组件布局是否合理
+4. 留白和间距是否恰当
+---END---
+EOF
 ```
 
-## Output Formats
+**Supported formats:** PNG, JPG, WEBP (< 5MB recommended)
 
-- `text`: 可读的设计文档，适合直接阅读
-- `jsonl`: 结构化输出，适合后续处理或存档
+### Compare Design Versions
+
+```bash
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: version-compare
+backend: gemini
+files: ./v1-home.png, ./v2-home.png
+files-mode: embed
+---CONTENT---
+对比这两个版本的首页设计，分析改进之处和潜在问题
+---END---
+EOF
+```
+
+### Competitive Analysis
+
+```bash
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: competitive-analysis
+backend: gemini
+files: ./our-app.png, ./competitor-a.png, ./competitor-b.png
+files-mode: embed
+---CONTENT---
+对比分析我们的App与竞品的设计：布局、视觉风格、交互模式
+---END---
+EOF
+```
+
+**Use cases:**
+- Design critique and feedback
+- Accessibility audit (color contrast check)
+- Competitive screenshot analysis
+- Design system compliance verification
+
+➜ **Advanced image analysis techniques:** [references/multimodal-tips.md](references/multimodal-tips.md)
+
+---
+
+## Advanced Workflows
+
+For multi-task workflows, parallel execution, and resume functionality, refer to memex-cli skill:
+
+- **Multi-task DAG workflows:** [memex-cli/references/advanced-usage.md](../memex-cli/references/advanced-usage.md)
+- **Parallel execution patterns:** [memex-cli/examples/parallel-tasks.md](../memex-cli/examples/parallel-tasks.md)
+- **Resume interrupted runs:** [memex-cli/examples/resume-workflow.md](../memex-cli/examples/resume-workflow.md)
+
+**Example multi-stage workflow:**
+
+```bash
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: research
+backend: gemini
+---CONTENT---
+用户研究
+---END---
+
+---TASK---
+id: architecture
+backend: gemini
+dependencies: research
+---CONTENT---
+信息架构设计
+---END---
+
+---TASK---
+id: wireframe
+backend: gemini
+dependencies: architecture
+---CONTENT---
+线框图规格
+---END---
+EOF
+```
+
+See [references/design-workflow.md](references/design-workflow.md) for complete design process with DAG examples.
+
+---
+
+## Quick Reference
+
+### Required Fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique task identifier |
+| `backend` | `gemini` |
+| `workdir` | Working directory path |
+
+### Optional Fields
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `dependencies` | - | Task IDs for sequential execution |
+| `timeout` | 300 | Seconds |
+| `files` | - | Design files to analyze (PNG, JPG) |
+| `files-mode` | auto | `embed` (required for image analysis) |
+
+---
+
+## Additional Resources
+
+### Progressive Disclosure Documentation
+
+- **[HOW_TO_USE.md](HOW_TO_USE.md)** - Complete usage guide
+  - When to use this skill
+  - Gemini vs other backends
+  - Integration with design tools
+  - Workflow recommendations
+
+- **[references/design-principles.md](references/design-principles.md)** - UX design fundamentals
+  - UX methodologies (Design Thinking, UCD)
+  - Nielsen's 10 heuristics
+  - Mobile design guidelines (iOS HIG, Material Design)
+  - Accessibility standards (WCAG 2.1)
+  - Visual hierarchy and color theory
+
+- **[references/design-workflow.md](references/design-workflow.md)** - Complete design process
+  - 5-stage workflow (Research → Define → Ideate → Prototype → Test)
+  - Deliverables by stage
+  - DAG workflow examples
+  - Iteration and feedback loops
+  - Handoff to development
+
+- **[references/multimodal-tips.md](references/multimodal-tips.md)** - Image analysis techniques
+  - File format and size recommendations
+  - Design critique prompt templates
+  - Multi-image comparison analysis
+  - Screenshot preparation tips
+
+### Detailed Examples
+
+- **[examples/user-research.md](examples/user-research.md)** - Personas, journey maps, competitive analysis
+- **[examples/information-architecture.md](examples/information-architecture.md)** - Site maps, navigation, content hierarchy
+- **[examples/wireframes-mockups.md](examples/wireframes-mockups.md)** - Lo-fi wireframes, hi-fi mockups, responsive layouts
+- **[examples/component-systems.md](examples/component-systems.md)** - Design systems, component libraries, style guides
+- **[examples/design-review.md](examples/design-review.md)** - Heuristic evaluations, accessibility audits, visual critiques
+
+---
 
 ## Tips
 
-1. 复杂设计任务拆分为多个步骤并行执行，利用resume连续迭代
-2. 使用jsonl格式保存完整设计过程，便于回溯
-3. 在prompt中明确指定输出格式要求（如Markdown表格、列表等）
+1. **Use structured prompts**
+   - Specify output format (Markdown tables, ASCII diagrams)
+   - Provide context (target users, design constraints)
+   - Include specific requirements (WCAG compliance, iOS HIG)
+
+2. **Leverage multimodal analysis**
+   - Upload design screenshots for visual feedback
+   - Compare multiple design versions
+   - Analyze competitor interfaces
+   - Use `files-mode: embed` for image analysis
+
+3. **Break down large projects**
+   - Use dependencies for sequential stages
+   - Parallelize independent pages/components
+   - See [design workflow guide](references/design-workflow.md)
+
+4. **Integrate with design tools**
+   - Export from Figma/Sketch as PNG
+   - Use Gemini to generate component specs
+   - Create handoff documentation for developers
+
+5. **Follow design principles**
+   - Reference [design principles guide](references/design-principles.md)
+   - Apply Nielsen's heuristics for evaluation
+   - Ensure WCAG 2.1 Level AA compliance
+
+---
+
+## SKILL Reference
+
+- [skills/memex-cli/SKILL.md](../memex-cli/SKILL.md) - Memex CLI full documentation
+- [HOW_TO_USE.md](HOW_TO_USE.md) - Detailed usage guide for this skill
