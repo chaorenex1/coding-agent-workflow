@@ -5,188 +5,303 @@ description: "Write and generate code using memex-cli with Codex backend. Use wh
 
 # Code with Codex
 
-Use memex-cli to leverage Codex for code generation with memory and replay support.
+Use memex-cli to leverage Codex for code generation with memory and resume support.
 
-## RUN_ID Instructions
-
-When using `memex-cli resume`, replace `<RUN_ID>` with the actual run ID obtained from the initial `memex-cli run` command. This allows you to continue or build upon previous code generation tasks.
-
-## Memex cli Output Format
-
-Outputs are streamed in the specified format (`jsonl` or `text`), allowing real-time monitoring of task progress.
-
-### Example JSONL output(multiple jsonl lines)
-
-```jsonl
-{"v":1,"type":"assistant.output","ts":"2026-01-08T08:22:20.664800300+00:00","run_id":"a9ba0e5d-9dd5-43a1-8b0f-b1dd11346a2b","action":"\"{}\"","args":null,"output":"{\n  \"mode\": \"command\",\n  \"task_type\": \"general\",\n  \"complexity\": \"simple\",\n  \"backend_hint\": null,\n  \"skill_hint\": null,\n  \"confidence\": 0.92,\n  \"reasoning\": \"简单的文件写入任务，生成10道算术题并写入文件，可用echo或Python命令直接完成\",\n  \"enable_parallel\": false,\n  \"parallel_reasoning\": \"单一文件写入操作，顺序 执行即可\"\n}"}
-```
-
-### Example Text output(multiple text lines, any format)
-
-```txt
-{
-  "mode": "backend",
-  "task_type": "general",
-  "complexity": "simple",
-  "backend_hint": "claude",
-  "skill_hint": null,
-  "confidence": 0.92,
-  "reasoning": "生成10道算术题目并写入文件，简单内容生成任务，适合直接LLM处理",
-  "enable_parallel": false,
-  "parallel_reasoning": "单一文件写入任务，无法分解并行"
-}
-```
+---
 
 ## Model Selection Guide
 
-| Model |  Best For | Complexity |
-|-------|-----------|------------|
+| Model | Best For | Complexity |
+|-------|----------|------------|
 | gpt-5.1-codex-mini | Simple scripts, quick fixes | ⭐ |
 | gpt-5.2-codex | General coding, utilities | ⭐⭐ |
 | gpt-5.1-codex-max | Balanced quality/speed | ⭐⭐⭐ |
 | gpt-5.2 | Complex logic, algorithms | ⭐⭐⭐⭐ |
 | gpt-5.2 | Architecture, system design | ⭐⭐⭐⭐⭐ |
 
-## Scenarios by Complexity
+**Quick selection guide:**
+- Start with lower-tier models for simple tasks
+- Upgrade to `codex-max` or `gpt-5.2` when quality issues arise
+- Use `gpt-5.2` for production-grade code and complex systems
 
-### Level 1: Simple Scripts
+---
 
-Quick utilities, single-file scripts, simple automation.
+## Complexity Levels Overview
 
+### Level 1: Simple Scripts (⭐)
+
+Quick utilities, single-file scripts (20-100 lines). Use `gpt-5.1-codex-mini`.
+
+**Examples:** Batch file rename, CSV processing, disk monitoring
+
+**Quick example:**
 ```bash
-# Hello world / basic syntax
-memex-cli run --backend "codex" --model "gpt-5.1-codex-mini" --prompt "Python脚本：批量重命名文件，添加日期前缀" --stream-format "text"
-
-# Simple data processing
-memex-cli run --backend "codex" --model "gpt-5.1-codex-mini" --prompt "读取CSV文件，统计每列的空值数量" --stream-format "text"
-
-# Basic CLI tool
-memex-cli run --backend "codex" --model "gpt-5.1-codex-mini" --prompt "Bash脚本：监控磁盘空间，超过80%发送告警" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: batch-rename
+backend: codex
+model: gpt-5.1-codex-mini
+workdir: /path/to/scripts
+---CONTENT---
+Python脚本：批量重命名文件，添加日期前缀
+---END---
+EOF
 ```
 
-### Level 2: Utility Functions
+➜ **Detailed examples:** [examples/level1-simple-scripts.md](examples/level1-simple-scripts.md)
 
-Helper functions, data transformations, format conversions.
+---
 
+### Level 2: Utility Functions (⭐⭐)
+
+Reusable functions, data transformations (100-300 lines). Use `gpt-5.2-codex`.
+
+**Examples:** Data validators, format converters, simple unit tests
+
+**Quick example:**
 ```bash
-# Data validation
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "编写邮箱、手机号、身份证号验证函数集合" --stream-format "text"
-
-# Format conversion
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "JSON/YAML/TOML格式互转工具类" --stream-format "text"
-
-# String processing
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "实现模板字符串解析器，支持变量替换和条件渲染" --stream-format "text"
-"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: validators
+backend: codex
+model: gpt-5.2-codex
+workdir: /path/to/utils
+---CONTENT---
+编写邮箱、手机号、身份证号验证函数
+---END---
+EOF
 ```
 
-### Level 3: Single Module
+➜ **Detailed examples:** [examples/level2-utilities.md](examples/level2-utilities.md)
 
-Complete modules with error handling, logging, tests.
+---
 
+### Level 3: Complete Modules (⭐⭐⭐)
+
+Production-ready modules with error handling, logging, tests (300-800 lines). Use `gpt-5.1-codex-max` or `gpt-5.2`.
+
+**Examples:** HTTP clients, database helpers, API wrappers
+
+**Special tasks at Level 3:**
+- **Code Review:** Analyze code for security/performance issues
+- **Refactoring:** Apply design patterns, improve testability
+- **Unit Testing:** Comprehensive test coverage (>80%)
+
+**Quick example:**
 ```bash
-# REST client
-memex-cli run --backend "codex" --model "gpt-5.1-codex-max" --prompt "Python HTTP客户端封装，支持重试、超时、拦截器" --stream-format "jsonl"
-
-# Database helper
-memex-cli run --backend "codex" --model "gpt-5.1-codex-max" --prompt "SQLite工具类：连接池、事务管理、查询构建器" --stream-format "jsonl"
-
-# File watcher
-memex-cli run --backend "codex" --model "gpt-5.1-codex-max" --prompt "目录监控服务，检测文件变更并触发回调，支持过滤规则" --stream-format "jsonl"
-"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: http-client
+backend: codex
+model: gpt-5.1-codex-max
+workdir: /path/to/lib
+timeout: 120
+---CONTENT---
+Python HTTP客户端：支持重试、超时、拦截器
+---END---
+EOF
 ```
 
-### Level 4: Algorithm Implementation
-
-Complex algorithms, data structures, performance-critical code.
-
+**Code review example:**
 ```bash
-# Data structures
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "实现跳表SkipList，支持插入、删除、范围查询，O(logN)复杂度" --stream-format "jsonl"
-
-# Graph algorithms
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "实现Dijkstra和A*寻路算法，支持动态权重和障碍物" --stream-format "jsonl"
-
-# Concurrent programming
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "实现无锁并发队列，支持多生产者多消费者" --stream-format "jsonl"
-
-# Parser / Compiler
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "实现简单的表达式解析器，支持四则运算、括号、变量" --stream-format "jsonl"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: review
+backend: codex
+model: gpt-5.2-codex
+files: ./src/auth.py
+files-mode: embed
+workdir: /path/to/project
+---CONTENT---
+审查代码：安全隐患、性能瓶颈、改进建议
+---END---
+EOF
 ```
 
-### Level 5: System Design & Architecture
+➜ **Detailed examples:** [examples/level3-modules.md](examples/level3-modules.md)
 
-Multi-module projects, microservices, complete applications.
+---
 
+### Level 4: Complex Algorithms (⭐⭐⭐⭐)
+
+Advanced data structures, optimized algorithms (500-1500 lines). Use `gpt-5.2` with extended timeout.
+
+**Examples:** Skip lists, pathfinding (Dijkstra, A*), expression parsers
+
+**Quick example:**
 ```bash
-# API service
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "设计并实现用户认证微服务：JWT、OAuth2、RBAC权限模型" --stream-format "jsonl"
-
-# Event-driven system
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "设计事件驱动架构：消息队列、事件溯源、CQRS模式实现" --stream-format "jsonl"
-
-# Plugin system
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "设计可扩展插件系统：插件发现、生命周期管理、依赖注入" --stream-format "jsonl"
-
-# Distributed system
-memex-cli run --backend "codex" --model "gpt-5.2" --prompt "设计分布式任务调度系统：任务分片、故障转移、负载均衡" --stream-format "jsonl"
-"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: skiplist
+backend: codex
+model: gpt-5.2
+workdir: /path/to/algorithms
+timeout: 180
+---CONTENT---
+实现跳表：支持插入、删除、搜索，O(log n)复杂度
+---END---
+EOF
 ```
 
-## Special Tasks
+➜ **Detailed examples:** [examples/level4-algorithms.md](examples/level4-algorithms.md)
 
-### Unit Testing
+---
 
+### Level 5: System Design & Architecture (⭐⭐⭐⭐⭐)
+
+Multi-module projects, microservices, complete applications (2000+ lines). Use `gpt-5.2` with 300-600s timeout.
+
+**Examples:** Authentication microservices, event-driven systems, full-stack apps
+
+**Quick example:**
 ```bash
-# Basic tests
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "为计算器模块编写pytest测试用例" --stream-format "text"
-
-# Comprehensive tests
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "为用户服务编写完整测试：单元测试、集成测试、Mock外部依赖" --stream-format "text"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: auth-service
+backend: codex
+model: gpt-5.2
+workdir: /path/to/services/auth
+timeout: 300
+---CONTENT---
+设计用户认证微服务：JWT、OAuth2、RBAC权限模型
+---END---
+EOF
 ```
 
-### Code Review & Refactoring
+➜ **Detailed examples:** [examples/level5-architecture.md](examples/level5-architecture.md)
+
+---
+
+## Basic Usage
+
+### Single Task
 
 ```bash
-# Code review
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "审查这段代码：指出问题、安全隐患、性能瓶颈、改进建议" --stream-format "text"
-
-# Refactoring
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "重构这段代码：应用设计模式，提取公共逻辑，改善可测试性" --stream-format "jsonl"
+memex-cli run --stdin <<'EOF'
+---TASK---
+id: task-id
+backend: codex
+workdir: /working/directory
+model: gpt-5.2-codex
+---CONTENT---
+[Your task description]
+---END---
+EOF
 ```
 
-### Documentation
+### Required Fields
 
-```bash
-# API docs
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "为这个模块生成API文档，包含函数签名、参数说明、使用示例" --stream-format "text"
+| Field | Description | Example |
+|-------|-------------|---------|
+| `id` | Unique task identifier | `impl-auth`, `test-validators` |
+| `backend` | Always `codex` for code generation | `codex` |
+| `workdir` | Working directory path | `./src`, `/home/user/project` |
 
-# Architecture docs
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "生成系统架构文档：模块关系图、数据流、部署架构" --stream-format "text"
+### Optional Fields
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `model` | gpt-5.2-codex | Model selection (see complexity guide) |
+| `timeout` | 300 | Max execution time (seconds) |
+| `dependencies` | - | Comma-separated task IDs |
+| `files` | - | Source files to reference |
+| `files-mode` | auto | `embed` (include content) / `ref` (path only) |
+| `retry` | 0 | Retry count on failure |
+
+---
+
+## Quick Reference
+
+### Complexity Decision Tree
+
+```
+Start
+  ├─ Single file, <100 lines? → Level 1 (codex-mini)
+  ├─ Reusable functions, no external deps? → Level 2 (codex)
+  ├─ Production module with tests?
+  │   ├─ Standard CRUD/API? → Level 3 (codex-max)
+  │   └─ Complex algorithm? → Level 4 (gpt-5.2)
+  └─ Multi-module/microservice? → Level 5 (gpt-5.2)
 ```
 
-## Workflow
+### Task Type Classification
 
-### Iterative Development
+| Task Type | Level | Model | Example Link |
+|-----------|-------|-------|--------------|
+| Batch rename script | 1 | codex-mini | [Level 1](examples/level1-simple-scripts.md) |
+| Email validator | 2 | codex | [Level 2](examples/level2-utilities.md) |
+| HTTP client with retry | 3 | codex-max | [Level 3](examples/level3-modules.md) |
+| Code review | 3 | codex-max | [Level 3](examples/level3-modules.md#code-quality-tasks) |
+| Refactoring | 3-4 | codex-max / gpt-5.2 | [Level 3](examples/level3-modules.md#example-4-refactoring) |
+| Unit testing | 2-3 | codex / codex-max | [Level 3](examples/level3-modules.md#example-5-comprehensive-unit-testing) |
+| Skip list algorithm | 4 | gpt-5.2 | [Level 4](examples/level4-algorithms.md) |
+| Auth microservice | 5 | gpt-5.2 | [Level 5](examples/level5-architecture.md) |
 
-```bash
-# Step 1: Initial implementation
-memex-cli run --backend "codex" --model "gpt-5.2-codex" --prompt "实现用户注册功能" --stream-format "jsonl"
+---
 
-# Step 2: Add features
-memex-cli resume --run-id <RUN_ID> --backend "codex" --model "gpt-5.2-codex" --prompt "添加邮箱验证和密码强度检查" --stream-format "jsonl"
+## Additional Resources
 
-# Step 3: Add tests
-memex-cli resume --run-id <RUN_ID> --backend "codex" --model "gpt-5.2-codex" --prompt "为注册功能编写单元测试" --stream-format "jsonl"
-"""
-```
+### Progressive Disclosure Documentation
+
+- **[HOW_TO_USE.md](HOW_TO_USE.md)** - Complete usage guide
+  - When to use this skill
+  - Relationship with memex-cli
+  - Model selection tips
+  - Workflow references
+
+- **[references/complexity-guide.md](references/complexity-guide.md)** - Detailed complexity selection
+  - In-depth explanation of 5 levels
+  - Model performance comparison
+  - Decision tree and classification
+  - Best practices by task type
+
+- **[examples/](examples/)** - Runnable code examples
+  - [level1-simple-scripts.md](examples/level1-simple-scripts.md) - Quick utilities
+  - [level2-utilities.md](examples/level2-utilities.md) - Reusable functions
+  - [level3-modules.md](examples/level3-modules.md) - Production modules, code review, refactoring
+  - [level4-algorithms.md](examples/level4-algorithms.md) - Complex algorithms
+  - [level5-architecture.md](examples/level5-architecture.md) - System design
+
+### Advanced Workflows
+
+For multi-task workflows, parallel execution, and resume functionality, refer to memex-cli skill:
+
+- **Multi-task DAG workflows:** [memex-cli/references/advanced-usage.md](../memex-cli/references/advanced-usage.md)
+- **Parallel execution patterns:** [memex-cli/examples/parallel-tasks.md](../memex-cli/examples/parallel-tasks.md)
+- **Resume interrupted runs:** [memex-cli/examples/resume-workflow.md](../memex-cli/examples/resume-workflow.md)
 
 ---
 
 ## Tips
 
-1. **Match model to task**: Use lightweight models for simple tasks, save powerful models for complex logic.
-2. **Prefer text for simple tasks**: Faster and lower cost for straightforward code generation.
-3. **Use jsonl for complex tasks**: Enables full audit trail and iterative refinement.
-4. **Break down large tasks**: split multifile subtasks parallel execution and use resume to build features incrementally.
-5. **Include context**: Specify language, framework, coding standards in prompts.
+1. **Match model to task complexity**
+   - Start with lightweight models for simple tasks
+   - Upgrade to powerful models only when needed
+   - Save costs by not over-provisioning
+
+2. **Use files for context**
+   - Code review: `files: ./src/auth.py` + `files-mode: embed`
+   - Refactoring: Include source code for analysis
+   - Unit testing: Reference module to test
+
+3. **Break down large tasks**
+   - Split Level 5 projects into parallel Level 3-4 subtasks
+   - Use DAG workflows for dependencies
+   - See [memex-cli advanced usage](../memex-cli/references/advanced-usage.md)
+
+4. **Include context in prompts**
+   - Specify language, framework, coding standards
+   - Mention target Python/Node.js version
+   - Include expected output format
+
+5. **Leverage examples**
+   - Browse [examples/](examples/) directory for similar tasks
+   - Copy and customize example commands
+   - Follow established patterns
+
+---
+
+## SKILL Reference
+
+- [skills/memex-cli/SKILL.md](../memex-cli/SKILL.md) - Memex CLI full documentation
+- [HOW_TO_USE.md](HOW_TO_USE.md) - Detailed usage guide for this skill
