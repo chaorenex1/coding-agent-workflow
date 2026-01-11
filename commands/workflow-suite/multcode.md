@@ -50,6 +50,7 @@ These rules have HIGHEST PRIORITY and override all other instructions:
 
   **Step 2**: Use Read And Grep tool to parallel analyze project files for architecture type
   - Analyze project files for frontend/backend/full-stack indicators
+  - IF EMPTY or UNCLEAR, use AskUserQuestion to prompt user to select architecture type from options: "frontend", "backend", "full-stack","Cancel"
   - Store selection as `ARCH_TYPE` for later stages
 
   **Step 3**: Record project configuration to `.claude/$RUN_ID/project-config.md`
@@ -150,15 +151,16 @@ These rules have HIGHEST PRIORITY and override all other instructions:
 
 - **Stage 4: Generate Development Documentation [FROM STAGE 3 ANALYSIS]**
   - MEMEX-CLI TASK FORMAT REFERENCE (IMPORTANT): `skills/memex-cli/SKILL.md` section on **Required Parameters** and **Optional Parameters**
-  - invoke Slash command: `/workflow-suite/implementation-analysis` @.claude/$RUN_ID/analysis-report.md
+  - invoke Slash Command: `/workflow-suite:implementation-analysis` @.claude/$RUN_ID/analysis-report.md
   - save output to `.claude/$RUN_ID/docs/implementation-analysis.md`
   - Analyze implementation-analysis document for TASK LIST generation, specifically the IMPLEMENTATION CHECKLIST section
   - Output TASK LIST, every TASK must follow **Task Format Requirements**(CRITICAL) below:
 
     ```markdown
+    ## Task: <task-name>
     - **Id**: <task-id>
     - **Type**: code | ui | design
-    - **BackEnd**: codex | gemini | claude
+    - **Backend**: codex | gemini | claude
     - **WorkDir**: working directory (e.g., .)
     - **Complexity**: Simple | Medium | Complex
     - **Dependencies**: [task-1, task-2] or None
@@ -171,9 +173,8 @@ These rules have HIGHEST PRIORITY and override all other instructions:
   - **Auto-validation**: If `needs_ui: true` append ui-implementation task automatically
 
     ```bash
-    UI_TASK_COUNT=$(grep -c "Type: ui" .claude/$RUN_ID/docs/development-plan.md || echo "0")
-
-    if [ "$UI_NEEDED" = "true" ] && [ "$UI_TASK_COUNT" -eq 0 ]; then
+    
+    if [ "$UI_NEEDED" = "true" ]; then
       cat >> .claude/$RUN_ID/docs/development-plan.md <<'EOF'
     ## Task: ui-implementation
     - **Id**: <task-id>
@@ -214,22 +215,146 @@ These rules have HIGHEST PRIORITY and override all other instructions:
   **Step 1**: Parse development-plan.md
   - Read `.claude/$RUN_ID/docs/development-plan.md`
   - Extract task metadata: id, type, backend, workdir, dependencies, description, file_scope, test_command, estimated_time
-  - Build dependency graph to identify parallelizable tasks or those needing sequential execution
+  - Build dependency graph to identify parallelizable tasks or those needing sequential execution,limit to max 10 tasks each wave
 
   **Step 2**: Route tasks to skills based on type
   - Type `code` → Invoke `Skill` tool with `skill="code-with-codex"`
   - Type `ui` → Invoke `Skill` tool with `skill="ux-design-gemini"`
   - Type `design` → Use Claude Code directly (no skill invocation needed)
 
-  **Step 3**: Execute tasks in parallel
-  - preferably execute PARALLEL tasks first, then SEQUENTIAL tasks
-  - build ONE PARALLEL EXECUTION TASK TEXT BLOCK using Skill tool invocations Including all tasks with resolved dependencies
-  - Example Parallel Execution Block:
-  - Monitor task completion status (success/failure) via Skill outputs
-  - Collect statistics: number of completed tasks, number of failed tasks,Store in `COMPLETED_TASKS` and `FAILED_TASKS`
+  **Step 3**: Execute tasks in parallel using Skill tool
+
+  Invoke Skill tools in parallel (one message with multiple tool calls), passing task descriptions as prompts.
+
+  **Example Parallel Execution:**
+
+  ```text
+  # Tool Call 1: code-with-codex skill (handles all code-type tasks)
+  Use Skill tool: skill="code-with-codex"
+  Prompt:
+  Execute the following code development tasks in parallel with dependency management.
+  Reference: @.claude/{RUN_ID}/docs/development-plan.md
+  Output log: .claude/{RUN_ID}/logs/code-tasks.log
+
+  **Task 1: Database Setup**
+  - id: database-setup
+  - backend: codex
+  - workdir: .
+  - Content:
+    Set up Prisma database schema with all models. Create initial migrations for database initialization. Implement database seed scripts for development/testing.
+    Complexity: Medium (production-grade database setup with migrations and seed scripts)
+    Files: prisma/schema.prisma, prisma/migrations/, prisma/seed.ts
+    Test command: npm run db:test
+    Coverage requirement: ≥70%
+    Deliverables:
+    1. Complete Prisma schema with all models
+    2. Migration scripts for database initialization
+    3. Seed data for development/testing
+    4. Unit tests for database operations
+    5. Coverage report (must be ≥70%)
+
+  **Task 2: Authentication Backend**
+  - id: auth-backend
+  - backend: codex
+  - workdir: .
+  - dependencies: database-setup
+  - Content:
+    Implement JWT-based authentication system. Create registration, login, logout, refresh token endpoints. Add password hashing with bcrypt and token validation middleware.
+    Complexity: High (security-critical authentication system with JWT and bcrypt)
+    Files: src/auth/, src/middleware/auth.ts
+    Test command: npm test src/auth
+    Coverage requirement: ≥70%
+    Deliverables:
+    1. Authentication API endpoints (register, login, logout, refresh)
+    2. JWT token generation and validation middleware
+    3. Password hashing with bcrypt
+    4. Integration tests with database
+    5. Coverage report (must be ≥70%)
+
+  # Tool Call 2: ux-design-gemini skill (handles all ui-type tasks)
+  Use Skill tool: skill="ux-design-gemini"
+  Prompt:
+  Execute the following UI development tasks in parallel with dependency management.
+  Reference: @.claude/{RUN_ID}/docs/ux-design.md
+  Output log: .claude/{RUN_ID}/logs/ui-tasks.log
+
+  **Task 1: UI Design System**
+  - id: ui-design-system
+  - backend: gemini
+  - workdir: .
+  - Content:
+    Create reusable design system components (Button, Input, Card, Modal, etc.). Implement component library with Storybook stories. Add component documentation and usage examples.
+    Files: src/components/design-system/
+    Test command: npm test src/components/design-system
+    Coverage requirement: ≥70%
+    Deliverables:
+    1. Design system components with consistent styling
+    2. Component documentation and usage examples
+    3. Storybook stories for each component
+    4. Unit tests with React Testing Library
+    5. Coverage report (must be ≥70%)
+
+  **Task 2: Authentication UI Components**
+  - id: ui-auth-components
+  - backend: gemini
+  - workdir: .
+  - dependencies: auth-backend, ui-design-system
+  - Content:
+    Create login and registration UI components using design system. Integrate with auth-backend API endpoints. Implement form validation with error handling.
+    Files: src/components/auth/
+    Test command: npm test src/components/auth
+    Coverage requirement: ≥70%
+    Deliverables:
+    1. LoginForm and RegisterForm components
+    2. Form validation with error handling
+    3. API integration with auth endpoints
+    4. Loading states and error messages
+    5. Unit tests and integration tests
+    6. Coverage report (must be ≥70%)
+  ```
+
+  **Key Points:**
+  - Pass task descriptions to Skill tools (NOT pre-formatted memex-cli stdin blocks)
+  - Each skill will internally construct memex-cli commands based on its guidance
+  - Invoke both Skill tools in parallel (single message, multiple tool calls)
+  - Skills handle dependency resolution automatically (Wave 0, 1, 2...)
+  - Include all required information: task ID, dependencies, requirements, file scope, test command, coverage target
+
+  **Execution Flow:**
+  ```
+  multcode → Skill tool (code-with-codex) → code-with-codex skill reads task descriptions
+                                           → constructs memex-cli stdin format
+                                           → executes memex-cli
+           ↘ Skill tool (ux-design-gemini) → ux-design-gemini skill reads task descriptions
+                                           → constructs memex-cli stdin format
+                                           → executes memex-cli
+  ```
+
+  **Parse execution results:**
+  ```bash
+  # Wait for both Skill tools to complete, then parse results
+  CODE_COMPLETED=$(grep -c "^✓" .claude/{RUN_ID}/logs/code-tasks.log || echo "0")
+  CODE_FAILED=$(grep -c "^✗" .claude/{RUN_ID}/logs/code-tasks.log || echo "0")
+  UI_COMPLETED=$(grep -c "^✓" .claude/{RUN_ID}/logs/ui-tasks.log || echo "0")
+  UI_FAILED=$(grep -c "^✗" .claude/{RUN_ID}/logs/ui-tasks.log || echo "0")
+
+  COMPLETED_TASKS=$((CODE_COMPLETED + UI_COMPLETED))
+  FAILED_TASKS=$((CODE_FAILED + UI_FAILED))
+  TOTAL_TASKS=$((COMPLETED_TASKS + FAILED_TASKS))
+  ```
+
+  **Handle failures:**
+  ```bash
+  if [ $FAILED_TASKS -gt 0 ]; then
+    echo "⚠️  $FAILED_TASKS task(s) failed"
+    echo "Code tasks: $CODE_FAILED failed, $CODE_COMPLETED completed"
+    echo "UI tasks: $UI_FAILED failed, $UI_COMPLETED completed"
+    # Use AskUserQuestion: "Retry failed tasks" / "Continue to Stage 6 (risky)" / "Abort"
+  fi
+  ```
 
   echo "✅ Stage 5 Complete - Parallel Development"
-  echo "Statistics: $COMPLETED_TASKS completed, $FAILED_TASKS failed"
+  echo "Statistics: $COMPLETED_TASKS/$TOTAL_TASKS completed, $FAILED_TASKS failed"
 
 - **Stage 6: Coverage Validation [MANDATORY ≥70%]**
 
@@ -310,7 +435,7 @@ These rules have HIGHEST PRIORITY and override all other instructions:
 **Error Handling**
 - **E1.1: memex-cli Not Installed (FATAL)** - Exit workflow, display installation instructions
 - **E1.2: Skill Invocation Failed (ERROR)** - Retry strategy: 2 attempts with 3s delay; if still fails, report error and ask user for guidance
-- **E2.2: Parallel Tasks Partially Failed (ERROR)** - Use AskUserQuestion: "Retry failed tasks only" / "Re-execute all" / "Abort workflow"
+- **E2.2: Parallel Tasks Partially Failed (ERROR)** - Fallback Claude Code execution for failed tasks; report failures in summary
 - **E3.1: Coverage Below Target (WARNING)** - Display low-coverage modules, recommend adding unit tests, boundary tests, error handling tests
 - **E4.1: User Gate Timeout (INFO)** - 15-minute timeout on user gates; save progress and display resume instructions
 
