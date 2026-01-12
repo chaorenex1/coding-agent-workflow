@@ -401,17 +401,31 @@ Bypass skips the **approval flow** (Analysis/Planning + AskUserQuestion), but **
 
 ### Medium Change Protocol (50-200 lines, 2-4 files)
 
-**Step 1: Call SKILL(`code-with-codex`) Implementation Analysis**
+**Step 1: Main Flow - Context Gathering**
+- Use Read/Grep/Glob tools to directly examine relevant files
+- Understand project structure, dependencies, existing patterns
+- Budget: 3-5 tool calls
+
+**Step 2: SKILL(`code-with-codex`) - Code Analysis (Optional)**
+Invoke only when:
+- Code logic is complex and difficult to understand
+- Multi-layer call chains or abstract patterns involved
+- Deep risk analysis required
 
 ```
-SKILL(`code-with-codex`, prompt="Analyze implementation for: [task description]")
+SKILL(`code-with-codex`, prompt="Analyze code structure for: [specific aspect]")
 ```
 
-SKILL returns:
-- Scope analysis (files, lines, impact, risks)
-- Implementation plan (max 8 bullet points)
+Output: Code structure analysis, dependency graph, risk points (NO plan generation)
 
-**Step 2: Present plan to user via AskUserQuestion**
+**Step 3: Main Flow - Plan Formulation**
+Based on gathered information, main flow formulates:
+- Change scope (file count, line count)
+- Implementation steps (max 8 bullets)
+- Risk assessment and mitigation strategies
+
+**Step 4: AskUserQuestion - Permission Request**
+Present plan, offer options: Execute Plan / Modify Approach / Abort
 
 ```json
 {
@@ -437,11 +451,18 @@ SKILL returns:
 }
 ```
 
-**Step 3: If approved → Call SKILL(`code-with-codex`) to execute**
+**Step 5: SKILL(`code-with-codex`) - Code Generation/Editing**
+After user approval, invoke codex for actual code changes:
 
 ```
-SKILL(`code-with-codex`, prompt="Execute approved plan: [plan details]")
+SKILL(`code-with-codex`, prompt="Generate/Edit code: [specific implementation]")
 ```
+
+**Responsibility Boundaries**:
+| Actor | Responsibilities | Prohibited |
+|-------|------------------|------------|
+| Main Flow | Classification, planning, permission, reporting | Direct Edit/Write to code files |
+| codex | Code analysis, code generation/editing | Plan formulation, permission requests |
 
 **Never** execute without user selecting "执行计划"
 
@@ -449,30 +470,49 @@ SKILL(`code-with-codex`, prompt="Execute approved plan: [plan details]")
 
 ### Large Change Protocol (>200 lines or >4 files)
 
-**Step 1: Call SKILL(`code-with-codex`) Deep Planning**
+**Step 1: Main Flow - Breadth Exploration**
+- Use Task tool (subagent_type=Explore) for codebase overview
+- Or parallel Glob/Grep to locate key files
+- Budget: 5-8 tool calls
+
+**Step 2: SKILL(`code-with-codex`) - Deep Code Analysis**
+Deep analysis of critical modules:
 
 ```
-SKILL(`code-with-codex`, prompt="Deep planning for: [task description]")
+SKILL(`code-with-codex`, prompt="Deep analysis: [module/component]
+Focus: architecture, dependencies, complexity, risks")
 ```
 
-SKILL internally:
-- Conducts thorough codebase exploration
-- Designs implementation approach
-- Generates detailed plan with file-by-file breakdown
+Output: Technical analysis report (NO implementation plan)
 
-**Step 2: User reviews plan and approves/rejects**
+**Step 3: Main Flow - Architecture Design + Phased Planning**
+Based on analysis results:
+- Design overall architecture approach
+- Break large change into multiple Medium/Small subtasks
+- Define execution order and dependencies
+- Output: Phased implementation roadmap
 
-Present the plan output from SKILL and wait for explicit user approval.
+**Step 4: AskUserQuestion - Permission Request**
+Present complete plan, await user approval
 
-**Step 3: If approved → Call SKILL(`code-with-codex`) to execute**
+**Step 5: Phased Execution**
+Execute each phase in loop:
 
 ```
-SKILL(`code-with-codex`, prompt="Execute approved large change: [plan details]")
+For each phase:
+  1. SKILL(`code-with-codex`, prompt="Implement phase N: [details]")
+  2. Main flow validates results
+  3. Update TodoWrite progress
+  4. Proceed to next phase
 ```
 
-SKILL internally applies Permission Bypass Condition #3 (Workflow Context).
+**Responsibility Boundaries**:
+| Actor | Responsibilities | Prohibited |
+|-------|------------------|------------|
+| Main Flow | Exploration, architecture design, phased planning, permission, validation | Direct Edit/Write to code files |
+| codex | Deep code analysis, phased code implementation | Overall plan formulation, permission requests |
 
-**Never** execute large changes without completing all 3 steps
+**Never** execute large changes without completing all 5 steps
 
 ---
 
@@ -587,6 +627,33 @@ Step 5: Main flow reports completion
 - **SKILL/SubAgent** = Execution worker (bypasses permission checks via Workflow Context)
 
 **Never**: SKILL/SubAgent should never prompt for permission internally—permission checking is main flow's responsibility
+
+---
+
+## codex Invocation Guidelines
+
+### Valid Invocation Scenarios
+
+| Scenario | Purpose | Example Prompt |
+|----------|---------|----------------|
+| **Code Analysis** | Understand complex logic | "Analyze [file]: structure, patterns, risks" |
+| **Code Generation** | Create new files | "Create [file] with: [requirements]" |
+| **Code Editing** | Modify existing files | "Edit [file]: [specific changes]" |
+| **Code Review** | Quality inspection | "Review [file]: security, performance, style" |
+
+### Prohibited Scenarios
+
+- ❌ Implementation plan formulation (main flow responsibility)
+- ❌ User permission requests (main flow responsibility)
+- ❌ Project management/progress tracking (main flow responsibility)
+- ❌ Non-code tasks (documentation, simple config changes)
+
+### Best Practices
+
+1. **Minimize Invocations**: If main flow can handle it, don't invoke codex
+2. **Focused Prompts**: Each invocation should do one thing only
+3. **Sufficient Context**: Provide necessary code context via files parameter
+4. **Validate Results**: Main flow must verify codex output correctness
 
 ---
 
