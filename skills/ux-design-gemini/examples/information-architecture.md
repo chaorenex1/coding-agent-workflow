@@ -11,7 +11,7 @@ Create a hierarchical site structure for a website or application.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: sitemap
 backend: gemini
@@ -150,7 +150,7 @@ Design intuitive navigation patterns for different platforms.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: navigation-design
 backend: gemini
@@ -372,7 +372,7 @@ Structure content with clear priority and relationships.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: content-hierarchy
 backend: gemini
@@ -563,7 +563,7 @@ Create classification systems for organizing content.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: taxonomy
 backend: gemini

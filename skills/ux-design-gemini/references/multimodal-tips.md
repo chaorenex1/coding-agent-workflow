@@ -31,7 +31,7 @@ Leverage Gemini's image analysis capabilities for design critique, competitive a
 ### Upload Method
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: design-review
 backend: gemini
@@ -55,7 +55,7 @@ EOF
 ### Template 1: Visual Hierarchy Analysis
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: visual-hierarchy
 backend: gemini
@@ -88,7 +88,7 @@ EOF
 ### Template 2: Usability Heuristic Evaluation
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: heuristic-eval
 backend: gemini
@@ -125,7 +125,7 @@ EOF
 ### Template 3: Accessibility Audit
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: accessibility-audit
 backend: gemini
@@ -162,7 +162,7 @@ EOF
 ### Template 4: Consistency Check
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: consistency-check
 backend: gemini
@@ -200,7 +200,7 @@ EOF
 Compare different iterations of the same design:
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: version-compare
 backend: gemini
@@ -228,7 +228,7 @@ EOF
 ### Use Case 2: A/B Testing Design Analysis
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: ab-test-analysis
 backend: gemini
@@ -252,7 +252,7 @@ EOF
 ### Use Case 3: Competitive Analysis
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: competitive-analysis
 backend: gemini
@@ -306,7 +306,7 @@ For complex critiques, add annotations before upload:
 
 ```bash
 # Example with annotations
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: annotated-review
 backend: gemini

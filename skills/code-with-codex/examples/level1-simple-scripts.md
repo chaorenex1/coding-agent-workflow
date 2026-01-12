@@ -11,7 +11,7 @@ Add date prefix to all files in a directory.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: batch-rename
 backend: codex
@@ -76,7 +76,7 @@ Calculate null value counts for each column in a CSV file.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: csv-stats
 backend: codex
@@ -150,7 +150,7 @@ Monitor disk usage and send alerts when threshold exceeded.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: disk-monitor
 backend: codex

@@ -40,7 +40,7 @@ Each stage produces specific deliverables that inform the next stage.
 **Gemini Workflow:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: user-interviews
 backend: gemini
@@ -94,7 +94,7 @@ EOF
 **Gemini Workflow:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: problem-statement
 backend: gemini
@@ -147,7 +147,7 @@ EOF
 **Gemini Workflow:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: user-flows
 backend: gemini
@@ -201,7 +201,7 @@ EOF
 **Gemini Workflow:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: wireframes
 backend: gemini
@@ -233,7 +233,7 @@ EOF
 **Parallel Task Example:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: wireframes
 backend: gemini
@@ -304,7 +304,7 @@ EOF
 **Gemini Workflow:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: test-plan
 backend: gemini
@@ -640,7 +640,7 @@ dependencies: ia  # Runs in parallel with page1
 ### 3. Resume for Iterations
 
 ```bash
-memex-cli resume --run-id <RUN_ID> --stdin <<'EOF'
+memex-cli resume --backend gemini --run-id <RUN_ID> --stdin <<'EOF'
 ---TASK---
 id: iteration-v2
 backend: gemini

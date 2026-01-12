@@ -119,7 +119,7 @@ Refer to the [complexity guide](references/complexity-guide.md) or use this quic
 ### Step 3: Run Generation Task
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: my-task
 backend: codex
@@ -135,7 +135,7 @@ EOF
 **Example:**
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: validators
 backend: codex
@@ -285,7 +285,7 @@ Task 4: Write tests (depends on Task 3)
 ### Code Generation
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: http-client
 backend: codex
@@ -300,7 +300,7 @@ EOF
 ### Code Review
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: review
 backend: codex
@@ -317,7 +317,7 @@ EOF
 ### Refactoring
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: refactor
 backend: codex
@@ -334,7 +334,7 @@ EOF
 ### Unit Testing
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: tests
 backend: codex

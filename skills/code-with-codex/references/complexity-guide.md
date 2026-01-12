@@ -287,7 +287,7 @@ Start
 
 **Code Review** (Level 3):
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: review
 backend: codex
@@ -302,7 +302,7 @@ EOF
 
 **Refactoring** (Level 3-4):
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: refactor
 backend: codex
@@ -317,7 +317,7 @@ EOF
 
 **Unit Testing** (Level 2-3):
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: test
 backend: codex

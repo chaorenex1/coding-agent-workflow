@@ -11,7 +11,7 @@ Complete HTTP client with retry logic, timeout handling, and interceptors.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: http-client
 backend: codex
@@ -148,7 +148,7 @@ SQLite utility with connection pooling, transaction management, and query builde
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: db-helper
 backend: codex
@@ -287,7 +287,7 @@ Analyze existing code for security issues, performance bottlenecks, and improvem
 #### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: code-review
 backend: codex

@@ -11,7 +11,7 @@ Probabilistic data structure with O(log n) operations for insert, delete, and se
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: skiplist
 backend: codex
@@ -232,7 +232,7 @@ Implement Dijkstra and A* algorithms for graph pathfinding with dynamic weights.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: pathfinding
 backend: codex
@@ -427,7 +427,7 @@ Build a mathematical expression parser with tokenization and AST generation.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: expr-parser
 backend: codex

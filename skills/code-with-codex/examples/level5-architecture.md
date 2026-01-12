@@ -11,7 +11,7 @@ Complete authentication service with JWT, OAuth2, and RBAC permission model.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: auth-service
 backend: codex
@@ -137,7 +137,7 @@ Design event-driven architecture with message queues, event sourcing, and CQRS p
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: event-system
 backend: codex
@@ -245,7 +245,7 @@ Complete blog system with backend API, frontend React app, and Docker deployment
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: design
 backend: codex
@@ -326,7 +326,7 @@ Design a complete microservices system with API Gateway, service discovery, and 
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: microservices
 backend: codex
@@ -412,7 +412,7 @@ EOF
 ### Multi-Phase Backend Service
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 # Phase 1: Architecture
 ---TASK---
 id: architecture

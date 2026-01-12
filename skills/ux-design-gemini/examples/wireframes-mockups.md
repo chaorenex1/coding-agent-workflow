@@ -11,7 +11,7 @@ Generate wireframe specifications for rapid prototyping.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: wireframe-specs
 backend: gemini
@@ -216,7 +216,7 @@ Create detailed visual specifications for developers.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: mockup-specs
 backend: gemini
@@ -492,7 +492,7 @@ Define interactions and transitions for prototypes.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: prototype-interactions
 backend: gemini
@@ -523,7 +523,7 @@ Design adaptive layouts for multiple screen sizes.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: responsive-layout
 backend: gemini

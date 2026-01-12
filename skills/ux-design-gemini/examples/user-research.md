@@ -11,7 +11,7 @@ Create detailed user personas based on research data.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: personas
 backend: gemini
@@ -152,7 +152,7 @@ Map the current user experience to identify pain points and opportunities.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: journey-map
 backend: gemini
@@ -231,7 +231,7 @@ Analyze competitor products to identify best practices and gaps.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: competitive-analysis
 backend: gemini
@@ -320,7 +320,7 @@ Design user research surveys with clear questions and structure.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: survey-design
 backend: gemini

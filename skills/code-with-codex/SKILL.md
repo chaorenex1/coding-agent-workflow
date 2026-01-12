@@ -36,7 +36,7 @@ Quick utilities, single-file scripts (20-100 lines). Use `gpt-5.1-codex-mini`.
 
 **Quick example:**
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: batch-rename
 backend: codex
@@ -60,7 +60,7 @@ Reusable functions, data transformations (100-300 lines). Use `gpt-5.2-codex`.
 
 **Quick example:**
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: validators
 backend: codex
@@ -89,7 +89,7 @@ Production-ready modules with error handling, logging, tests (300-800 lines). Us
 
 **Quick example:**
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: http-client
 backend: codex
@@ -104,7 +104,7 @@ EOF
 
 **Code review example:**
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: review
 backend: codex
@@ -130,7 +130,7 @@ Advanced data structures, optimized algorithms (500-1500 lines). Use `gpt-5.2` w
 
 **Quick example:**
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: skiplist
 backend: codex
@@ -155,7 +155,7 @@ Multi-module projects, microservices, complete applications (2000+ lines). Use `
 
 **Quick example:**
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: auth-service
 backend: codex
@@ -177,7 +177,7 @@ EOF
 ### Single Task
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: task-id
 backend: codex

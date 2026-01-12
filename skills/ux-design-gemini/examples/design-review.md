@@ -11,7 +11,7 @@ Evaluate designs against established usability principles.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: heuristic-eval
 backend: gemini
@@ -295,7 +295,7 @@ Evaluate designs for accessibility compliance.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: accessibility-audit
 backend: gemini
@@ -334,7 +334,7 @@ Provide constructive feedback on visual design.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: visual-critique
 backend: gemini
@@ -371,7 +371,7 @@ Compare your design with competitors.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: competitive-design
 backend: gemini
@@ -407,7 +407,7 @@ Verify designs follow design system guidelines.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: design-system-check
 backend: gemini

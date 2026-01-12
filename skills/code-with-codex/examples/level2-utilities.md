@@ -11,7 +11,7 @@ Validation functions for common data formats (email, phone, ID card).
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: validators
 backend: codex
@@ -95,7 +95,7 @@ Convert between JSON, YAML, and TOML configuration formats.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: format-converter
 backend: codex
@@ -207,7 +207,7 @@ Write basic test cases for utility functions.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: test-validators
 backend: codex

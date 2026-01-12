@@ -11,7 +11,7 @@ Create comprehensive design system documentation.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: design-system-doc
 backend: gemini
@@ -317,7 +317,7 @@ Create comprehensive brand style guide.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: style-guide
 backend: gemini
@@ -348,7 +348,7 @@ Document interaction patterns and best practices.
 ### Command
 
 ```bash
-memex-cli run --stdin <<'EOF'
+memex-cli run --backend gemini --stdin <<'EOF'
 ---TASK---
 id: pattern-library
 backend: gemini
