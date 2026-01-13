@@ -96,6 +96,39 @@ Use `code-with-codex` when you need to:
 
 ---
 
+## Execution Strategy
+
+| Level | Model | files-mode | Dependency Analysis | Task Decomposition | Execution |
+|:-----:|-------|:----------:|:-------------------:|:------------------:|:---------:|
+| **L1** | `gpt-5.1-codex-mini` | ref | ❌ | ❌ | **Serial** |
+| **L2** | `gpt-5.1-codex-max` | ref | ✅ | ❌ | **Parallel** |
+| **L3** | `gpt-5.2-codex` | ref | ✅ | ✅ | **Parallel** |
+| **L4** | `gpt-5.2` | ref | ✅ | ✅ | **Parallel** |
+| **L5** | `gpt-5.2` | ref | ✅ | ✅ | **Parallel** |
+
+---
+
+## Automated Capabilities
+
+The skill provides automatic optimization based on task complexity:
+
+| Capability | Description | Active Level |
+|------------|-------------|:------------:|
+| **Auto Model Selection** | Automatically select optimal model based on complexity | L1-L5 |
+| **Auto Grading** | Evaluate task complexity via Decision Tree | L1-L5 |
+| **Dependency Analysis** | Analyze task/file dependencies, build DAG | L2+ |
+| **Task Decomposition** | Auto-split large tasks into subtasks | L3+ |
+| **Parallel Execution** | Execute independent subtasks in parallel | L2+ |
+
+**How it works:**
+1. Analyze task description to determine complexity level
+2. Auto-select appropriate model for the level
+3. For L2+: Analyze dependencies between tasks/files
+4. For L3+: Decompose large tasks into manageable subtasks
+5. Execute with optimal parallelization strategy
+
+---
+
 ## Quick Start Example
 
 ### Step 1: Install memex-cli
@@ -111,8 +144,8 @@ Refer to the [complexity guide](references/complexity-guide.md) or use this quic
 | Task | Level | Model | Example |
 |------|-------|-------|---------|
 | Batch rename files | 1 | codex-mini | [Level 1](examples/level1-simple-scripts.md) |
-| Email validator | 2 | codex | [Level 2](examples/level2-utilities.md) |
-| HTTP client module | 3 | codex-max | [Level 3](examples/level3-modules.md) |
+| Email validator | 2 | codex-max | [Level 2](examples/level2-utilities.md) |
+| HTTP client module | 3 | gpt-5.2-codex | [Level 3](examples/level3-modules.md) |
 | Skip list algorithm | 4 | gpt-5.2 | [Level 4](examples/level4-algorithms.md) |
 | Auth microservice | 5 | gpt-5.2 | [Level 5](examples/level5-architecture.md) |
 
@@ -140,7 +173,7 @@ memex-cli run --backend codex --stdin <<'EOF'
 id: validators
 backend: codex
 workdir: ./utils
-model: gpt-5.2-codex
+model: gpt-5.1-codex-max
 ---CONTENT---
 编写邮箱、手机号、身份证号验证函数（Python）
 ---END---
@@ -151,38 +184,37 @@ EOF
 
 ## Model Selection Tips
 
-### 1. Match Model to Task Complexity
+### 1. Match Model to Task Complexity (Auto-Selected)
 
-| Complexity | Model | Cost | Speed | Quality |
-|-----------|-------|------|-------|---------|
-| Level 1-2 | codex-mini | $ | Fast | Good |
-| Level 2-3 | codex | $$ | Medium | Better |
-| Level 3 | codex-max | $$$ | Slower | Best balance |
-| Level 4-5 | gpt-5.2 | $$$$ | Slowest | Highest quality |
+| Level | Model | Cost | Speed | Quality |
+|:-----:|-------|------|-------|---------|
+| L1 | codex-mini | $ | Fast | Good |
+| L2 | codex-max | $$ | Medium | Better |
+| L3 | gpt-5.2-codex | $$$ | Slower | Best balance |
+| L4-5 | gpt-5.2 | $$$$ | Slowest | Highest quality |
 
-### 2. Upgrade When Needed
+**Note:** Model is automatically selected based on task complexity. Manual override is available via `model` field.
 
-Start with a lower-tier model and upgrade if:
-- Generated code has bugs or poor quality
-- Missing edge case handling
-- Needs better architecture design
-- Performance optimization required
+### 2. Model Performance by Task Type
 
-### 3. Model Performance by Task Type
-
-**Fast models (codex-mini, codex)**:
+**Fast models (codex-mini)**:
 - ✅ Simple scripts and utilities
 - ✅ Data processing and file operations
 - ✅ Quick prototypes
 - ❌ Complex algorithms
 - ❌ System architecture
 
-**Powerful models (codex-max, gpt-5.2)**:
+**Balanced models (codex-max, gpt-5.2-codex)**:
 - ✅ Production-grade modules
-- ✅ Algorithm implementation
 - ✅ Code review and refactoring
+- ✅ Comprehensive testing
+- ⚠️ May need upgrade for complex algorithms
+
+**Powerful models (gpt-5.2)**:
+- ✅ Complex algorithms
 - ✅ Microservices and architecture
-- ⚠️ Overkill for simple scripts (higher cost)
+- ✅ System design
+- ⚠️ Higher cost for simple tasks
 
 ---
 
@@ -225,7 +257,7 @@ id: review
 backend: codex
 model: gpt-5.2-codex
 files: ./src/auth.py, ./src/user.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 Review for security issues and performance
 ---END---
@@ -274,7 +306,7 @@ Task 4: Write tests (depends on Task 3)
 | `timeout` | 300 | Max execution time (seconds) |
 | `dependencies` | - | Comma-separated task IDs |
 | `files` | - | Source files to reference |
-| `files-mode` | auto | `embed` (include content) / `ref` (path only) |
+| `files-mode` | ref | `ref` (path only) - unified across all levels |
 | `retry` | 0 | Retry count on failure |
 | `stream-format` | jsonl | `jsonl` / `text` |
 
@@ -282,14 +314,14 @@ Task 4: Write tests (depends on Task 3)
 
 ## Examples by Use Case
 
-### Code Generation
+### Code Generation (Level 3)
 
 ```bash
 memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: http-client
 backend: codex
-model: gpt-5.1-codex-max
+model: gpt-5.2-codex
 workdir: ./lib
 ---CONTENT---
 Python HTTP client with retry, timeout, interceptors
@@ -297,7 +329,7 @@ Python HTTP client with retry, timeout, interceptors
 EOF
 ```
 
-### Code Review
+### Code Review (Level 3)
 
 ```bash
 memex-cli run --backend codex --stdin <<'EOF'
@@ -306,7 +338,7 @@ id: review
 backend: codex
 model: gpt-5.2-codex
 files: ./src/auth.py
-files-mode: embed
+files-mode: ref
 workdir: ./project
 ---CONTENT---
 Review for security issues, performance, best practices
@@ -314,7 +346,7 @@ Review for security issues, performance, best practices
 EOF
 ```
 
-### Refactoring
+### Refactoring (Level 4)
 
 ```bash
 memex-cli run --backend codex --stdin <<'EOF'
@@ -323,7 +355,7 @@ id: refactor
 backend: codex
 model: gpt-5.2
 files: ./legacy_code.py
-files-mode: embed
+files-mode: ref
 workdir: ./project
 ---CONTENT---
 Refactor: apply design patterns, extract common logic, improve testability
@@ -331,7 +363,7 @@ Refactor: apply design patterns, extract common logic, improve testability
 EOF
 ```
 
-### Unit Testing
+### Unit Testing (Level 3)
 
 ```bash
 memex-cli run --backend codex --stdin <<'EOF'
@@ -340,7 +372,7 @@ id: tests
 backend: codex
 model: gpt-5.2-codex
 files: ./calculator.py
-files-mode: embed
+files-mode: ref
 workdir: ./project
 ---CONTENT---
 Write pytest tests with >90% coverage, including edge cases

@@ -1,6 +1,6 @@
 # Level 3: Complete Modules Examples
 
-Production-ready modules with error handling, logging, tests. Includes code review, refactoring, and comprehensive testing tasks using `codex-max` or `gpt-5.2` models.
+Production-ready modules with error handling, logging, tests. Includes code review, refactoring, and comprehensive testing tasks using `gpt-5.2-codex` model (auto-selected). Parallel execution with task decomposition.
 
 ---
 
@@ -16,7 +16,7 @@ memex-cli run --backend codex --stdin <<'EOF'
 id: http-client
 backend: codex
 workdir: /home/user/lib
-model: gpt-5.1-codex-max
+model: gpt-5.2-codex
 timeout: 120
 ---CONTENT---
 Python HTTP客户端封装：支持重试、超时、请求拦截器、响应拦截器
@@ -27,7 +27,7 @@ EOF
 ### Expected Output
 
 ```
-▶ http-client (codex/gpt-5.1-codex-max)
+▶ http-client (codex/gpt-5.2-codex)
 
 ```python
 import requests
@@ -153,7 +153,7 @@ memex-cli run --backend codex --stdin <<'EOF'
 id: db-helper
 backend: codex
 workdir: /home/user/lib
-model: gpt-5.1-codex-max
+model: gpt-5.2-codex
 timeout: 120
 ---CONTENT---
 SQLite工具类：连接池管理、事务上下文、简单查询构建器、自动重连
@@ -164,7 +164,7 @@ EOF
 ### Expected Output
 
 ```
-▶ db-helper (codex/gpt-5.1-codex-max)
+▶ db-helper (codex/gpt-5.2-codex)
 
 ```python
 import sqlite3
@@ -294,7 +294,7 @@ backend: codex
 workdir: /home/user/project
 model: gpt-5.2-codex
 files: ./src/auth.py, ./src/user.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 审查这段代码：
 1. 指出安全隐患（SQL注入、XSS、密码存储等）
@@ -401,7 +401,7 @@ backend: codex
 workdir: /home/user/project
 model: gpt-5.2-codex
 files: ./src/legacy.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 重构这段代码：
 1. 应用设计模式（如Strategy、Factory、Observer）
@@ -564,7 +564,7 @@ backend: codex
 workdir: /home/user/project
 model: gpt-5.2-codex
 files: ./src/calculator.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 为calculator.py编写完整pytest测试用例：
 1. 覆盖所有公共方法（正常路径 + 边界情况）
@@ -696,14 +696,191 @@ pytest test_calculator.py -m "not performance"
 
 ---
 
+## Example 6: Auto Task Decomposition + Dependency Analysis + Parallel Execution
+
+This example demonstrates L3 full capabilities: automatic task decomposition, dependency analysis, and parallel execution.
+
+### Single Task Input (Auto-Decomposed)
+
+```bash
+memex-cli run --backend codex --stdin <<'EOF'
+---TASK---
+id: cache-manager
+backend: codex
+model: gpt-5.2-codex
+workdir: ./lib
+timeout: 180
+---CONTENT---
+创建完整的缓存管理模块：
+1. 缓存接口抽象 (cache/interface.py)
+2. 内存缓存实现 (cache/memory.py)
+3. Redis缓存实现 (cache/redis.py)
+4. 缓存装饰器 (cache/decorators.py)
+5. 完整单元测试 (tests/test_cache.py)
+
+要求：
+- 支持TTL过期
+- 支持缓存穿透保护
+- 线程安全
+- 完整类型注解
+---END---
+EOF
+```
+
+### Auto-Decomposition Process
+
+```
+▶ Task Decomposition Analysis
+  Input: 1 complex task
+  Detected Components: 5 files
+  Generated Subtasks: 5
+
+  Decomposition Strategy:
+  ┌──────────────────────────────────────────────────┐
+  │ Original Task: cache-manager                      │
+  │                                                   │
+  │ Subtasks Generated:                               │
+  │   1. cache-manager-interface (interface.py)       │
+  │   2. cache-manager-memory (memory.py)             │
+  │   3. cache-manager-redis (redis.py)               │
+  │   4. cache-manager-decorators (decorators.py)     │
+  │   5. cache-manager-tests (test_cache.py)          │
+  └──────────────────────────────────────────────────┘
+```
+
+### Auto-Generated Dependency Graph
+
+```
+▶ Dependency Analysis
+  Implicit Dependencies Detected:
+    - memory.py imports interface.py
+    - redis.py imports interface.py
+    - decorators.py imports interface.py
+    - test_cache.py imports all modules
+
+  Generated DAG:
+
+Phase 1: Foundation (No deps)
+┌──────────────────────┐
+│ cache-manager-       │
+│ interface            │
+│ (interface.py)       │
+│ 2.8s                 │
+└──────────┬───────────┘
+           │
+           ↓
+Phase 2: Implementations (Parallel, depends on Phase 1)
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│ cache-manager-   │  │ cache-manager-   │  │ cache-manager-   │
+│ memory           │  │ redis            │  │ decorators       │
+│ (memory.py)      │  │ (redis.py)       │  │ (decorators.py)  │
+│ 3.2s             │  │ 3.5s             │  │ 2.9s             │
+└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+         │                     │                     │
+         └─────────────────────┼─────────────────────┘
+                               ↓
+Phase 3: Testing (Depends on Phase 2)
+              ┌──────────────────────┐
+              │ cache-manager-tests  │
+              │ (test_cache.py)      │
+              │ 4.1s                 │
+              └──────────────────────┘
+```
+
+### Execution Output
+
+```
+▶ Executing cache-manager with auto-decomposition
+
+▶ Phase 1: Foundation
+  » cache-manager-interface
+
+  ```python
+  from abc import ABC, abstractmethod
+  from typing import Any, Optional
+
+  class CacheInterface(ABC):
+      """缓存接口抽象"""
+
+      @abstractmethod
+      def get(self, key: str) -> Optional[Any]:
+          """获取缓存值"""
+          pass
+
+      @abstractmethod
+      def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+          """设置缓存值"""
+          pass
+
+      @abstractmethod
+      def delete(self, key: str) -> bool:
+          """删除缓存"""
+          pass
+
+      @abstractmethod
+      def exists(self, key: str) -> bool:
+          """检查键是否存在"""
+          pass
+  ```
+  » 写入 cache/interface.py
+  ✓ cache-manager-interface 2.8s
+
+▶ Phase 2: Implementations (3 tasks parallel)
+  » Executing 3 tasks in parallel...
+
+  ✓ cache-manager-memory 3.2s
+    » 写入 cache/memory.py
+  ✓ cache-manager-redis 3.5s
+    » 写入 cache/redis.py
+  ✓ cache-manager-decorators 2.9s
+    » 写入 cache/decorators.py
+
+▶ Phase 3: Testing
+  » cache-manager-tests
+  ✓ cache-manager-tests 4.1s
+    » 写入 tests/test_cache.py
+
+═══════════════════════════════════════════════════════════
+✓ cache-manager completed
+  Subtasks: 5
+  Total Time: 10.4s (vs 16.5s serial = 37% faster)
+  Files Generated:
+    - cache/interface.py
+    - cache/memory.py
+    - cache/redis.py
+    - cache/decorators.py
+    - tests/test_cache.py
+═══════════════════════════════════════════════════════════
+```
+
+### Comparison: L2 vs L3 Execution
+
+| Feature | L2 | L3 |
+|---------|:--:|:--:|
+| Dependency Analysis | ✅ | ✅ |
+| Parallel Execution | ✅ | ✅ |
+| **Task Decomposition** | ❌ | ✅ |
+| Single task → Multiple files | ❌ | ✅ |
+| Auto-detect implicit deps | ❌ | ✅ |
+
+**L3 Key Advantage:** Single complex task is automatically decomposed into multiple subtasks with proper dependency ordering.
+
+---
+
 ## Model Selection for Level 3
 
-| Task Type | Model | Reason |
-|-----------|-------|--------|
-| Standard modules | `gpt-5.1-codex-max` | Best balance for production code |
-| Code review | `gpt-5.2-codex` | Better analysis capabilities |
-| Large refactoring | `gpt-5.2` | Handles complex restructuring |
-| Comprehensive tests | `gpt-5.2-codex` | Covers all edge cases |
+| Task Type | Model | Execution |
+|-----------|-------|-----------|
+| Standard modules | `gpt-5.2-codex` | Parallel with decomposition |
+| Code review | `gpt-5.2-codex` | Parallel analysis |
+| Large refactoring | `gpt-5.2` | Auto-decomposition + parallel |
+| Comprehensive tests | `gpt-5.2-codex` | Parallel test generation |
+
+**L3 Execution Features:**
+- Automatic task decomposition (single task → multiple subtasks)
+- Implicit dependency detection (import analysis)
+- Parallel execution of independent subtasks
+- Phase-based execution scheduling
 
 **When to upgrade to Level 4**:
 - Algorithm optimization needed
@@ -714,7 +891,7 @@ pytest test_calculator.py -m "not performance"
 
 ## Tips for Level 3 Tasks
 
-1. **Use files-mode: embed** for code review/refactoring to include source code
+1. **Use files-mode: ref** for code review/refactoring to include source code
 2. **Set longer timeout**: 120-180s for complex modules
 3. **Review generated code**: Check for security issues before production
 4. **Add logging**: Include logging statements in production modules

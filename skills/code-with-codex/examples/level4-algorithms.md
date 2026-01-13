@@ -1,6 +1,6 @@
 # Level 4: Complex Algorithms Examples
 
-Advanced algorithms, data structures, and performance-critical code using `gpt-5.2` model.
+Advanced algorithms, data structures, and performance-critical code using `gpt-5.2` model (auto-selected). Parallel execution with task decomposition.
 
 ---
 
@@ -486,13 +486,220 @@ class ExprParser:
 
 ---
 
+## Example 4: Algorithm Library with Auto-Decomposition + Parallel Execution
+
+This example demonstrates L4 full capabilities: automatic task decomposition, dependency analysis, and parallel execution for complex algorithm libraries.
+
+### Single Task Input (Auto-Decomposed)
+
+```bash
+memex-cli run --backend codex --stdin <<'EOF'
+---TASK---
+id: search-library
+backend: codex
+model: gpt-5.2
+workdir: ./algorithms
+timeout: 300
+---CONTENT---
+创建完整的搜索算法库：
+1. 二分搜索 (search/binary.py) - 支持自定义比较器
+2. 插值搜索 (search/interpolation.py) - 均匀分布数据优化
+3. 指数搜索 (search/exponential.py) - 无界数组搜索
+4. 跳跃搜索 (search/jump.py) - 有序数组块搜索
+5. 斐波那契搜索 (search/fibonacci.py) - 分治优化
+6. 算法基类和接口 (search/base.py)
+7. 性能基准测试 (benchmarks/search_benchmark.py)
+8. 完整单元测试 (tests/test_search.py)
+
+要求：
+- 完整类型注解
+- 时间复杂度分析注释
+- 泛型支持
+---END---
+EOF
+```
+
+### Auto-Decomposition Process
+
+```
+▶ Task Decomposition Analysis
+  Input: 1 complex task (algorithm library)
+  Detected Components: 8 files
+  Generated Subtasks: 8
+
+  Decomposition Strategy: Layer-based
+  ┌──────────────────────────────────────────────────────────┐
+  │ Layer 1: Foundation (No deps)                            │
+  │   - search-library-base (base.py)                        │
+  │                                                          │
+  │ Layer 2: Implementations (Parallel, depends on Layer 1)  │
+  │   - search-library-binary (binary.py)                    │
+  │   - search-library-interpolation (interpolation.py)      │
+  │   - search-library-exponential (exponential.py)          │
+  │   - search-library-jump (jump.py)                        │
+  │   - search-library-fibonacci (fibonacci.py)              │
+  │                                                          │
+  │ Layer 3: Validation (Parallel, depends on Layer 2)       │
+  │   - search-library-benchmark (benchmark.py)              │
+  │   - search-library-tests (test_search.py)                │
+  └──────────────────────────────────────────────────────────┘
+```
+
+### Auto-Generated Dependency Graph
+
+```
+▶ Dependency Analysis
+  Implicit Dependencies Detected:
+    - All search algorithms import base.py
+    - benchmark.py imports all algorithms
+    - test_search.py imports all algorithms
+
+  Generated DAG:
+
+Phase 1: Foundation
+┌─────────────────────────┐
+│ search-library-base     │
+│ (search/base.py)        │
+│ 3.2s                    │
+└───────────┬─────────────┘
+            │
+            ↓
+Phase 2: Algorithm Implementations (5 tasks parallel)
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│ binary   │ │ interp.  │ │ expon.   │ │ jump     │ │ fibonacci│
+│ 4.1s     │ │ 4.3s     │ │ 3.9s     │ │ 3.7s     │ │ 4.5s     │
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
+     │            │            │            │            │
+     └────────────┴────────────┼────────────┴────────────┘
+                               ↓
+Phase 3: Validation (2 tasks parallel)
+         ┌──────────────────┐  ┌──────────────────┐
+         │ benchmark        │  │ tests            │
+         │ 5.2s             │  │ 4.8s             │
+         └──────────────────┘  └──────────────────┘
+```
+
+### Execution Output
+
+```
+▶ Executing search-library with auto-decomposition
+
+▶ Phase 1: Foundation
+  » search-library-base
+
+  ```python
+  from abc import ABC, abstractmethod
+  from typing import TypeVar, Generic, Callable, Optional, List
+
+  T = TypeVar('T')
+
+  class SearchAlgorithm(ABC, Generic[T]):
+      """
+      搜索算法基类
+
+      时间复杂度分析：
+      - 最佳情况: O(1) - 首次命中
+      - 最坏情况: 子类定义
+      - 平均情况: 子类定义
+      """
+
+      @abstractmethod
+      def search(
+          self,
+          arr: List[T],
+          target: T,
+          comparator: Optional[Callable[[T, T], int]] = None
+      ) -> int:
+          """
+          在有序数组中搜索目标元素
+
+          Args:
+              arr: 有序数组
+              target: 目标元素
+              comparator: 自定义比较函数，返回 -1/0/1
+
+          Returns:
+              目标元素索引，未找到返回 -1
+          """
+          pass
+
+      def _compare(self, a: T, b: T, comparator: Optional[Callable]) -> int:
+          """比较两个元素"""
+          if comparator:
+              return comparator(a, b)
+          if a < b:
+              return -1
+          elif a > b:
+              return 1
+          return 0
+  ```
+  » 写入 search/base.py
+  ✓ search-library-base 3.2s
+
+▶ Phase 2: Implementations (5 tasks parallel)
+  » Executing 5 tasks in parallel...
+
+  ✓ search-library-binary 4.1s
+    » 写入 search/binary.py (O(log n) 二分搜索)
+  ✓ search-library-interpolation 4.3s
+    » 写入 search/interpolation.py (O(log log n) 均匀分布)
+  ✓ search-library-exponential 3.9s
+    » 写入 search/exponential.py (O(log n) 无界搜索)
+  ✓ search-library-jump 3.7s
+    » 写入 search/jump.py (O(√n) 块搜索)
+  ✓ search-library-fibonacci 4.5s
+    » 写入 search/fibonacci.py (O(log n) 分治)
+
+▶ Phase 3: Validation (2 tasks parallel)
+  » Executing 2 tasks in parallel...
+
+  ✓ search-library-benchmark 5.2s
+    » 写入 benchmarks/search_benchmark.py
+  ✓ search-library-tests 4.8s
+    » 写入 tests/test_search.py
+
+═══════════════════════════════════════════════════════════════
+✓ search-library completed
+  Subtasks: 8
+  Total Time: 13.2s (vs 37.7s serial = 65% faster)
+  Files Generated:
+    - search/base.py
+    - search/binary.py
+    - search/interpolation.py
+    - search/exponential.py
+    - search/jump.py
+    - search/fibonacci.py
+    - benchmarks/search_benchmark.py
+    - tests/test_search.py
+═══════════════════════════════════════════════════════════════
+```
+
+### L4 Execution Features
+
+| Feature | Description |
+|---------|-------------|
+| **Task Decomposition** | Single task → 8 subtasks |
+| **Dependency Analysis** | Auto-detect import relationships |
+| **Parallel Execution** | 5 algorithms in parallel |
+| **Phase Scheduling** | 3-phase execution plan |
+| **Performance Gain** | 65% faster than serial |
+
+---
+
 ## Model Selection for Level 4
 
-| Task Type | Model | Timeout |
-|-----------|-------|---------|
-| Standard algorithms | `gpt-5.2` | 180s |
-| Complex optimization | `gpt-5.2` | 240s |
-| Cryptographic algorithms | `gpt-5.2` | 300s |
+| Task Type | Model | Timeout | Execution |
+|-----------|-------|---------|-----------|
+| Standard algorithms | `gpt-5.2` | 180s | Parallel with decomposition |
+| Algorithm libraries | `gpt-5.2` | 300s | Multi-phase parallel |
+| Complex optimization | `gpt-5.2` | 240s | Auto DAG construction |
+| Cryptographic algorithms | `gpt-5.2` | 300s | Sequential (security) |
+
+**L4 Execution Features:**
+- Automatic task decomposition for algorithm libraries
+- Implicit dependency detection (import analysis)
+- Parallel execution of independent algorithms
+- Phase-based execution scheduling
 
 **When to upgrade to Level 5**:
 - Multi-module projects (not single algorithm)

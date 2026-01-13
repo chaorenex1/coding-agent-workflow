@@ -4,13 +4,38 @@ This guide helps you choose the right complexity level and model for your code g
 
 ---
 
+## Execution Strategy
+
+| Level | Model | files-mode | Dependency Analysis | Task Decomposition | Execution |
+|:-----:|-------|:----------:|:-------------------:|:------------------:|:---------:|
+| **L1** | `gpt-5.1-codex-mini` | ref | ❌ | ❌ | **Serial** |
+| **L2** | `gpt-5.1-codex-max` | ref | ✅ | ❌ | **Parallel** |
+| **L3** | `gpt-5.2-codex` | ref | ✅ | ✅ | **Parallel** |
+| **L4** | `gpt-5.2` | ref | ✅ | ✅ | **Parallel** |
+| **L5** | `gpt-5.2` | ref | ✅ | ✅ | **Parallel** |
+
+---
+
+## Automated Capabilities
+
+| Capability | Description | Active Level |
+|------------|-------------|:------------:|
+| **Auto Model Selection** | Automatically select optimal model based on complexity | L1-L5 |
+| **Auto Grading** | Evaluate task complexity via Decision Tree | L1-L5 |
+| **Dependency Analysis** | Analyze task/file dependencies, build DAG | L2+ |
+| **Task Decomposition** | Auto-split large tasks into subtasks | L3+ |
+| **Parallel Execution** | Execute independent subtasks in parallel | L2+ |
+
+---
+
 ## Understanding Complexity Levels
 
 The 5-level complexity system maps task requirements to optimal model selection:
 
-- **Level 1-2**: Fast models (codex-mini, codex) for routine tasks
-- **Level 3**: Balanced model (codex-max) for production-grade modules
-- **Level 4-5**: Powerful models (gpt-5.2) for complex logic and architecture
+- **Level 1**: Fast model (codex-mini) for simple scripts, serial execution
+- **Level 2**: Balanced model (codex-max) for utilities, parallel with dependency analysis
+- **Level 3**: Production model (gpt-5.2-codex) for modules, parallel with task decomposition
+- **Level 4-5**: Powerful model (gpt-5.2) for complex algorithms and architecture
 
 ---
 
@@ -64,8 +89,8 @@ The 5-level complexity system maps task requirements to optimal model selection:
 
 ### Recommended Models
 
-- **Primary**: `gpt-5.2-codex`
-- **When to upgrade**: `gpt-5.1-codex-max` for complex validation logic
+- **Primary**: `gpt-5.1-codex-max` (auto-selected)
+- **Execution**: Parallel with dependency analysis
 
 ### When to Use
 
@@ -98,8 +123,8 @@ The 5-level complexity system maps task requirements to optimal model selection:
 
 ### Recommended Models
 
-- **Primary**: `gpt-5.1-codex-max` (best balance)
-- **Complex modules**: `gpt-5.2`
+- **Primary**: `gpt-5.2-codex` (auto-selected)
+- **Execution**: Parallel with task decomposition
 
 ### When to Use
 
@@ -114,7 +139,7 @@ The 5-level complexity system maps task requirements to optimal model selection:
 - Analyze code for security issues
 - Identify performance bottlenecks
 - Suggest refactoring opportunities
-- Use `files-mode: embed` to include source files
+- Use `files-mode: ref` (unified across all levels)
 
 **Refactoring**:
 - Apply design patterns
@@ -211,18 +236,18 @@ Start
 
 ### Quick Classification Table
 
-| Task Type | Typical Level | Model |
-|-----------|--------------|-------|
-| Batch rename files | 1 | codex-mini |
-| Email validator | 2 | codex |
-| HTTP client with retry | 3 | codex-max |
-| Skip list implementation | 4 | gpt-5.2 |
-| Auth microservice | 5 | gpt-5.2 |
-| Code review | 3 | codex-max |
-| Simple refactor | 3 | codex-max |
-| Complex refactor | 4 | gpt-5.2 |
-| Unit tests (simple module) | 2 | codex |
-| Unit tests (complex module) | 3 | codex-max |
+| Task Type | Typical Level | Model | Execution |
+|-----------|:------------:|-------|:---------:|
+| Batch rename files | 1 | codex-mini | Serial |
+| Email validator | 2 | codex-max | Parallel |
+| HTTP client with retry | 3 | gpt-5.2-codex | Parallel |
+| Skip list implementation | 4 | gpt-5.2 | Parallel |
+| Auth microservice | 5 | gpt-5.2 | Parallel |
+| Code review | 3 | gpt-5.2-codex | Parallel |
+| Simple refactor | 3 | gpt-5.2-codex | Parallel |
+| Complex refactor | 4 | gpt-5.2 | Parallel |
+| Unit tests (simple module) | 2 | codex-max | Parallel |
+| Unit tests (complex module) | 3 | gpt-5.2-codex | Parallel |
 
 ---
 
@@ -230,29 +255,22 @@ Start
 
 ### Speed vs Quality Trade-offs
 
-| Model | Level 1-2 | Level 3 | Level 4-5 | Cost | Speed |
-|-------|-----------|---------|-----------|------|-------|
-| codex-mini | ⭐⭐⭐ | ⭐ | ❌ | $ | ⚡⚡⚡ |
-| codex | ⭐⭐⭐ | ⭐⭐ | ⭐ | $$ | ⚡⚡ |
-| codex-max | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ | $$$ | ⚡ |
-| gpt-5.2 | ⭐ | ⭐⭐⭐ | ⭐⭐⭐ | $$$$ | ⚡ |
+| Model | Level | Cost | Speed | Quality | Execution |
+|-------|:-----:|------|:-----:|---------|:---------:|
+| codex-mini | L1 | $ | ⚡⚡⚡ | Good | Serial |
+| codex-max | L2 | $$ | ⚡⚡ | Better | Parallel |
+| gpt-5.2-codex | L3 | $$$ | ⚡ | Best balance | Parallel |
+| gpt-5.2 | L4-5 | $$$$ | ⚡ | Highest | Parallel |
 
-### When to Upgrade Models
+### Auto Model Selection
 
-**From codex-mini to codex**:
-- Script fails with syntax errors
-- Needs external library usage
-- Requires better error handling
+Models are automatically selected based on task complexity level. The system:
 
-**From codex to codex-max**:
-- Production-grade quality needed
-- Complex business logic
-- Integration with multiple services
-
-**From codex-max to gpt-5.2**:
-- Algorithm optimization required
-- System architecture design
-- Performance-critical code
+1. Analyzes task description to determine complexity
+2. Selects optimal model for the level
+3. Configures appropriate execution strategy (serial/parallel)
+4. For L2+: Builds dependency graph
+5. For L3+: Decomposes into subtasks
 
 ---
 
@@ -291,31 +309,31 @@ memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: review
 backend: codex
-model: gpt-5.1-codex-max
+model: gpt-5.2-codex
 files: ./src/auth.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 Review for: security issues, performance, best practices
 ---END---
 EOF
 ```
 
-**Refactoring** (Level 3-4):
+**Refactoring** (Level 4):
 ```bash
 memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
 id: refactor
 backend: codex
-model: gpt-5.2  # Use gpt-5.2 for large refactors
+model: gpt-5.2
 files: ./src/legacy.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 Apply design patterns, extract common logic, improve testability
 ---END---
 EOF
 ```
 
-**Unit Testing** (Level 2-3):
+**Unit Testing** (Level 3):
 ```bash
 memex-cli run --backend codex --stdin <<'EOF'
 ---TASK---
@@ -323,7 +341,7 @@ id: test
 backend: codex
 model: gpt-5.2-codex
 files: ./src/calculator.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 Write pytest tests covering all edge cases, >80% coverage
 ---END---

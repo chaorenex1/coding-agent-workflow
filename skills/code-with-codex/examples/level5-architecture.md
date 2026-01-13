@@ -1,6 +1,6 @@
 # Level 5: System Design & Architecture Examples
 
-Multi-module projects, microservices, complete applications using `gpt-5.2` model with extended timeout.
+Multi-module projects, microservices, complete applications using `gpt-5.2` model (auto-selected) with extended timeout. Full parallel execution with multi-phase task decomposition.
 
 ---
 
@@ -385,14 +385,280 @@ EOF
 
 ---
 
+## Example 5: E-Commerce Platform with Full Auto-Decomposition
+
+This example demonstrates L5 full capabilities: automatic multi-service decomposition, cross-service dependency analysis, and maximum parallel execution.
+
+### Single Task Input (Auto-Decomposed into Microservices)
+
+```bash
+memex-cli run --backend codex --stdin <<'EOF'
+---TASK---
+id: ecommerce-platform
+backend: codex
+model: gpt-5.2
+workdir: ./platform
+timeout: 600
+---CONTENT---
+设计并实现电商平台微服务架构：
+
+服务列表：
+1. 用户服务 (services/user/) - 注册、登录、个人信息
+2. 商品服务 (services/product/) - 商品CRUD、分类、搜索
+3. 订单服务 (services/order/) - 订单创建、状态管理、历史
+4. 支付服务 (services/payment/) - 支付网关集成、退款
+5. 通知服务 (services/notification/) - 邮件、短信、推送
+
+基础设施：
+6. API网关 (gateway/) - 路由、限流、认证
+7. 共享库 (shared/) - 通用模型、工具函数
+8. 数据库迁移 (migrations/) - 所有服务的schema
+9. Docker编排 (docker/) - Compose + K8s配置
+10. 集成测试 (tests/) - 端到端测试
+
+要求：
+- FastAPI + SQLAlchemy
+- gRPC服务间通信
+- Redis缓存
+- RabbitMQ消息队列
+- JWT认证
+---END---
+EOF
+```
+
+### Auto-Decomposition Process (5-Phase Architecture)
+
+```
+▶ Task Decomposition Analysis
+  Input: 1 complex task (microservices platform)
+  Detected Components: 10 modules
+  Generated Subtasks: 15 (some modules split further)
+
+  Decomposition Strategy: Layered Architecture
+  ┌────────────────────────────────────────────────────────────────────┐
+  │ Phase 1: Foundation (No deps)                                      │
+  │   - shared-models (shared/models.py)                               │
+  │   - shared-utils (shared/utils.py)                                 │
+  │   - shared-config (shared/config.py)                               │
+  │                                                                    │
+  │ Phase 2: Data Layer (Parallel, depends on Phase 1)                 │
+  │   - migrations-user (migrations/user.sql)                          │
+  │   - migrations-product (migrations/product.sql)                    │
+  │   - migrations-order (migrations/order.sql)                        │
+  │                                                                    │
+  │ Phase 3: Core Services (Parallel, depends on Phase 2)              │
+  │   - service-user (services/user/)                                  │
+  │   - service-product (services/product/)                            │
+  │   - service-payment (services/payment/)                            │
+  │   - service-notification (services/notification/)                  │
+  │                                                                    │
+  │ Phase 4: Orchestration Services (Parallel, depends on Phase 3)     │
+  │   - service-order (services/order/) - depends on user,product,pay  │
+  │   - gateway (gateway/) - depends on all services                   │
+  │                                                                    │
+  │ Phase 5: Infrastructure & Testing (Parallel, depends on Phase 4)   │
+  │   - docker-config (docker/)                                        │
+  │   - integration-tests (tests/)                                     │
+  └────────────────────────────────────────────────────────────────────┘
+```
+
+### Auto-Generated Dependency Graph
+
+```
+▶ Dependency Analysis
+  Cross-Service Dependencies Detected:
+    - order imports user, product, payment
+    - gateway routes to all services
+    - all services import shared/*
+    - tests import all services
+
+  Generated 5-Phase DAG:
+
+Phase 1: Foundation (3 tasks parallel)
+┌────────────┐  ┌────────────┐  ┌────────────┐
+│ shared-    │  │ shared-    │  │ shared-    │
+│ models     │  │ utils      │  │ config     │
+│ 2.1s       │  │ 1.8s       │  │ 1.5s       │
+└─────┬──────┘  └─────┬──────┘  └─────┬──────┘
+      │               │               │
+      └───────────────┼───────────────┘
+                      ↓
+Phase 2: Data Layer (3 tasks parallel)
+┌────────────┐  ┌────────────┐  ┌────────────┐
+│ migrations │  │ migrations │  │ migrations │
+│ user       │  │ product    │  │ order      │
+│ 1.2s       │  │ 1.4s       │  │ 1.6s       │
+└─────┬──────┘  └─────┬──────┘  └─────┬──────┘
+      │               │               │
+      └───────────────┼───────────────┘
+                      ↓
+Phase 3: Core Services (4 tasks parallel)
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│ service-    │ │ service-    │ │ service-    │ │ service-    │
+│ user        │ │ product     │ │ payment     │ │ notification│
+│ 8.5s        │ │ 9.2s        │ │ 7.8s        │ │ 6.4s        │
+└──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+       │               │               │               │
+       └───────────────┼───────────────┴───────────────┘
+                       ↓
+Phase 4: Orchestration (2 tasks parallel)
+         ┌─────────────────┐  ┌─────────────────┐
+         │ service-order   │  │ gateway         │
+         │ 10.3s           │  │ 8.7s            │
+         └────────┬────────┘  └────────┬────────┘
+                  │                    │
+                  └──────────┬─────────┘
+                             ↓
+Phase 5: Infrastructure (2 tasks parallel)
+         ┌─────────────────┐  ┌─────────────────┐
+         │ docker-config   │  │ integration-    │
+         │ 4.2s            │  │ tests 6.8s      │
+         └─────────────────┘  └─────────────────┘
+```
+
+### Execution Output
+
+```
+▶ Executing ecommerce-platform with auto-decomposition
+
+▶ Phase 1: Foundation (3 tasks parallel)
+  » Executing 3 tasks in parallel...
+
+  ✓ shared-models 2.1s
+    » 写入 shared/models.py (User, Product, Order 基础模型)
+  ✓ shared-utils 1.8s
+    » 写入 shared/utils.py (JWT, 加密, 分页工具)
+  ✓ shared-config 1.5s
+    » 写入 shared/config.py (环境变量, 数据库配置)
+
+▶ Phase 2: Data Layer (3 tasks parallel)
+  » Executing 3 tasks in parallel...
+
+  ✓ migrations-user 1.2s
+    » 写入 migrations/001_user.sql
+  ✓ migrations-product 1.4s
+    » 写入 migrations/002_product.sql
+  ✓ migrations-order 1.6s
+    » 写入 migrations/003_order.sql
+
+▶ Phase 3: Core Services (4 tasks parallel)
+  » Executing 4 tasks in parallel...
+
+  ✓ service-user 8.5s
+    » 写入 services/user/main.py
+    » 写入 services/user/routes.py
+    » 写入 services/user/service.py
+    » 写入 services/user/grpc_server.py
+  ✓ service-product 9.2s
+    » 写入 services/product/main.py
+    » 写入 services/product/routes.py
+    » 写入 services/product/search.py (Elasticsearch集成)
+  ✓ service-payment 7.8s
+    » 写入 services/payment/main.py
+    » 写入 services/payment/stripe.py
+    » 写入 services/payment/alipay.py
+  ✓ service-notification 6.4s
+    » 写入 services/notification/main.py
+    » 写入 services/notification/email.py
+    » 写入 services/notification/sms.py
+
+▶ Phase 4: Orchestration (2 tasks parallel)
+  » Executing 2 tasks in parallel...
+
+  ✓ service-order 10.3s
+    » 写入 services/order/main.py
+    » 写入 services/order/workflow.py (状态机)
+    » 写入 services/order/saga.py (分布式事务)
+  ✓ gateway 8.7s
+    » 写入 gateway/main.py
+    » 写入 gateway/routes.py
+    » 写入 gateway/middleware.py (限流, 认证)
+
+▶ Phase 5: Infrastructure (2 tasks parallel)
+  » Executing 2 tasks in parallel...
+
+  ✓ docker-config 4.2s
+    » 写入 docker/docker-compose.yml
+    » 写入 docker/docker-compose.prod.yml
+    » 写入 docker/k8s/ (Deployment, Service, ConfigMap)
+  ✓ integration-tests 6.8s
+    » 写入 tests/test_e2e.py
+    » 写入 tests/test_saga.py
+    » 写入 tests/conftest.py
+
+═══════════════════════════════════════════════════════════════════════
+✓ ecommerce-platform completed
+  Phases: 5
+  Subtasks: 15
+  Total Time: 42.8s (vs 89.2s serial = 52% faster)
+
+  Generated Structure:
+  platform/
+  ├── shared/
+  │   ├── models.py
+  │   ├── utils.py
+  │   └── config.py
+  ├── migrations/
+  │   ├── 001_user.sql
+  │   ├── 002_product.sql
+  │   └── 003_order.sql
+  ├── services/
+  │   ├── user/
+  │   ├── product/
+  │   ├── order/
+  │   ├── payment/
+  │   └── notification/
+  ├── gateway/
+  ├── docker/
+  │   ├── docker-compose.yml
+  │   └── k8s/
+  └── tests/
+
+  Services: 5
+  Files: 35+
+═══════════════════════════════════════════════════════════════════════
+```
+
+### L5 Execution Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Service Decomposition** | 1 task → 5 microservices + infra |
+| **Cross-Service Dependency** | Auto-detect inter-service imports |
+| **5-Phase Execution** | Foundation → Data → Core → Orchestration → Infra |
+| **Maximum Parallelization** | 4 services in parallel (Phase 3) |
+| **Performance Gain** | 52% faster than serial |
+
+### Comparison: L3 vs L4 vs L5
+
+| Feature | L3 | L4 | L5 |
+|---------|:--:|:--:|:--:|
+| Task Decomposition | ✅ | ✅ | ✅ |
+| Dependency Analysis | ✅ | ✅ | ✅ |
+| Parallel Execution | ✅ | ✅ | ✅ |
+| Multi-file output | ✅ | ✅ | ✅ |
+| **Multi-service decomposition** | ❌ | ❌ | ✅ |
+| **Cross-service dependency** | ❌ | ❌ | ✅ |
+| **5+ phase execution** | ❌ | ❌ | ✅ |
+| **Infrastructure generation** | ❌ | ❌ | ✅ |
+
+---
+
 ## Model Selection for Level 5
 
-| Task Type | Model | Timeout | Notes |
-|-----------|-------|---------|-------|
-| Microservices | `gpt-5.2` | 300-600s | Use DAG for parallel services |
-| Full-stack apps | `gpt-5.2` | 300s | Separate design → implement |
-| DevOps configs | `gpt-5.2` | 180s | Simpler than code |
-| Distributed systems | `gpt-5.2` | 600s | Most complex |
+| Task Type | Model | Timeout | Execution |
+|-----------|-------|---------|-----------|
+| Microservices | `gpt-5.2` | 300-600s | Multi-phase parallel |
+| Full-stack apps | `gpt-5.2` | 300s | 4-phase decomposition |
+| DevOps configs | `gpt-5.2` | 180s | Parallel infrastructure |
+| Distributed systems | `gpt-5.2` | 600s | Maximum parallelization |
+
+**L5 Execution Features:**
+- Automatic multi-service decomposition
+- Cross-service dependency detection
+- 5+ phase execution planning
+- Maximum parallel execution
+- Infrastructure generation (Docker, K8s)
 
 ---
 

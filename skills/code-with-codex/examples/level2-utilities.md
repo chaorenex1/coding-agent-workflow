@@ -1,6 +1,6 @@
 # Level 2: Utility Functions Examples
 
-Reusable helper functions, data transformations, format conversions using `codex` or `codex-max` models.
+Reusable helper functions, data transformations, format conversions using `gpt-5.1-codex-max` model (auto-selected). Parallel execution with dependency analysis.
 
 ---
 
@@ -16,7 +16,7 @@ memex-cli run --backend codex --stdin <<'EOF'
 id: validators
 backend: codex
 workdir: /home/user/utils
-model: gpt-5.2-codex
+model: gpt-5.1-codex-max
 ---CONTENT---
 编写邮箱、手机号、身份证号验证函数集合（支持中国格式）
 ---END---
@@ -100,7 +100,7 @@ memex-cli run --backend codex --stdin <<'EOF'
 id: format-converter
 backend: codex
 workdir: /home/user/utils
-model: gpt-5.2-codex
+model: gpt-5.1-codex-max
 ---CONTENT---
 JSON/YAML/TOML格式互转工具类，支持文件和字符串输入
 ---END---
@@ -212,9 +212,9 @@ memex-cli run --backend codex --stdin <<'EOF'
 id: test-validators
 backend: codex
 workdir: /home/user/utils
-model: gpt-5.2-codex
+model: gpt-5.1-codex-max
 files: ./validators.py
-files-mode: embed
+files-mode: ref
 ---CONTENT---
 为validators.py编写pytest测试用例，覆盖正常和边界情况
 ---END---
@@ -320,17 +320,142 @@ pytest test_validators.py -v
 
 ---
 
+## Example 4: Multi-Task with Dependency Analysis + Parallel Execution
+
+This example demonstrates L2 parallel execution with automatic dependency analysis.
+
+### Command
+
+```bash
+memex-cli run --backend codex --stdin <<'EOF'
+---TASK---
+id: string-utils
+backend: codex
+model: gpt-5.1-codex-max
+workdir: ./utils
+---CONTENT---
+字符串工具函数 (utils/strings.py)：
+- camelCase ↔ snake_case 转换
+- slugify 函数
+- truncate 带省略号
+---END---
+---TASK---
+id: date-utils
+backend: codex
+model: gpt-5.1-codex-max
+workdir: ./utils
+---CONTENT---
+日期工具函数 (utils/dates.py)：
+- 相对时间显示 ("3天前")
+- 时区转换
+- 日期格式化
+---END---
+---TASK---
+id: number-utils
+backend: codex
+model: gpt-5.1-codex-max
+workdir: ./utils
+---CONTENT---
+数字工具函数 (utils/numbers.py)：
+- 货币格式化
+- 文件大小格式化 (KB/MB/GB)
+- 百分比格式化
+---END---
+---TASK---
+id: utils-index
+backend: codex
+model: gpt-5.1-codex-max
+workdir: ./utils
+dependencies: string-utils, date-utils, number-utils
+---CONTENT---
+创建 utils/__init__.py：
+- 导出所有工具函数
+- 添加版本号
+- 编写模块 docstring
+---END---
+---TASK---
+id: utils-tests
+backend: codex
+model: gpt-5.1-codex-max
+workdir: ./utils
+files: ./utils/strings.py, ./utils/dates.py, ./utils/numbers.py
+files-mode: ref
+dependencies: utils-index
+---CONTENT---
+为所有工具函数编写 pytest 测试 (tests/test_utils.py)
+---END---
+EOF
+```
+
+### Execution Flow (Auto-Generated DAG)
+
+```
+Phase 1: Parallel Execution (No Dependencies)
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│ string-utils│  │ date-utils  │  │ number-utils│
+│   2.1s      │  │   2.3s      │  │   1.9s      │
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │
+       └────────────────┼────────────────┘
+                        ↓
+Phase 2: Sequential (Depends on Phase 1)
+              ┌─────────────┐
+              │ utils-index │
+              │   1.2s      │
+              └──────┬──────┘
+                     ↓
+Phase 3: Sequential (Depends on Phase 2)
+              ┌─────────────┐
+              │ utils-tests │
+              │   3.5s      │
+              └─────────────┘
+
+Total: ~6.0s (vs 11.0s serial) - 45% faster
+```
+
+### Expected Output
+
+```
+▶ Dependency Analysis
+  Tasks: 5
+  Parallel Groups: 3
+  Dependencies Detected:
+    - utils-index → [string-utils, date-utils, number-utils]
+    - utils-tests → [utils-index]
+
+▶ Phase 1: Executing 3 tasks in parallel
+  ✓ string-utils 2.1s
+  ✓ date-utils 2.3s
+  ✓ number-utils 1.9s
+
+▶ Phase 2: Executing 1 task
+  ✓ utils-index 1.2s
+
+▶ Phase 3: Executing 1 task
+  ✓ utils-tests 3.5s
+
+✓ All 5 tasks completed in 6.0s
+```
+
+---
+
 ## Model Selection for Level 2
 
-| Task Complexity | Model | Reason |
-|----------------|-------|--------|
-| Standard utilities | `gpt-5.2-codex` | Good balance of quality and speed |
-| Complex validation logic | `gpt-5.1-codex-max` | Better edge case handling |
-| Math/crypto utilities | `gpt-5.1-codex-max` | Requires precision |
+| Task Complexity | Model | Execution |
+|----------------|-------|-----------|
+| Standard utilities | `gpt-5.1-codex-max` | Parallel with dependency analysis |
+| Multi-task workflow | `gpt-5.1-codex-max` | Auto DAG construction |
+| Complex validation | `gpt-5.1-codex-max` | Parallel when independent |
+
+**L2 Execution Features:**
+- Automatic dependency analysis between tasks
+- Parallel execution of independent tasks
+- DAG-based execution scheduling
+- No task decomposition (single task = single output)
 
 **When to upgrade to Level 3**:
-- Need production-grade error handling
-- Require logging and monitoring
+- Need automatic task decomposition
+- Require production-grade error handling
 - Code integrates with external services
 - Need comprehensive test coverage
 
