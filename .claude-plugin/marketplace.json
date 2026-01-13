@@ -1,0 +1,32 @@
+{
+  "name": "coding-workflow-marketplace",
+  "owner": {
+    "name": "chaorenex1",
+    "url": "https://github.com/chaorenex1"
+  },
+  "plugins": [
+    {
+      "name": "coding-workflow",
+      "source": ".",
+      "description": "AI 智能工作流系统 - 包含 18 个 Skills、36 个 Agents 和 48 个 Commands，提供从需求分析到代码实现的全自动化解决方案",
+      "version": "3.0.0",
+      "author": {
+        "name": "chaorenex1",
+        "url": "https://github.com/chaorenex1"
+      },
+      "homepage": "https://github.com/chaorenex1/coding-workflow#readme",
+      "repository": "https://github.com/chaorenex1/coding-workflow",
+      "license": "MIT",
+      "keywords": [
+        "workflow",
+        "ai",
+        "automation",
+        "bmad",
+        "orchestrator",
+        "code-generation",
+        "testing",
+        "deployment"
+      ]
+    }
+  ]
+}
