@@ -18,8 +18,5 @@
     "code-generation",
     "testing",
     "deployment"
-  ],
-  "skills": "./skills",
-  "agents": "./agents",
-  "commands": "./commands"
+  ]
 }
