@@ -26,10 +26,10 @@ Coding Workflow 是一个面向开发者的 AI 智能工作流系统，实现从
 
 在 Claude Code 中运行：
 ```
-/plugin coding-workflow
+/plugin chaorenex1/coding-workflow
 ```
 
-插件会自动安装所有 18 个 Skills、36 个 Agents 和 48 个 Commands。
+插件会自动安装所有技能、代理和命令。
 
 **依赖安装**：
 
@@ -116,10 +116,6 @@ coding-workflow/
 │   │   ├── bmad-iter-developer.md      # 迭代开发者
 │   │   ├── bmad-regression-tester.md   # 回归测试员
 │   │   └── bmad-release-manager.md     # 发布管理员
-│   │
-│   ├── quick-code/                     # 快速代码代理 (5 个)
-│   │
-│   ├── feature-workflow/               # 功能开发代理
 │   │
 │   └── automation/                     # 自动化代理
 │       ├── comprehensive-analysis-report-generator.md
