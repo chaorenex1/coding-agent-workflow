@@ -9,6 +9,112 @@ Use memex-cli to leverage Codex for code generation with memory and resume suppo
 
 ---
 
+## Mandatory Execution Protocol
+
+**⚠️ CRITICAL**: Claude MUST complete ALL applicable steps below BEFORE invoking memex-cli. Skipping any step is a protocol violation.
+
+### Step 1: Complexity Assessment (ALL Levels)
+
+**Required for**: L1-L5
+
+Use decision tree to determine complexity level:
+```
+Start
+  ├─ Single file, <100 lines? → L1
+  ├─ Reusable functions, no external deps? → L2
+  ├─ Production module with tests?
+  │   ├─ Standard CRUD/API? → L3
+  │   └─ Complex algorithm? → L4
+  └─ Multi-module/microservice? → L5
+```
+
+**Output**: Determined level (L1-L5) with reasoning.
+
+### Step 2: Task Decomposition (L3+ MANDATORY)
+
+**Required for**: L3, L4, L5
+
+Claude MUST decompose the task into subtasks:
+1. Identify all components/modules/files to be created
+2. Split into independent subtasks (each <300 lines output)
+3. Assign unique task IDs
+4. Establish dependency relationships
+
+**Skip condition**: Only if task is truly atomic (single file, single responsibility)
+
+### Step 3: Dependency Analysis (L2+ MANDATORY)
+
+**Required for**: L2, L3, L4, L5
+
+Claude MUST analyze dependencies:
+1. **File dependencies**: Which files import/require others?
+2. **Task dependencies**: Which tasks must complete before others?
+3. **Build DAG**: Create directed acyclic graph of execution order
+
+**Output**: Dependency graph showing parallel groups.
+
+### Step 4: Execution Plan Report (ALL Levels)
+
+**Required for**: L1-L5
+
+Claude MUST report to user before execution:
+
+```markdown
+## 📋 Execution Plan Report
+
+### Complexity Assessment
+- **Level**: L[X] ([level name])
+- **Model**: [selected model]
+- **Reasoning**: [why this level]
+
+### Task Decomposition (L3+)
+| ID | Description | Est. Lines | Dependencies |
+|----|-------------|------------|--------------|
+| task-1 | [desc] | ~100 | - |
+| task-2 | [desc] | ~150 | task-1 |
+
+### Dependency Graph (L2+)
+```
+Phase 1 (Parallel):  [task-1] [task-2]
+                         ↓       ↓
+Phase 2 (Sequential): [task-3 depends on 1,2]
+```
+
+### Execution Summary
+- **Total subtasks**: N
+- **Parallel groups**: M
+- **Estimated phases**: P
+```
+
+### Step 5: Workdir Resolution (AUTO)
+
+**Required for**: ALL tasks
+
+Claude MUST resolve workdir to project root:
+
+```bash
+git rev-parse --show-toplevel
+```
+
+**Rule**: `workdir` = Git 项目根目录（绝对路径）
+
+**Output**: Report resolved workdir in Execution Plan.
+
+### Pre-Execution Checklist
+
+Before invoking memex-cli, Claude MUST confirm:
+
+- [ ] ✅ Complexity level determined (L1-L5)
+- [ ] ✅ Model selected based on level
+- [ ] ✅ (L2+) Dependencies analyzed
+- [ ] ✅ (L3+) Task decomposed into subtasks
+- [ ] ✅ Workdir resolved (via git root)
+- [ ] ✅ Execution plan reported to user
+
+**⛔ VIOLATION**: Directly passing L3/L4/L5 task to Codex without decomposition is a protocol violation. Always decompose first.
+
+---
+
 ## Execution Strategy
 
 | Level | Model | files-mode | Dependency Analysis | Task Decomposition | Execution |

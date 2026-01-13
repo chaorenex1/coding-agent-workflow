@@ -9,6 +9,106 @@ Use memex-cli to leverage Gemini for UX design tasks with multimodal analysis an
 
 ---
 
+## Mandatory Execution Protocol
+
+**⚠️ CRITICAL**: Claude MUST complete ALL applicable steps BEFORE invoking memex-cli. Skipping any step is a protocol violation.
+
+### Step 1: Scope Analysis
+
+Analyze design task scope:
+
+| Scope | Trigger | Action |
+|-------|---------|--------|
+| **Single** | 1 个页面/组件 | 直接执行 |
+| **Multi-page** | 多个页面 | 任务分解 |
+| **Multi-stage** | 研究→定义→原型 | 依赖分析 |
+| **Design System** | 完整设计体系 | 分解 + 依赖 |
+
+**Output**: Scope type with reasoning.
+
+### Step 2: Task Decomposition (Multi-page/System MANDATORY)
+
+**Required when**: 任务涉及 ≥2 个页面或组件
+
+Claude MUST decompose the task:
+1. 识别所有设计交付物
+2. 拆分为独立设计任务
+3. 分配唯一 task ID
+4. 建立依赖关系（如有）
+
+**Skip condition**: Only if task is truly atomic (single page, single component)
+
+### Step 3: Dependency Analysis (Multi-stage MANDATORY)
+
+**Required when**: 设计流程跨多个阶段
+
+Design stage dependency chain:
+```
+Research → Define → Ideate → Prototype → Test
+   ↓         ↓         ↓          ↓
+personas  sitemap   userflow   wireframe
+```
+
+Claude MUST:
+1. Identify design stages involved
+2. Map dependencies between deliverables
+3. Build execution DAG
+
+### Step 4: Workdir Resolution (AUTO)
+
+**Required for**: ALL tasks
+
+Claude MUST resolve workdir to project root:
+
+```bash
+git rev-parse --show-toplevel
+```
+
+**Rule**: `workdir` = Git 项目根目录（绝对路径）
+
+### Step 5: Execution Plan Report (ALL Tasks)
+
+Claude MUST report to user before execution:
+
+```markdown
+## 📋 设计执行计划
+
+### 范围分析
+- **类型**: [Single/Multi-page/Multi-stage/Design System]
+- **交付物**: [列表]
+
+### 任务分解 (如适用)
+| ID | 设计任务 | 依赖 |
+|----|----------|------|
+| design-1 | [desc] | - |
+| design-2 | [desc] | design-1 |
+
+### 依赖图 (如适用)
+```
+Phase 1: [design-1] [design-2]
+Phase 2: [design-3 depends on 1,2]
+```
+
+### 执行摘要
+- **Workdir**: /path/to/project
+- **子任务数**: N
+- **并行组**: M
+```
+
+### Pre-Execution Checklist
+
+Before invoking memex-cli, Claude MUST confirm:
+
+- [ ] ✅ 范围分析完成 (Single/Multi-page/Multi-stage/System)
+- [ ] ✅ (多页面/系统) 任务已分解
+- [ ] ✅ (多阶段) 依赖已分析
+- [ ] ✅ Workdir 已解析 (via git root)
+- [ ] ✅ 执行计划已报告给用户
+
+**⛔ VIOLATION**: Directly passing multi-page/system task to Gemini without decomposition is a protocol violation.
+
+---
+
 ## When to Use This Skill
 
 **Choose ux-design-gemini when:**
