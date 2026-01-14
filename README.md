@@ -29,7 +29,7 @@ Coding Workflow 是一个面向开发者的 AI 智能工作流系统，实现从
 claude plugin marketplace add chaorenex1/coding-workflow
 ```
 
-插件会自动安装所有技能、代理和命令。
+在Claude Code插件界面安装所有技能、代理和命令。
 
 **依赖安装**：
 
