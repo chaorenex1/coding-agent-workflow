@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "pre-tool-use": {
+      "enabled": true,
+      "script": "hooks/pre-tool-use.ps1",
+      "timeout": 5000
+    }
+  }
+}
