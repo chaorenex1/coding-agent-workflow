@@ -5,8 +5,9 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "检查 Coding Workflow 插件的依赖项（仅在首次检查或距上次检查超过24小时时执行）：\n\n1. **memex-cli**: 运行 `which memex-cli` (macOS/Linux) 或 `where memex-cli` (Windows) 检查是否安装。\n   - 如未找到，提示用户安装：`npm install -g memex-cli`\n   - 如已安装，验证版本：`memex-cli --version`（需要 >= 1.0.0）\n\n2. **Python 依赖**: 运行 `python -c \"import chardet, yaml\"` 检查。\n   - 如导入失败，提示：`pip install chardet pyyaml`\n\n3. **缓存检查结果**: 将检查时间戳保存到 ~/.claude/coding-workflow-deps-check.txt，避免频繁检查。\n\n如果所有依赖都已满足，显示简短的成功消息。如果有缺失，显示清晰的安装指令但允许继续使用插件（某些功能可能受限）。"
+            "type": "script",
+            "script": "${CLAUDE_PLUGIN_ROOT}/hooks/check-deps.py",
+            "timeout": 180000
           }
         ]
       }
@@ -16,7 +17,7 @@
         "hooks": [
           {
             "type": "script",
-            "script": "${CLAUDE_PLUGIN_ROOT}/pre-tool-use.ps1",
+            "script": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use.py",
             "timeout": 5000
           }
         ]
