@@ -253,7 +253,7 @@ id: http-client-module
 backend: codex
 model: gpt-5.2-codex
 workdir: ./lib
-timeout: 180
+timeout: 5400
 ---CONTENT---
 创建完整的 HTTP 客户端模块：
 1. 核心客户端类 (http_client.py)
@@ -290,7 +290,7 @@ id: auth-service
 backend: codex
 model: gpt-5.2
 workdir: ./services/auth
-timeout: 300
+timeout: 9000
 ---CONTENT---
 设计用户认证微服务：
 - 数据模型 (models/)
@@ -418,7 +418,7 @@ id: http-client
 backend: codex
 model: gpt-5.2-codex
 workdir: /path/to/lib
-timeout: 120
+timeout: 5400
 ---CONTENT---
 Python HTTP客户端：支持重试、超时、拦截器
 ---END---
@@ -459,7 +459,7 @@ id: skiplist
 backend: codex
 model: gpt-5.2
 workdir: /path/to/algorithms
-timeout: 180
+timeout: 7200
 ---CONTENT---
 实现跳表：支持插入、删除、搜索，O(log n)复杂度
 ---END---
@@ -484,7 +484,7 @@ id: auth-service
 backend: codex
 model: gpt-5.2
 workdir: /path/to/services/auth
-timeout: 300
+timeout: 9000
 ---CONTENT---
 设计用户认证微服务：JWT、OAuth2、RBAC权限模型
 ---END---
@@ -525,7 +525,7 @@ EOF
 | Field | Default | Description |
 |-------|---------|-------------|
 | `model` | gpt-5.2-codex | Model selection (see complexity guide) |
-| `timeout` | 300 | Max execution time (seconds) |
+| `timeout` | 1800 | Max execution time (seconds, 30min base, +30min per level) |
 | `dependencies` | - | Comma-separated task IDs |
 | `files` | - | Source files to reference |
 | `files-mode` | ref | `ref` (path only) - unified across all levels |

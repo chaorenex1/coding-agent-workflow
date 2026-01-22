@@ -394,7 +394,7 @@ See [references/design-workflow.md](references/design-workflow.md) for complete 
 | Field | Default | Description |
 |-------|---------|-------------|
 | `dependencies` | - | Task IDs for sequential execution |
-| `timeout` | 300 | Seconds |
+| `timeout` | 1800 | Seconds (30 minutes) |
 | `files` | - | Design files to analyze (PNG, JPG) |
 | `files-mode` | auto | `embed` (required for image analysis) |
 
