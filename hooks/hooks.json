@@ -3,24 +3,16 @@
   "hooks": {
     "SessionStart": [
       {
-        "hooks": [
-          {
-            "type": "script",
-            "script": "${CLAUDE_PLUGIN_ROOT}/hooks/check-deps.py",
-            "timeout": 180000
-          }
-        ]
+        "type": "script",
+        "script": "${CLAUDE_PLUGIN_ROOT}/hooks/check-deps.py",
+        "timeout": 180000
       }
     ],
     "PreToolUse": [
       {
-        "hooks": [
-          {
-            "type": "script",
-            "script": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use.py",
-            "timeout": 5000
-          }
-        ]
+        "type": "script",
+        "script": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use.py",
+        "timeout": 5000
       }
     ]
   }
