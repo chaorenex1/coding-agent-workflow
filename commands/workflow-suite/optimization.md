@@ -19,6 +19,45 @@ Target for optimization: $ARGUMENTS
 ### Performance-Critical Patterns
 !`grep -r "async\|await\|Promise\|setTimeout\|setInterval\|loop\|for\|while" --include="*.js" --include="*.ts" --exclude-dir=node_modules --exclude-dir=.git . 2>/dev/null | wc -l`
 
+## Reasoning Chain Framework
+
+Follow this iterative cycle for each optimization:
+
+1. **[Observe]** What do I see?
+   - Gather metrics, identify symptoms
+   - Output: Observation Log
+
+2. **[Analyze]** What does it mean?
+   - Root cause analysis, pattern recognition
+   - Output: Problem Hypothesis
+
+3. **[Hypothesize]** What should I do?
+   - Generate optimization options with trade-offs
+   - Output: Decision Matrix (Option A/B/C with pros/cons)
+
+4. **[Experiment]** How to verify?
+   - Design benchmark, create A/B test
+   - Output: Experiment Plan
+
+5. **[Verify]** Did it work?
+   - Measure results, compare to baseline
+   - Output: Before/After Metrics
+
+6. **[Refine]** What to adjust?
+   - If successful: document, if failed: iterate
+   - Output: Refined Approach or Success Declaration
+
+### Assumption Tracking
+Document assumptions at each step:
+- Assumption: [statement]
+- Confidence: [High/Medium/Low]
+- Validation needed: [how to verify]
+
+### Phase Outputs → Next Phase Inputs
+- Phase 1 produces: Baseline metrics → consumed by Phase 5 (Benchmarking)
+- Phase 2 produces: Bottleneck hypotheses → consumed by Phase 3 (Optimization Strategies)
+- Phase 3 produces: Selected optimizations → consumed by Phase 10 (Implementation Priority)
+
 ## Your Task
 
 Analyze and optimize performance for "$ARGUMENTS":
@@ -217,6 +256,20 @@ Analyze and optimize performance for "$ARGUMENTS":
 ## Output Format
 
 ```
+🧪 REASONING PROCESS
+Observations:
+- [Observation 1]: [Metric/behavior observed]
+
+Hypotheses:
+- [Hypothesis 1]: [Root cause theory]
+
+Decision Rationale:
+- Chose Option A because: [reasoning]
+- Rejected Option B because: [reasoning]
+
+Assumptions Validated:
+- [Assumption 1]: ✅ Confirmed / ❌ Rejected
+
 📊 PERFORMANCE ANALYSIS
 
 Current Metrics:

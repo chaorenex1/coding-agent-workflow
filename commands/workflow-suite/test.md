@@ -21,6 +21,45 @@ Target for testing: $ARGUMENTS
 @pytest.ini
 @package.json
 
+## Test Case Derivation Framework
+
+Follow this reasoning chain to derive test cases from code analysis:
+
+1. **[Explore]** What does the code do?
+   - Read target files, identify functions/classes
+   - Analyze control flow (branches, loops, conditions)
+   - Identify inputs, outputs, side effects
+   - Output: Code Structure Map
+
+2. **[Decompose]** What are the logical paths?
+   - Map all execution paths (happy path + error paths)
+   - Identify decision points and branches
+   - Find boundary conditions in loops/comparisons
+   - Output: Path Coverage Diagram
+
+3. **[Derive]** What test cases are needed?
+   - For each path: generate test case
+   - For each boundary: generate edge case
+   - For each error condition: generate negative test
+   - Output: Test Case Matrix (Path → Test → Expected)
+
+4. **[Prioritize]** What matters most?
+   - Critical business logic → P0 (must have)
+   - Error handling → P1 (high priority)
+   - Edge cases → P2 (medium priority)
+   - Output: Prioritized Test List
+
+5. **[Validate]** Is coverage sufficient?
+   - Check: All paths covered? All edges tested?
+   - Identify gaps in test strategy
+   - Output: Coverage Gap Analysis
+
+### Reasoning Output → Next Stage
+- Explore produces: Code structure → consumed by Decompose
+- Decompose produces: Path diagram → consumed by Derive
+- Derive produces: Test cases → consumed by Prioritize
+- Prioritize produces: Test plan → consumed by Generate
+
 ## Your Task
 
 Generate comprehensive tests for "$ARGUMENTS":
@@ -315,6 +354,17 @@ Generate comprehensive tests for "$ARGUMENTS":
 ## Output Format
 
 ```
+🧪 DERIVATION PROCESS
+Code Analyzed:
+- [File]: [Functions/Classes identified]
+
+Execution Paths Mapped:
+- Path 1: [Description] → Test Case: [Name]
+- Path 2: [Description] → Test Case: [Name]
+
+Coverage Gaps Identified:
+- [Gap 1]: [Missing test]
+
 🧪 TEST STRATEGY
 
 Test Pyramid:

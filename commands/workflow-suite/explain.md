@@ -17,6 +17,46 @@ Code to explain: $ARGUMENTS
 @README.md
 @CLAUDE.md
 
+## Code Exploration → Explanation Framework
+
+Follow this reasoning chain to explain code systematically:
+
+1. **[Survey]** What am I looking at?
+   - Scan file structure, identify key files
+   - Count lines, modules, functions
+   - Detect language, framework, patterns
+   - Output: Initial Assessment
+
+2. **[Trace]** How does data flow?
+   - Follow entry points → main paths → exit points
+   - Map function call chains
+   - Identify state changes
+   - Output: Flow Trace
+
+3. **[Abstract]** What are the key concepts?
+   - Extract business logic patterns
+   - Identify design patterns used
+   - Map data structures and relationships
+   - Output: Conceptual Model
+
+4. **[Explain]** How should I describe this?
+   - Structure explanation from abstract → concrete
+   - Use analogies for complex concepts
+   - Provide examples for clarity
+   - Output: Layered Explanation
+
+5. **[Validate]** Is the explanation complete?
+   - Check: All major paths covered?
+   - Check: Key concepts explained?
+   - Check: Examples provided?
+   - Output: Completeness Report
+
+### Reasoning Sequence
+- Survey produces: Code map → informs Trace
+- Trace produces: Flow diagram → informs Abstract
+- Abstract produces: Concepts → informs Explain
+- Explain produces: Documentation → reviewed by Validate
+
 ## Your Task
 
 Provide comprehensive explanation of "$ARGUMENTS":
@@ -86,6 +126,17 @@ Provide comprehensive explanation of "$ARGUMENTS":
 ## Output Format
 
 ```
+🔍 EXPLORATION PROCESS
+Survey Results:
+- Files analyzed: [count]
+- Language/framework: [detected]
+- Patterns identified: [list]
+
+Flow Traced:
+- Entry point: [location]
+- Main path: [description]
+- Exit points: [locations]
+
 📋 OVERVIEW
 [High-level summary in 2-3 sentences]
 

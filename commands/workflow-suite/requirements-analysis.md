@@ -19,6 +19,47 @@ Requirements to analyze: $ARGUMENTS
 @package.json
 @requirements.txt
 
+## Requirements → Technical Analysis Framework
+
+Follow this reasoning chain to transform business requirements:
+
+1. **[Extract]** What is being requested?
+   - Parse business language into technical statements
+   - Identify explicit and implicit requirements
+   - Extract constraints and assumptions
+   - Output: Requirement Breakdown
+
+2. **[Map]** How does this map to technology?
+   - Match features to technical components
+   - Identify data flows and state changes
+   - Map user actions to system responses
+   - Output: Feature-Component Map
+
+3. **[Design]** What architecture fits?
+   - Evaluate architectural options
+   - Select patterns based on constraints
+   - Define integration points
+   - Output: Architecture Proposal
+
+4. **[Validate]** Does this meet the original requirement?
+   - Trace each requirement → technical decision
+   - Verify: No requirement left unmapped
+   - Check: Technical design aligns with business goals
+   - Output: Validation Report (gaps and mismatches)
+
+5. **[Refine]** What needs adjustment?
+   - If gap found: revise technical design
+   - If over-engineered: simplify
+   - If under-specified: add detail
+   - Output: Refined Technical Specification
+
+### Validation Loop
+After each major section, validate against original:
+- Extract ↔ Original: All requirements captured?
+- Map ↔ Extract: All features mapped?
+- Design ↔ Map: All components justified?
+- Validate ↔ Design: Traceability confirmed?
+
 ## Your Task
 
 Transform "$ARGUMENTS" into technical requirements and architecture plan:
@@ -102,6 +143,17 @@ Transform "$ARGUMENTS" into technical requirements and architecture plan:
 ## Output Format
 
 ```
+🧺 REQUIREMENT EXTRACTION
+Original Requirements:
+- [Req 1]: [Business language]
+
+Technical Translation:
+- [Req 1] → [Technical spec]
+
+✓ TRACEABILITY MATRIX
+Requirement → Component → API → Data Model
+[Req-1] → [Service] → [Endpoint] → [Schema]
+
 🎯 TECHNICAL OVERVIEW
 [Summary of technical approach]
 

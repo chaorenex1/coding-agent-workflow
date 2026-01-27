@@ -10,6 +10,45 @@ allowed-tools: Read
 
 Topic for clarification: $ARGUMENTS
 
+## Iterative Question Generation Framework
+
+Follow this refinement cycle to generate targeted questions:
+
+1. **[Scan]** What do I understand initially?
+   - Parse the topic/requirement
+   - Identify what's clear vs. ambiguous
+   - Detect implied assumptions
+   - Output: Initial Understanding Assessment
+
+2. **[Identify Gaps]** What's missing or unclear?
+   - Find ambiguous terms
+   - Spot missing details
+   - Locate contradictory statements
+   - Output: Gap Inventory
+
+3. **[Prioritize]** What questions matter most?
+   - Critical blockers: Must ask first
+   - Important details: Should ask soon
+   - Nice-to-know: Can ask later
+   - Output: Prioritized Question Queue
+
+4. **[Generate]** How should I phrase questions?
+   - Make specific, not vague
+   - Make actionable, answers lead to decisions
+   - Make open-ended where exploration needed
+   - Output: Draft Questions
+
+5. **[Refine]** Are these questions effective?
+   - Review: Will answers move project forward?
+   - Edit: Combine overlapping questions
+   - Validate: Each question has clear purpose
+   - Output: Final Question Set
+
+### Iteration Strategy
+- Round 1: High-level understanding (What, Why, Who)
+- Round 2: Technical details (How, What if, Constraints)
+- Round 3: Edge cases and validation (What about X, What happens when)
+
 ## Your Task
 
 Generate targeted, high-quality questions to clarify "$ARGUMENTS":
@@ -94,6 +133,17 @@ Each question should be:
 ## Output Format
 
 ```
+🔍 QUESTION GENERATION PROCESS
+Initial Understanding:
+- Clear: [What's understood]
+- Ambiguous: [What's unclear]
+- Assumptions detected: [List]
+
+Gap Analysis:
+- Missing details: [List]
+- Contradictions: [List]
+- Need clarification: [List]
+
 📋 CLARIFICATION QUESTIONS FOR: $ARGUMENTS
 
 🎯 FUNCTIONAL REQUIREMENTS
