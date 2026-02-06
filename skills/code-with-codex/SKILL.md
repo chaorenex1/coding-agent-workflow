@@ -542,7 +542,7 @@ Start
   ├─ Single file, <100 lines? → Level 1 (codex-mini)
   ├─ Reusable functions, no external deps? → Level 2 (codex)
   ├─ Production module with tests?
-  │   ├─ Standard CRUD/API? → Level 3 (codex-max)
+  │   ├─ Standard CRUD/API? → Level 3 (gpt-5.1-codex-max)
   │   └─ Complex algorithm? → Level 4 (gpt-5.2)
   └─ Multi-module/microservice? → Level 5 (gpt-5.2)
 ```
@@ -552,11 +552,11 @@ Start
 | Task Type | Level | Model | Example Link |
 |-----------|-------|-------|--------------|
 | Batch rename script | 1 | codex-mini | [Level 1](examples/level1-simple-scripts.md) |
-| Email validator | 2 | codex-max | [Level 2](examples/level2-utilities.md) |
+| Email validator | 2 | gpt-5.1-codex-max | [Level 2](examples/level2-utilities.md) |
 | HTTP client with retry | 3 | gpt-5.2-codex | [Level 3](examples/level3-modules.md) |
 | Code review | 3 | gpt-5.2-codex | [Level 3](examples/level3-modules.md#code-quality-tasks) |
 | Refactoring | 3-4 | gpt-5.2-codex / gpt-5.2 | [Level 3](examples/level3-modules.md#example-4-refactoring) |
-| Unit testing | 2-3 | codex-max / gpt-5.2-codex | [Level 3](examples/level3-modules.md#example-5-comprehensive-unit-testing) |
+| Unit testing | 2-3 | gpt-5.1-codex-max / gpt-5.2-codex | [Level 3](examples/level3-modules.md#example-5-comprehensive-unit-testing) |
 | Skip list algorithm | 4 | gpt-5.2 | [Level 4](examples/level4-algorithms.md) |
 | Auth microservice | 5 | gpt-5.2 | [Level 5](examples/level5-architecture.md) |
 

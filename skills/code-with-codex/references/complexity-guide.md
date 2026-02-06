@@ -32,8 +32,8 @@ This guide helps you choose the right complexity level and model for your code g
 
 The 5-level complexity system maps task requirements to optimal model selection:
 
-- **Level 1**: Fast model (codex-mini) for simple scripts, serial execution
-- **Level 2**: Balanced model (codex-max) for utilities, parallel with dependency analysis
+- **Level 1**: Fast model (gpt-5.1-codex-mini) for simple scripts, serial execution
+- **Level 2**: Balanced model (gpt-5.1-codex-max) for utilities, parallel with dependency analysis
 - **Level 3**: Production model (gpt-5.2-codex) for modules, parallel with task decomposition
 - **Level 4-5**: Powerful model (gpt-5.2) for complex algorithms and architecture
 
@@ -238,15 +238,15 @@ Start
 
 | Task Type | Typical Level | Model | Execution |
 |-----------|:------------:|-------|:---------:|
-| Batch rename files | 1 | codex-mini | Serial |
-| Email validator | 2 | codex-max | Parallel |
+| Batch rename files | 1 | gpt-5.1-codex-mini | Serial |
+| Email validator | 2 | gpt-5.1-codex-max | Parallel |
 | HTTP client with retry | 3 | gpt-5.2-codex | Parallel |
 | Skip list implementation | 4 | gpt-5.2 | Parallel |
 | Auth microservice | 5 | gpt-5.2 | Parallel |
 | Code review | 3 | gpt-5.2-codex | Parallel |
 | Simple refactor | 3 | gpt-5.2-codex | Parallel |
 | Complex refactor | 4 | gpt-5.2 | Parallel |
-| Unit tests (simple module) | 2 | codex-max | Parallel |
+| Unit tests (simple module) | 2 | gpt-5.1-codex-max | Parallel |
 | Unit tests (complex module) | 3 | gpt-5.2-codex | Parallel |
 
 ---
@@ -257,8 +257,8 @@ Start
 
 | Model | Level | Cost | Speed | Quality | Execution |
 |-------|:-----:|------|:-----:|---------|:---------:|
-| codex-mini | L1 | $ | ⚡⚡⚡ | Good | Serial |
-| codex-max | L2 | $$ | ⚡⚡ | Better | Parallel |
+| gpt-5.1-codex-mini | L1 | $ | ⚡⚡⚡ | Good | Serial |
+| gpt-5.1-codex-max | L2 | $$ | ⚡⚡ | Better | Parallel |
 | gpt-5.2-codex | L3 | $$$ | ⚡ | Best balance | Parallel |
 | gpt-5.2 | L4-5 | $$$$ | ⚡ | Highest | Parallel |
 
@@ -292,7 +292,7 @@ Models are automatically selected based on task complexity level. The system:
 
 ### Cost Optimization
 
-- Use `codex-mini` for prototyping (iterate fast)
+- Use `gpt-5.1-codex-mini` for prototyping (iterate fast)
 - Reserve `gpt-5.2` for final production code
 - Parallelize independent tasks to reduce total time
 - Cache and reuse generated utilities

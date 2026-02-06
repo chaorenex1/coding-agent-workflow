@@ -143,8 +143,8 @@ Refer to the [complexity guide](references/complexity-guide.md) or use this quic
 
 | Task | Level | Model | Example |
 |------|-------|-------|---------|
-| Batch rename files | 1 | codex-mini | [Level 1](examples/level1-simple-scripts.md) |
-| Email validator | 2 | codex-max | [Level 2](examples/level2-utilities.md) |
+| Batch rename files | 1 | gpt-5.1-codex-mini | [Level 1](examples/level1-simple-scripts.md) |
+| Email validator | 2 | gpt-5.1-codex-max | [Level 2](examples/level2-utilities.md) |
 | HTTP client module | 3 | gpt-5.2-codex | [Level 3](examples/level3-modules.md) |
 | Skip list algorithm | 4 | gpt-5.2 | [Level 4](examples/level4-algorithms.md) |
 | Auth microservice | 5 | gpt-5.2 | [Level 5](examples/level5-architecture.md) |
@@ -188,8 +188,8 @@ EOF
 
 | Level | Model | Cost | Speed | Quality |
 |:-----:|-------|------|-------|---------|
-| L1 | codex-mini | $ | Fast | Good |
-| L2 | codex-max | $$ | Medium | Better |
+| L1 | gpt-5.1-codex-mini | $ | Fast | Good |
+| L2 | gpt-5.1-codex-max | $$ | Medium | Better |
 | L3 | gpt-5.2-codex | $$$ | Slower | Best balance |
 | L4-5 | gpt-5.2 | $$$$ | Slowest | Highest quality |
 
@@ -197,14 +197,14 @@ EOF
 
 ### 2. Model Performance by Task Type
 
-**Fast models (codex-mini)**:
+**Fast models (gpt-5.1-codex-mini)**:
 - ✅ Simple scripts and utilities
 - ✅ Data processing and file operations
 - ✅ Quick prototypes
 - ❌ Complex algorithms
 - ❌ System architecture
 
-**Balanced models (codex-max, gpt-5.2-codex)**:
+**Balanced models (gpt-5.1-codex-max, gpt-5.2-codex)**:
 - ✅ Production-grade modules
 - ✅ Code review and refactoring
 - ✅ Comprehensive testing
@@ -387,7 +387,7 @@ EOF
 ### Issue: Generated code has bugs
 
 **Solution**:
-1. Upgrade to higher-tier model (codex → codex-max → gpt-5.2)
+1. Upgrade to higher-tier model (gpt-5.1-codex-max → gpt-5.2-codex → gpt-5.2)
 2. Add more context in prompt (framework version, requirements)
 3. Request specific error handling in prompt
 

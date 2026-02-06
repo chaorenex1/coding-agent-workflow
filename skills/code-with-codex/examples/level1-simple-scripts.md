@@ -1,6 +1,6 @@
 # Level 1: Simple Scripts Examples
 
-Quick utilities, single-file scripts, simple automation tasks using `codex-mini` or `codex` models.
+Quick utilities, single-file scripts, simple automation tasks using `gpt-5.1-codex-mini` models.
 
 ---
 
@@ -257,7 +257,7 @@ chmod +x disk_monitor.sh
 2. **Use stdlib only**: Avoid external dependencies for portability
 3. **Add basic docs**: Include usage examples in docstrings
 4. **Test interactively**: Run generated scripts immediately to verify
-5. **Iterate quickly**: Use `codex-mini` for rapid prototyping
+5. **Iterate quickly**: Use `gpt-5.1-codex-mini` for rapid prototyping
 
 ---
 
